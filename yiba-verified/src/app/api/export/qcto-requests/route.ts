@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireApiContext } from "@/lib/api/context";
+import { prisma } from "@/lib/prisma";
+import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { fail } from "@/lib/api/response";
+
+/**
+ * GET /api/export/qcto-requests
+ *
+ * Export QCTO requests to CSV or JSON.
+ * - QCTO_USER and PLATFORM_ADMIN (REPORTS_EXPORT)
+ *
+ * Query params:
+ * - format: 'csv' | 'json' (default: 'csv')
+ * - institution_id: Filter by institution
+ * - status: PENDING | APPROVED | REJECTED
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const ctx = await requireApiContext(request);
+
+    if (ctx.role !== "PLATFORM_ADMIN" && ctx.role !== "QCTO_USER") {
+      return fail(
+        new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins and QCTO users can export QCTO requests", 403)
+      );
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const where: Record<string, unknown> = { deleted_at: null };
+
+    const institutionId = searchParams.get("institution_id");
+    if (institutionId) where.institution_id = institutionId;
+
+    const status = searchParams.get("status");
+    if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+      where.status = status;
+    }
+
+    const requests = await prisma.qCTORequest.findMany({
+      where,
+      include: {
+        institution: { select: { institution_id: true, legal_name: true, trading_name: true } },
+        requestedByUser: { select: { first_name: true, last_name: true, email: true } },
+        reviewedByUser: { select: { first_name: true, last_name: true, email: true } },
+      },
+      orderBy: { requested_at: "desc" },
+    });
+
+    const format = searchParams.get("format") || "csv";
+
+    const toName = (u: { first_name: string; last_name: string; email: string } | null) =>
+      u ? `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email : "";
+
+    if (format === "json") {
+      return NextResponse.json(
+        {
+          count: requests.length,
+          qcto_requests: requests.map((r) => ({
+            request_id: r.request_id,
+            institution_id: r.institution_id,
+            institution_name: r.institution.trading_name || r.institution.legal_name,
+            title: r.title,
+            description: r.description,
+            request_type: r.request_type,
+            status: r.status,
+            requested_at: r.requested_at.toISOString(),
+            requested_by: toName(r.requestedByUser),
+            requested_by_email: r.requestedByUser?.email ?? null,
+            reviewed_at: r.reviewed_at?.toISOString() ?? null,
+            reviewed_by: toName(r.reviewedByUser),
+            response_notes: r.response_notes,
+            created_at: r.created_at.toISOString(),
+            updated_at: r.updated_at.toISOString(),
+          })),
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Disposition": `attachment; filename="qcto-requests-${new Date().toISOString().split("T")[0]}.json"`,
+          },
+        }
+      );
+    }
+
+    const csvRows: string[] = [
+      "Request ID,Institution ID,Institution Name,Title,Description,Request Type,Status,Requested At,Requested By,Requested By Email,Reviewed At,Reviewed By,Response Notes,Created At,Updated At",
+    ];
+    for (const r of requests) {
+      const row = [
+        r.request_id,
+        r.institution_id,
+        (r.institution.trading_name || r.institution.legal_name || "").replace(/,/g, ";"),
+        (r.title || "").replace(/,/g, ";"),
+        (r.description || "").replace(/,/g, ";"),
+        r.request_type || "",
+        r.status,
+        r.requested_at.toISOString(),
+        toName(r.requestedByUser).replace(/,/g, ";"),
+        r.requestedByUser?.email || "",
+        r.reviewed_at?.toISOString() || "",
+        toName(r.reviewedByUser).replace(/,/g, ";"),
+        (r.response_notes || "").replace(/,/g, ";"),
+        r.created_at.toISOString(),
+        r.updated_at.toISOString(),
+      ].map((f) => `"${String(f).replace(/"/g, '""')}"`);
+      csvRows.push(row.join(","));
+    }
+
+    return new NextResponse(csvRows.join("\n"), {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="qcto-requests-${new Date().toISOString().split("T")[0]}.csv"`,
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) return fail(error);
+    console.error("GET /api/export/qcto-requests error:", error);
+    return fail(new AppError(ERROR_CODES.INTERNAL_ERROR, "Failed to export QCTO requests", 500));
+  }
+}

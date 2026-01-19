@@ -1,0 +1,762 @@
+openapi: 3.0.3
+info:
+  title: Yiba Verified API
+  description: |
+    Comprehensive API for managing educational institutions, learners, enrolments, submissions, and QCTO workflows.
+    
+    ## Authentication
+    
+    ### Development Mode
+    - Use `X-DEV-TOKEN` header with your `DEV_API_TOKEN` value
+    - Only works in development environment (`NODE_ENV=development`)
+    - Example: `X-DEV-TOKEN: your-dev-token-here`
+    
+    ### Production Mode
+    - Use NextAuth session cookies
+    - Login via `/auth/login` endpoint
+    - Session cookie is automatically included in requests
+    
+    ## Role-Based Access Control (RBAC)
+    
+    - **PLATFORM_ADMIN**: Full access to all resources across all institutions
+    - **QCTO_USER**: Read-only access to approved submissions and requests
+    - **INSTITUTION_ADMIN**: Full access to their institution's resources
+    - **INSTITUTION_STAFF**: Limited access to their institution's resources
+    - **STUDENT**: Access only to their own data
+    
+    ## Rate Limiting
+    
+    - **Auth endpoints**: 5 requests per 15 minutes
+    - **Mutations**: 30 requests per minute
+    - **Uploads**: 10 requests per minute
+    - **Standard API**: 60 requests per minute
+    - **Reads**: 120 requests per minute
+    
+  version: 1.0.0
+  contact:
+    name: Yiba Verified Support
+    email: support@yiba.co.za
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.yiba.co.za/api
+    description: Production server
+
+tags:
+  - name: Learners
+    description: Learner management endpoints
+  - name: Enrolments
+    description: Enrolment management endpoints
+  - name: Submissions
+    description: Institution submission endpoints
+  - name: Readiness
+    description: Form 5 readiness record endpoints
+  - name: Documents
+    description: Document upload and management endpoints
+  - name: QCTO
+    description: QCTO review and approval endpoints
+  - name: Notifications
+    description: User notification endpoints
+  - name: Export
+    description: Data export endpoints
+  - name: Audit Logs
+    description: Audit log viewing endpoints
+  - name: Stats
+    description: Statistics and analytics endpoints
+  - name: Dev
+    description: Development-only endpoints
+
+security:
+  - DevToken: []
+  - SessionCookie: []
+
+paths:
+  /learners:
+    get:
+      tags: [Learners]
+      summary: List learners
+      description: |
+        Get a list of learners with RBAC enforcement.
+        - INSTITUTION_* roles: Only see learners from their institution
+        - PLATFORM_ADMIN: Can see all learners (requires institution_id param or sees all)
+        - QCTO_USER: Can see learners from approved submissions/requests
+      parameters:
+        - name: institution_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by institution (required for PLATFORM_ADMIN)
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query (searches national_id, first_name, last_name)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+          description: Maximum number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of learners
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Learner'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    
+    post:
+      tags: [Learners]
+      summary: Create a new learner
+      description: |
+        Create a new learner record with RBAC enforcement and audit logging.
+        - INSTITUTION_* roles: institution_id is set from session
+        - PLATFORM_ADMIN: must provide institution_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLearnerRequest'
+      responses:
+        '201':
+          description: Learner created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Learner'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /learners/{learnerId}:
+    get:
+      tags: [Learners]
+      summary: Get learner by ID
+      parameters:
+        - name: learnerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Learner details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Learner'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    patch:
+      tags: [Learners]
+      summary: Update learner
+      parameters:
+        - name: learnerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLearnerRequest'
+      responses:
+        '200':
+          description: Learner updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Learner'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /enrolments:
+    get:
+      tags: [Enrolments]
+      summary: List enrolments
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of enrolments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Enrolment'
+    
+    post:
+      tags: [Enrolments]
+      summary: Create enrolment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnrolmentRequest'
+      responses:
+        '201':
+          description: Enrolment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrolment'
+
+  /institutions/submissions:
+    get:
+      tags: [Submissions]
+      summary: List institution submissions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, RETURNED_FOR_CORRECTION]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+    
+    post:
+      tags: [Submissions]
+      summary: Create submission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubmissionRequest'
+      responses:
+        '201':
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+
+  /institutions/documents:
+    get:
+      tags: [Documents]
+      summary: List documents
+      parameters:
+        - name: related_entity
+          in: query
+          schema:
+            type: string
+            enum: [INSTITUTION, LEARNER, ENROLMENT, READINESS]
+        - name: document_type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [UPLOADED, FLAGGED, ACCEPTED]
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+    
+    post:
+      tags: [Documents]
+      summary: Upload document
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, related_entity, document_type]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                related_entity:
+                  type: string
+                  enum: [INSTITUTION, LEARNER, ENROLMENT, READINESS]
+                related_entity_id:
+                  type: string
+                  format: uuid
+                document_type:
+                  type: string
+      responses:
+        '201':
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get user notifications
+      parameters:
+        - name: is_read
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  unread_count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+    
+    post:
+      tags: [Notifications]
+      summary: Create notification (internal use)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationRequest'
+      responses:
+        '201':
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+
+  /notifications/{notificationId}:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /qcto/submissions/{submissionId}:
+    patch:
+      tags: [QCTO]
+      summary: Review submission
+      description: QCTO users can review and approve/reject submissions
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, UNDER_REVIEW, RETURNED_FOR_CORRECTION]
+                review_notes:
+                  type: string
+      responses:
+        '200':
+          description: Submission reviewed
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /export/learners:
+    get:
+      tags: [Export]
+      summary: Export learners data
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: institution_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Export file
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Learner'
+
+components:
+  securitySchemes:
+    DevToken:
+      type: apiKey
+      in: header
+      name: X-DEV-TOKEN
+      description: Development token (dev mode only)
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth session cookie
+
+  schemas:
+    Learner:
+      type: object
+      properties:
+        learner_id:
+          type: string
+          format: uuid
+        national_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        institution_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    
+    CreateLearnerRequest:
+      type: object
+      required: [national_id, first_name, last_name, birth_date, gender_code, nationality_code, popia_consent, consent_date]
+      properties:
+        national_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        gender_code:
+          type: string
+        nationality_code:
+          type: string
+        home_language_code:
+          type: string
+        disability_status:
+          type: string
+        popia_consent:
+          type: boolean
+        consent_date:
+          type: string
+          format: date
+        institution_id:
+          type: string
+          format: uuid
+          description: Required for PLATFORM_ADMIN, auto-set for INSTITUTION_* roles
+    
+    UpdateLearnerRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        home_language_code:
+          type: string
+    
+    Enrolment:
+      type: object
+      properties:
+        enrolment_id:
+          type: string
+          format: uuid
+        learner_id:
+          type: string
+          format: uuid
+        qualification_id:
+          type: string
+          format: uuid
+        enrolment_status:
+          type: string
+          enum: [ACTIVE, COMPLETED, TRANSFERRED, ARCHIVED]
+        start_date:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+    
+    CreateEnrolmentRequest:
+      type: object
+      required: [learner_id, qualification_id, start_date]
+      properties:
+        learner_id:
+          type: string
+          format: uuid
+        qualification_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date
+        expected_completion_date:
+          type: string
+          format: date
+    
+    Submission:
+      type: object
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+        institution_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        submission_type:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, RETURNED_FOR_CORRECTION]
+        submitted_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    
+    CreateSubmissionRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        submission_type:
+          type: string
+    
+    Document:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        related_entity:
+          type: string
+          enum: [INSTITUTION, LEARNER, ENROLMENT, READINESS]
+        related_entity_id:
+          type: string
+          format: uuid
+        document_type:
+          type: string
+        file_name:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [UPLOADED, FLAGGED, ACCEPTED]
+        uploaded_at:
+          type: string
+          format: date-time
+    
+    Notification:
+      type: object
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+        notification_type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    
+    CreateNotificationRequest:
+      type: object
+      required: [user_id, notification_type, title, message]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        notification_type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION_ERROR, INTERNAL_ERROR, RATE_LIMIT_EXCEEDED]
+        message:
+          type: string
+        field:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            code: "UNAUTHENTICATED"
+            message: "Authentication required"
+    
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            code: "FORBIDDEN"
+            message: "You don't have permission to access this resource"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            code: "NOT_FOUND"
+            message: "The requested resource was not found"
+    
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation Error"
+            code: "VALIDATION_ERROR"
+            message: "Missing required fields"
+            field: "national_id"
