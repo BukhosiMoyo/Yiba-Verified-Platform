@@ -298,7 +298,7 @@ function QualificationsPageContent() {
       )}
 
       {loading ? (
-        <LoadingTable columns={4} rows={5} />
+        <LoadingTable columns={5} rows={5} />
       ) : qualifications.length === 0 ? (
         <EmptyState
           title="No qualifications found"
@@ -316,6 +316,9 @@ function QualificationsPageContent() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead key="#" className="whitespace-nowrap w-12 text-center" style={{ minWidth: 48 }}>
+                    #
+                  </TableHead>
                   {orderedCols.map((col) => {
                     const isLeft = pins[col.id] === "left";
                     const isRight = pins[col.id] === "right";
@@ -405,11 +408,14 @@ function QualificationsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedQualifications.map((qualification) => {
+                {sortedQualifications.map((qualification, index) => {
                   const createdStr = formatDate(qualification.created_at);
                   const updatedStr = formatDate(qualification.updated_at);
                   return (
                     <TableRow key={qualification.qualification_id}>
+                      <TableCell key="#" className="whitespace-nowrap text-center text-muted-foreground text-sm" style={{ minWidth: 48 }}>
+                        {offset + index + 1}
+                      </TableCell>
                       {orderedCols.map((col) => {
                         const isLeft = pins[col.id] === "left";
                         const isRight = pins[col.id] === "right";
@@ -545,7 +551,7 @@ function QualificationsPageContent() {
                           );
                         }
                         return (
-                          <TableCell key={col.id} className={cellClass} style={stickyStyle} />
+                          <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
                         );
                       })}
                     </TableRow>
@@ -602,7 +608,7 @@ function QualificationsPageContent() {
 
 export default function QualificationsPage() {
   return (
-    <Suspense fallback={<LoadingTable columns={4} rows={5} />}>
+    <Suspense fallback={<LoadingTable columns={5} rows={5} />}>
       <QualificationsPageContent />
     </Suspense>
   );

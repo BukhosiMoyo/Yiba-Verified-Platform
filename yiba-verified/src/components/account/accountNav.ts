@@ -53,7 +53,7 @@ export function getAccountNavItems(role: Role): AccountNavItem[] {
       label: "Scope / Assignments",
       href: "/account/scope-assignments",
       icon: Briefcase,
-      roles: ["QCTO_USER"],
+      roles: ["QCTO_USER", "QCTO_SUPER_ADMIN", "QCTO_ADMIN", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"],
     },
   ];
 

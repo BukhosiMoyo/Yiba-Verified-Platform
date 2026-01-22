@@ -21,7 +21,7 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl border border-gray-200/60 shadow-sm p-7 sm:p-8",
+        "rounded-2xl border border-border/70 bg-card p-8 sm:p-9 shadow-[var(--shadow-card)] dark:shadow-[var(--shadow-soft)] dark:border-border/80",
         className
       )}
     >
@@ -32,10 +32,10 @@ export function AuthCard({
           ) : (
             <>
               {title && (
-                <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+                <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
               )}
               {subtitle && (
-                <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
               )}
             </>
           )}

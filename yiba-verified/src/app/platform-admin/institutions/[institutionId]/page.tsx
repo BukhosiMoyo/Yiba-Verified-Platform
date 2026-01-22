@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { InstitutionLearnersTable } from "@/components/platform-admin/InstitutionLearnersTable";
 
 export default function InstitutionDetailPage() {
   const params = useParams();
@@ -436,48 +437,7 @@ export default function InstitutionDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {institution.learners && institution.learners.length > 0 ? (
-                <ResponsiveTable>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>National ID</TableHead>
-                        <TableHead>First Name</TableHead>
-                        <TableHead>Last Name</TableHead>
-                        <TableHead>Registered</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {institution.learners.map((learner: any) => (
-                        <TableRow key={learner.learner_id}>
-                          <TableCell className="font-mono text-sm">
-                            {learner.national_id}
-                          </TableCell>
-                          <TableCell>{learner.first_name}</TableCell>
-                          <TableCell>{learner.last_name}</TableCell>
-                          <TableCell className="text-sm text-gray-500">
-                            {formatDate(learner.created_at)}
-                          </TableCell>
-                          <TableCell>
-                            <Link href={`/platform-admin/learners/${learner.learner_id}`}>
-                              <Button variant="outline" size="sm">
-                                View
-                              </Button>
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ResponsiveTable>
-              ) : (
-                <EmptyState
-                  title="No learners found"
-                  description="No learners have been registered with this institution yet."
-                  icon={<GraduationCap className="h-12 w-12 text-gray-400" />}
-                />
-              )}
+              <InstitutionLearnersTable institutionId={institutionId} />
             </CardContent>
           </Card>
         </TabsContent>

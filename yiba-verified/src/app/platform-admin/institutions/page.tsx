@@ -517,7 +517,7 @@ function InstitutionsPageContent() {
                             );
                           }
                           return (
-                            <TableCell key={col.id} className={cellClass} style={stickyStyle} />
+                            <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
                           );
                         })}
                       </TableRow>

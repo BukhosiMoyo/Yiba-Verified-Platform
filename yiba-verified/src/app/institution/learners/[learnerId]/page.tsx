@@ -5,9 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PageProps {
-  params: {
-    learnerId: string;
-  };
+  params: Promise<{ learnerId: string }>;
 }
 
 /**
@@ -21,7 +19,7 @@ interface PageProps {
  * - Ignores soft-deleted learners (deleted_at must be null)
  */
 export default async function LearnerDetailsPage({ params }: PageProps) {
-  const { learnerId } = params;
+  const { learnerId } = await params;
 
   // Get session (layout already ensures auth, but we need role/institutionId for scoping)
   const session = await getServerSession(authOptions);

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canReadForQCTO } from "@/lib/api/qctoAccess";
 import type { ApiContext } from "@/lib/api/context";
+import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
@@ -26,12 +27,13 @@ export default async function QCTOLearnerDetailPage({ params }: PageProps) {
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;
-  if (role !== "QCTO_USER" && role !== "PLATFORM_ADMIN") redirect("/unauthorized");
+  if (!canAccessQctoData(role)) redirect("/unauthorized");
 
   const ctx: ApiContext = {
     userId: (session.user as { userId?: string }).userId ?? (session.user as { id?: string }).id ?? "",
     role: role!,
     institutionId: (session.user as { institutionId?: string }).institutionId ?? null,
+    qctoId: (session.user as { qctoId?: string | null }).qctoId ?? null,
   };
 
   const canRead = await canReadForQCTO(ctx, "LEARNER", learnerId);

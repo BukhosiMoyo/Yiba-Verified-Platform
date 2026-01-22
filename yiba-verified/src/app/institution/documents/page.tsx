@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { DocumentFilters } from "@/components/institution/DocumentFilters";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { Button } from "@/components/ui/button";
-import { File, FileText, Image, MoreVertical, Eye, FileUp } from "lucide-react";
+import { File, FileText, Image, MoreVertical, Eye, FileUp, Upload } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -211,7 +212,10 @@ export default async function InstitutionDocumentsPage({ searchParams }: PagePro
           </p>
         </div>
         <Button asChild>
-          <Link href="/institution/documents/upload">Upload Document</Link>
+          <Link href="/institution/documents/upload" className="inline-flex items-center gap-2">
+            <Upload className="h-4 w-4" aria-hidden />
+            Upload Document
+          </Link>
         </Button>
       </div>
 

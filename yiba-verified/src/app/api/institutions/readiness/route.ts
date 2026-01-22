@@ -151,6 +151,7 @@ interface CreateReadinessBody {
   nqf_level?: number;
   curriculum_code: string;
   delivery_mode: DeliveryMode;
+  institution_id?: string; // optional, for PLATFORM_ADMIN when creating for a specific institution
 }
 
 /**

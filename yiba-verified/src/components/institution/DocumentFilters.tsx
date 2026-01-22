@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
 interface DocumentFiltersProps {
@@ -74,19 +74,16 @@ export function DocumentFilters({ currentParams }: DocumentFiltersProps) {
         <div className="space-y-1.5">
           <Label htmlFor="related_entity" className="text-xs text-gray-600">Entity Type</Label>
           <Select
+            id="related_entity"
             value={currentParams.related_entity || ""}
-            onValueChange={(value) => handleFilterChange("related_entity", value)}
+            onChange={(e) => handleFilterChange("related_entity", (e.target as HTMLSelectElement).value)}
+            className="h-9 text-sm"
           >
-            <SelectTrigger id="related_entity" className="h-9 text-sm">
-              <SelectValue placeholder="All Entities" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Entities</SelectItem>
-              <SelectItem value="INSTITUTION">Institution</SelectItem>
-              <SelectItem value="LEARNER">Learner</SelectItem>
-              <SelectItem value="ENROLMENT">Enrolment</SelectItem>
-              <SelectItem value="READINESS">Readiness</SelectItem>
-            </SelectContent>
+            <option value="">All Entities</option>
+            <option value="INSTITUTION">Institution</option>
+            <option value="LEARNER">Learner</option>
+            <option value="ENROLMENT">Enrolment</option>
+            <option value="READINESS">Readiness</option>
           </Select>
         </div>
 
@@ -104,18 +101,15 @@ export function DocumentFilters({ currentParams }: DocumentFiltersProps) {
         <div className="space-y-1.5">
           <Label htmlFor="status" className="text-xs text-gray-600">Status</Label>
           <Select
+            id="status"
             value={currentParams.status || ""}
-            onValueChange={(value) => handleFilterChange("status", value)}
+            onChange={(e) => handleFilterChange("status", (e.target as HTMLSelectElement).value)}
+            className="h-9 text-sm"
           >
-            <SelectTrigger id="status" className="h-9 text-sm">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
-              <SelectItem value="UPLOADED">Uploaded</SelectItem>
-              <SelectItem value="FLAGGED">Flagged</SelectItem>
-              <SelectItem value="ACCEPTED">Accepted</SelectItem>
-            </SelectContent>
+            <option value="">All Statuses</option>
+            <option value="UPLOADED">Uploaded</option>
+            <option value="FLAGGED">Flagged</option>
+            <option value="ACCEPTED">Accepted</option>
           </Select>
         </div>
       </div>

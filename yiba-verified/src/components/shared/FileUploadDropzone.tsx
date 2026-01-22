@@ -153,8 +153,8 @@ export function FileUploadDropzone({
     }
   };
 
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRemove = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (value && onFileRemove) {
       onFileRemove(value);
     } else {
@@ -176,11 +176,11 @@ export function FileUploadDropzone({
         onClick={!value ? handleBrowseClick : undefined}
         className={cn(
           "relative rounded-xl border-2 border-dashed p-8 transition-all duration-200",
-          "bg-white border-gray-200/60",
-          isDragging && "border-blue-400 bg-blue-50/30",
-          !isDragging && !value && "hover:border-gray-300 hover:bg-gray-50/50",
-          value && "border-gray-300 bg-gray-50/30",
-          error && "border-red-300 bg-red-50/30",
+          "bg-card border-border",
+          isDragging && "border-primary bg-primary/10",
+          !isDragging && !value && "hover:border-border-strong hover:bg-muted/50",
+          value && "border-border-strong bg-muted/30",
+          error && "border-destructive bg-destructive/10",
           disabled && "opacity-50 cursor-not-allowed",
           !disabled && !value && "cursor-pointer"
         )}
@@ -206,16 +206,16 @@ export function FileUploadDropzone({
               <Upload
                 className={cn(
                   "h-6 w-6 transition-colors duration-200",
-                  isDragging ? "text-blue-600" : "text-gray-400"
+                  isDragging ? "text-primary" : "text-muted-foreground"
                 )}
                 strokeWidth={1.5}
               />
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-foreground">
                 {isDragging ? "Drop file here" : "Drag and drop a file"}
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 or{" "}
                 <button
                   type="button"
@@ -244,9 +244,9 @@ export function FileUploadDropzone({
       </div>
 
       {/* Hints */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span>Max size: {maxSizeMB}MB</span>
-        <span className="text-gray-300">•</span>
+        <span className="text-muted-foreground/50">•</span>
         <span>Accepted: {getAcceptedExtensions()}</span>
       </div>
     </div>

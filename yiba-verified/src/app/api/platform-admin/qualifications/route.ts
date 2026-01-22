@@ -173,11 +173,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create qualification with audit
-    const qualification = await mutateWithAudit(
+    const qualification = await mutateWithAudit({
       ctx,
-      "QUALIFICATION_CREATE",
-      async () => {
-        return await prisma.qualification.create({
+      entityType: "QUALIFICATION",
+      changeType: "CREATE",
+      fieldName: "qualification_id",
+      assertCan: async () => {},
+      mutation: async (tx) =>
+        tx.qualification.create({
           data: {
             name: name.trim(),
             code: code ? code.trim() : null,
@@ -189,9 +192,8 @@ export async function POST(request: NextRequest) {
             created_at: true,
             updated_at: true,
           },
-        });
-      }
-    );
+        }),
+    });
 
     return ok(qualification, 201);
   } catch (error) {

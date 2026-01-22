@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!ctx.institution_id) {
+    if (!ctx.institutionId) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
         "User must be associated with an institution",
@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
     const statusFilter = searchParams.get("status");
+    const roleFilter = searchParams.get("role");
+    const q = searchParams.get("q")?.trim().toLowerCase();
 
     const limit = Math.min(limitParam ? parseInt(limitParam, 10) : 50, 200);
     const offset = Math.max(0, offsetParam ? parseInt(offsetParam, 10) : 0);
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
     // Build where clause - only invites for this institution
     const where: any = {
       deleted_at: null,
-      institution_id: ctx.institution_id,
+      institution_id: ctx.institutionId,
     };
 
     if (statusFilter === "pending") {
@@ -53,6 +55,14 @@ export async function GET(request: NextRequest) {
     } else if (statusFilter === "expired") {
       where.used_at = null;
       where.expires_at = { lte: new Date() };
+    }
+
+    if (roleFilter && ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"].includes(roleFilter)) {
+      where.role = roleFilter;
+    }
+
+    if (q && q.length > 0) {
+      where.email = { contains: q, mode: "insensitive" };
     }
 
     // Get total count

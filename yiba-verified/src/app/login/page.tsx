@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -14,15 +14,20 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Role } from "@/lib/rbac";
 
-const roleRedirects: Record<Role, string> = {
+const roleRedirects: Partial<Record<Role, string>> = {
   PLATFORM_ADMIN: "/platform-admin",
   QCTO_USER: "/qcto",
+  QCTO_SUPER_ADMIN: "/qcto",
+  QCTO_ADMIN: "/qcto",
+  QCTO_REVIEWER: "/qcto",
+  QCTO_AUDITOR: "/qcto",
+  QCTO_VIEWER: "/qcto",
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -38,11 +43,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role) {
       const role = session.user.role as Role;
-      if (role && roleRedirects[role]) {
-        router.replace(roleRedirects[role]);
+      const next = searchParams.get("next");
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+      const path = safeNext || (role && roleRedirects[role]);
+      if (path) {
+        router.replace(path);
       }
     }
-  }, [status, session, router]);
+  }, [status, session, router, searchParams]);
 
   // Check if user just registered
   useEffect(() => {
@@ -57,18 +65,41 @@ export default function LoginPage() {
   if (status === "loading") {
     return (
       <AuthLayout>
-        <AuthCard title="Yiba Verified" subtitle="Sign in to your account">
+        <AuthCard
+          header={
+            <div className="space-y-2">
+              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
+              <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            </div>
+          }
+        >
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </AuthCard>
       </AuthLayout>
     );
   }
 
-  // Don't render form if user is authenticated (redirect will happen)
+  // Show redirecting state when authenticated (useEffect will redirect)
   if (status === "authenticated") {
-    return null;
+    return (
+      <AuthLayout>
+        <AuthCard
+          header={
+            <div className="space-y-2">
+              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
+              <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            </div>
+          }
+        >
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Redirecting…</p>
+          </div>
+        </AuthCard>
+      </AuthLayout>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,18 +121,21 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        // Fetch session to get role for redirect
+        // Fetch session to get role for redirect (ensures session is ready)
         const response = await fetch("/api/auth/session");
-        const session = await response.json();
-        const role = session?.user?.role as Role | undefined;
+        const data = await response.json();
+        const role = data?.user?.role as Role | undefined;
+        const path = role && roleRedirects[role];
 
-        if (role && roleRedirects[role]) {
+        if (path) {
           const next = searchParams.get("next");
-          const redirectPath = next || roleRedirects[role];
-          router.push(redirectPath);
+          const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+          const redirectPath = safeNext || path;
+          // Refresh so the next page gets a fresh RSC fetch with the new session, then navigate
           router.refresh();
+          router.replace(redirectPath);
         } else {
-          router.push("/unauthorized");
+          router.replace("/unauthorized");
         }
       }
     } catch (err) {
@@ -112,10 +146,17 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <AuthCard title="Yiba Verified" subtitle="Sign in to your account">
+      <AuthCard
+        header={
+          <div className="space-y-2">
+            <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
+            <p className="text-sm text-muted-foreground">Sign in to your account</p>
+          </div>
+        }
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
             </Label>
             <Input
@@ -131,12 +172,12 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
                 Password
               </Label>
               <Link
                 href="/forgot-password"
-                className="text-sm text-blue-700 hover:text-blue-800 hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 Forgot password?
               </Link>
@@ -154,7 +195,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? (
@@ -174,22 +215,14 @@ export default function LoginPage() {
             />
           </div>
           {success && (
-            <Alert
-              variant="success"
-              description={success}
-              className="mb-0"
-            />
+            <Alert variant="success" description={success} className="mb-0 rounded-xl border-border/60" />
           )}
           {error && (
-            <Alert
-              variant="error"
-              description={error}
-              className="mb-0"
-            />
+            <Alert variant="error" description={error} className="mb-0 rounded-xl border-border/60" />
           )}
           <Button
             type="submit"
-            className="w-full h-10 font-semibold"
+            className="w-full h-11 font-semibold rounded-xl"
             disabled={loading}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" strokeWidth={2} />}
@@ -199,5 +232,30 @@ export default function LoginPage() {
         </form>
       </AuthCard>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout>
+          <AuthCard
+            header={
+              <div className="space-y-2">
+                <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
+                <p className="text-sm text-muted-foreground">Sign in to your account</p>
+              </div>
+            }
+          >
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          </AuthCard>
+        </AuthLayout>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

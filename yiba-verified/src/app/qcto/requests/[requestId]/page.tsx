@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -33,8 +34,7 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
   const userRole = session.user.role;
   const userId = session.user.userId;
 
-  // Only QCTO_USER and PLATFORM_ADMIN can access this page
-  if (userRole !== "QCTO_USER" && userRole !== "PLATFORM_ADMIN") {
+  if (!canAccessQctoData(userRole)) {
     redirect("/unauthorized");
   }
 
@@ -70,22 +70,25 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
       institution: {
         select: {
           institution_id: true,
-          name: true,
-          code: true,
-          type: true,
+          legal_name: true,
+          trading_name: true,
+          registration_number: true,
+          institution_type: true,
         },
       },
       requestedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
       reviewedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
@@ -183,10 +186,10 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Institution</p>
               <p className="text-base">
-                {request.institution.name}
-                {request.institution.code && (
+                {request.institution.trading_name || request.institution.legal_name}
+                {request.institution.registration_number && (
                   <span className="text-sm text-muted-foreground ml-1">
-                    ({request.institution.code})
+                    ({request.institution.registration_number})
                   </span>
                 )}
               </p>
@@ -217,7 +220,7 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Requested By</p>
               <p className="text-base">
-                {request.requestedByUser.name || request.requestedByUser.email}
+                {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser?.email}
               </p>
             </div>
 
@@ -232,7 +235,7 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Reviewed By</p>
                 <p className="text-base">
-                  {request.reviewedByUser.name || request.reviewedByUser.email}
+                  {[request.reviewedByUser?.first_name, request.reviewedByUser?.last_name].filter(Boolean).join(" ") || request.reviewedByUser?.email}
                 </p>
               </div>
             )}

@@ -31,7 +31,8 @@ import { mutateWithAudit } from "@/server/mutations/mutate";
 import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
-import type { Role } from "@/lib/rbac";
+import { canAccessQctoData, QCTO_DATA_ACCESS_ROLES } from "@/lib/rbac";
+import { getProvinceFilterForQCTO } from "@/lib/api/qctoAccess";
 
 type CreateQCTORequestBody = {
   institution_id: string;
@@ -73,8 +74,7 @@ export async function POST(request: NextRequest) {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can create QCTO requests
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot create QCTO requests`,
@@ -152,10 +152,8 @@ export async function POST(request: NextRequest) {
       institutionId: body.institution_id,
       reason: `Create QCTO request: ${body.title}`,
       
-      // RBAC: Only QCTO_USER and PLATFORM_ADMIN can create QCTO requests
       assertCan: async (tx, ctx) => {
-        const allowedRoles: Role[] = ["QCTO_USER", "PLATFORM_ADMIN"];
-        if (!allowedRoles.includes(ctx.role)) {
+        if (!QCTO_DATA_ACCESS_ROLES.includes(ctx.role)) {
           throw new AppError(
             ERROR_CODES.FORBIDDEN,
             `Role ${ctx.role} cannot create QCTO requests`,
@@ -191,15 +189,17 @@ export async function POST(request: NextRequest) {
             institution: {
               select: {
                 institution_id: true,
-                name: true,
-                code: true,
+                legal_name: true,
+                trading_name: true,
+                registration_number: true,
               },
             },
             requestedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             requestResources: {
@@ -247,12 +247,15 @@ export async function POST(request: NextRequest) {
  * Query parameters:
  * - institution_id (optional - filter by institution; PLATFORM_ADMIN only)
  * - status (optional - filter by status: PENDING, APPROVED, REJECTED)
+ * - q (optional - search in title, institution legal_name, trading_name, registration_number; min 2 chars)
  * - limit (optional, default 50, max 200)
+ * - offset (optional, default 0) - for pagination
  * 
  * Returns:
  * {
  *   "count": number,
- *   "items": [ ...qctoRequests... ]
+ *   "items": [ ...qctoRequests... ],
+ *   "meta": { "isYourRequestsOnly": boolean }
  * }
  */
 export async function GET(request: NextRequest) {
@@ -260,8 +263,7 @@ export async function GET(request: NextRequest) {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can access QCTO endpoints
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot access QCTO endpoints`,
@@ -273,11 +275,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const institutionIdParam = searchParams.get("institution_id");
     const statusParam = searchParams.get("status") as "PENDING" | "APPROVED" | "REJECTED" | null;
+    const qParam = searchParams.get("q")?.trim() || "";
     const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
     const limit = Math.min(
       limitParam ? parseInt(limitParam, 10) : 50,
       200 // Cap at 200
     );
+    const offset = Math.max(0, offsetParam ? parseInt(offsetParam, 10) : 0);
 
     if (isNaN(limit) || limit < 1) {
       throw new AppError(
@@ -286,6 +291,9 @@ export async function GET(request: NextRequest) {
         400
       );
     }
+
+    // Get province filter based on user's assigned provinces
+    const provinceFilter = await getProvinceFilterForQCTO(ctx);
 
     // Build where clause
     const where: any = {
@@ -297,8 +305,44 @@ export async function GET(request: NextRequest) {
       where.requested_by = ctx.userId;
     }
 
-    // PLATFORM_ADMIN: Can filter by institution if provided
-    if (ctx.role === "PLATFORM_ADMIN" && institutionIdParam) {
+    // Apply province filtering to requests (via institution)
+    if (provinceFilter !== null && provinceFilter.length > 0) {
+      where.institution = {
+        ...where.institution,
+        province: { in: provinceFilter },
+      };
+    } else if (provinceFilter !== null && provinceFilter.length === 0) {
+      // No provinces assigned - return empty result
+      return NextResponse.json(
+        {
+          count: 0,
+          items: [],
+          meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
+        },
+        { status: 200 }
+      );
+    }
+
+    // PLATFORM_ADMIN, QCTO_SUPER_ADMIN, QCTO_ADMIN: Can filter by institution if provided
+    if (institutionIdParam && ctx.role !== "QCTO_USER") {
+      // Verify institution is in user's province filter (if applicable)
+      if (provinceFilter !== null && provinceFilter.length > 0) {
+        const institution = await prisma.institution.findUnique({
+          where: { institution_id: institutionIdParam },
+          select: { province: true },
+        });
+        if (!institution || !provinceFilter.includes(institution.province)) {
+          // Institution not in user's provinces - return empty
+          return NextResponse.json(
+            {
+              count: 0,
+              items: [],
+              meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
+            },
+            { status: 200 }
+          );
+        }
+      }
       where.institution_id = institutionIdParam;
     }
 
@@ -315,46 +359,44 @@ export async function GET(request: NextRequest) {
       where.status = statusParam;
     }
 
-    // Note: Verify the Prisma client model name after migration
-    // It might be qCTORequest or qctoRequest
+    // Search: q (min 2 chars) in title or institution fields
+    if (qParam.length >= 2) {
+      where.AND = [
+        {
+          OR: [
+            { title: { contains: qParam, mode: "insensitive" } },
+            { institution: { legal_name: { contains: qParam, mode: "insensitive" } } },
+            { institution: { trading_name: { contains: qParam, mode: "insensitive" } } },
+            { institution: { registration_number: { contains: qParam, mode: "insensitive" } } },
+          ],
+        },
+      ];
+    }
+
     const [requests, totalCount] = await Promise.all([
       prisma.qCTORequest.findMany({
         where,
-        include: {
+        select: {
+          request_id: true,
+          institution_id: true,
+          title: true,
+          request_type: true,
+          status: true,
+          requested_at: true,
+          reviewed_at: true,
+          expires_at: true,
           institution: {
             select: {
               institution_id: true,
-              name: true,
-              code: true,
+              legal_name: true,
+              trading_name: true,
+              registration_number: true,
             },
           },
-          requestedByUser: {
-            select: {
-              user_id: true,
-              email: true,
-              name: true,
-            },
-          },
-          reviewedByUser: {
-            select: {
-              user_id: true,
-              email: true,
-              name: true,
-            },
-          },
-          requestResources: {
-            select: {
-              resource_id: true,
-              resource_type: true,
-              resource_id_value: true,
-              added_at: true,
-              notes: true,
-            },
-          },
+          _count: { select: { requestResources: true } },
         },
-        orderBy: {
-          requested_at: "desc",
-        },
+        orderBy: { requested_at: "desc" },
+        skip: offset,
         take: limit,
       }),
       prisma.qCTORequest.count({ where }),
@@ -370,6 +412,7 @@ export async function GET(request: NextRequest) {
       {
         count: totalCount,
         items: requests,
+        meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
       },
       { status: 200, headers }
     );

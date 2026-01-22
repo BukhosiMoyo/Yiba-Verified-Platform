@@ -12,6 +12,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
+import { validateRouteParamUUID } from "@/lib/security/validation";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/api/routeHelpers";
 
 /**
  * GET /api/qcto/requests/[requestId]
@@ -37,8 +40,7 @@ export async function GET(
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can access QCTO endpoints
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot access QCTO endpoints`,
@@ -46,8 +48,12 @@ export async function GET(
       );
     }
 
-    // Unwrap params (Next.js 16)
-    const { requestId } = await params;
+    // Apply rate limiting
+    const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
+    
+    // Unwrap and validate params (Next.js 16)
+    const { requestId: rawRequestId } = await params;
+    const requestId = validateRouteParamUUID(rawRequestId, "requestId");
 
     // Build where clause with access control
     const where: any = {
@@ -68,23 +74,26 @@ export async function GET(
         institution: {
           select: {
             institution_id: true,
-            name: true,
-            code: true,
-            type: true,
+            legal_name: true,
+            trading_name: true,
+            registration_number: true,
+            institution_type: true,
           },
         },
         requestedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         reviewedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         requestResources: {
@@ -108,7 +117,7 @@ export async function GET(
     }
 
     // Add debug header in development
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...rateLimitHeaders };
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }

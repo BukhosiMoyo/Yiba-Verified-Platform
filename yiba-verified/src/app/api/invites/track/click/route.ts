@@ -28,18 +28,16 @@ export async function GET(request: NextRequest) {
     // Hash the token to find the invite
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 
-    // Update invite to mark as clicked
+    // Update invite to mark as clicked (only if not yet clicked and status is SENT/DELIVERED/OPENED)
     await prisma.invite.updateMany({
       where: {
         token_hash: tokenHash,
-        clicked_at: null, // Only update if not already clicked
+        clicked_at: null,
+        status: { in: ["SENT", "OPENED", "DELIVERED"] },
       },
       data: {
         clicked_at: new Date(),
-        // Update status if not already accepted
-        status: {
-          in: ["SENT", "OPENED", "DELIVERED"],
-        },
+        status: "OPENED",
       },
     });
 

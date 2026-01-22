@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, Check, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReadinessReviewFormProps {
@@ -111,27 +111,30 @@ export function ReadinessReviewForm({ readiness }: ReadinessReviewFormProps) {
               variant={status === "UNDER_REVIEW" ? "default" : "outline"}
               onClick={() => setStatus("UNDER_REVIEW")}
               disabled={isSubmitting}
-              className="flex-1"
+              className="flex-1 gap-2"
             >
-              🔍 Under Review
+              <Search className="h-4 w-4 shrink-0" aria-hidden />
+              Under Review
             </Button>
             <Button
               type="button"
               variant={status === "RECOMMENDED" ? "default" : "outline"}
               onClick={() => setStatus("RECOMMENDED")}
               disabled={isSubmitting}
-              className="flex-1"
+              className="flex-1 gap-2"
             >
-              ✓ Recommend
+              <Check className="h-4 w-4 shrink-0" aria-hidden />
+              Recommend
             </Button>
             <Button
               type="button"
               variant={status === "REJECTED" ? "destructive" : "outline"}
               onClick={() => setStatus("REJECTED")}
               disabled={isSubmitting}
-              className="flex-1"
+              className="flex-1 gap-2"
             >
-              ✗ Reject
+              <X className="h-4 w-4 shrink-0" aria-hidden />
+              Reject
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
@@ -151,27 +154,30 @@ export function ReadinessReviewForm({ readiness }: ReadinessReviewFormProps) {
                 variant={recommendation === "APPROVE" ? "default" : "outline"}
                 onClick={() => setRecommendation("APPROVE")}
                 disabled={isSubmitting}
-                className="flex-1"
+                className="flex-1 gap-2"
               >
-                ✓ Approve
+                <Check className="h-4 w-4 shrink-0" aria-hidden />
+                Approve
               </Button>
               <Button
                 type="button"
                 variant={recommendation === "CONDITIONAL_APPROVAL" ? "default" : "outline"}
                 onClick={() => setRecommendation("CONDITIONAL_APPROVAL")}
                 disabled={isSubmitting}
-                className="flex-1"
+                className="flex-1 gap-2"
               >
-                ⚠️ Conditional
+                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+                Conditional
               </Button>
               <Button
                 type="button"
                 variant={recommendation === "REJECT" ? "destructive" : "outline"}
                 onClick={() => setRecommendation("REJECT")}
                 disabled={isSubmitting}
-                className="flex-1"
+                className="flex-1 gap-2"
               >
-                ✗ Reject
+                <X className="h-4 w-4 shrink-0" aria-hidden />
+                Reject
               </Button>
             </div>
           </div>

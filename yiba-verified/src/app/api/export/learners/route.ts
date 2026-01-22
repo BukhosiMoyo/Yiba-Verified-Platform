@@ -49,11 +49,11 @@ export async function GET(request: NextRequest) {
         { first_name: { contains: q, mode: "insensitive" } },
         { last_name: { contains: q, mode: "insensitive" } },
         { national_id: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
+        { user: { email: { contains: q, mode: "insensitive" } } },
       ];
     }
 
-    // Fetch learners with institution info
+    // Fetch learners with institution and user info
     const learners = await prisma.learner.findMany({
       where,
       include: {
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
             trading_name: true,
           },
         },
+        user: { select: { email: true, phone: true } },
       },
       orderBy: { created_at: "desc" },
     });
@@ -80,10 +81,10 @@ export async function GET(request: NextRequest) {
             national_id: learner.national_id,
             first_name: learner.first_name,
             last_name: learner.last_name,
-            email: learner.email,
-            phone_number: learner.phone_number,
-            date_of_birth: learner.date_of_birth?.toISOString() || null,
-            gender: learner.gender,
+            email: learner.user?.email ?? null,
+            phone_number: learner.user?.phone ?? null,
+            date_of_birth: learner.birth_date?.toISOString() || null,
+            gender: learner.gender_code,
             institution_id: learner.institution_id,
             institution_name: learner.institution.trading_name || learner.institution.legal_name,
             created_at: learner.created_at.toISOString(),
@@ -114,10 +115,10 @@ export async function GET(request: NextRequest) {
         learner.national_id || "",
         learner.first_name || "",
         learner.last_name || "",
-        learner.email || "",
-        learner.phone_number || "",
-        learner.date_of_birth?.toISOString().split("T")[0] || "",
-        learner.gender || "",
+        learner.user?.email || "",
+        learner.user?.phone || "",
+        learner.birth_date?.toISOString().split("T")[0] || "",
+        learner.gender_code || "",
         learner.institution_id,
         (learner.institution.trading_name || learner.institution.legal_name || "").replace(/,/g, ";"),
         learner.created_at.toISOString(),

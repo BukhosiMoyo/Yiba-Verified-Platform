@@ -52,6 +52,12 @@ function InstitutionSubmissionsContent() {
     } catch (_) { /* ignore */ }
   }, []);
 
+  // Sync filters from URL when navigating from sidebar (e.g. ?status=SUBMITTED)
+  useEffect(() => {
+    setStatusFilter(searchParams.get("status") || "");
+    setSearchQuery(searchParams.get("q") || "");
+  }, [searchParams]);
+
   useEffect(() => {
     fetchSubmissions();
   }, [searchQuery, statusFilter, offset, pageSize]);
@@ -217,7 +223,7 @@ function InstitutionSubmissionsContent() {
                       const resCount = s._count?.submissionResources ?? s.submissionResources?.length ?? 0;
                       return (
                         <TableRow key={s.submission_id} className="group hover:bg-sky-50/50 transition-colors duration-200">
-                          <TableCell className="py-3 whitespace-nowrap text-muted-foreground w-12">{offset + index + 1}</TableCell>
+                          <TableCell className="py-3 whitespace-nowrap text-gray-800 w-12 font-bold">{offset + index + 1}</TableCell>
                           <TableCell className="font-medium py-3 max-w-[220px] truncate" title={s.title || "Untitled"}>{s.title || "Untitled"}</TableCell>
                           <TableCell className="py-3 whitespace-nowrap">{s.submission_type || "N/A"}</TableCell>
                           <TableCell className="py-3 whitespace-nowrap">
@@ -231,7 +237,7 @@ function InstitutionSubmissionsContent() {
                           </TableCell>
                           <TableCell className="py-3 whitespace-nowrap">{resCount}</TableCell>
                           <TableCell className="sticky right-0 z-10 bg-white group-hover:bg-sky-50/50 border-l border-gray-200 py-3 whitespace-nowrap">
-                            <Button variant="outline" size="sm" asChild className="h-7 min-w-0 px-2 text-xs gap-1">
+                            <Button variant="outline" size="sm" asChild className="h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-400">
                               <Link href={`/institution/submissions/${s.submission_id}`}>
                                 <Eye className="h-3 w-3" aria-hidden />
                                 View

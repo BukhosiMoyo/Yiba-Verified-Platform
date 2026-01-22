@@ -1,14 +1,9 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
-import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { EnrolmentsTable } from "@/components/institution/EnrolmentsTable";
+import { ClipboardList } from "lucide-react";
 
 interface PageProps {
   searchParams: {
@@ -106,118 +101,36 @@ export default async function EnrolmentsPage({ searchParams }: PageProps) {
     take: limit,
   });
 
-  // Format dates for display
-  const formatDate = (date: Date | null) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-ZA", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatStatus = (status: string) => {
-    const statusMap: Record<string, string> = {
-      ACTIVE: "Active",
-      COMPLETED: "Completed",
-      TRANSFERRED: "Transferred",
-      ARCHIVED: "Archived",
-    };
-    return statusMap[status] || status;
-  };
-
   return (
-    <div className="space-y-4 md:space-y-8 p-4 md:p-8">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Enrolments</h1>
-        <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-          Manage learner enrolments for qualifications
-        </p>
+    <div className="space-y-6 md:space-y-8 p-4 md:p-8">
+      {/* Header with gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 via-violet-600 to-purple-700 px-6 py-8 md:px-8 md:py-10 text-white shadow-lg">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.14)_0%,_transparent_50%)]" aria-hidden />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+            <ClipboardList className="h-7 w-7" strokeWidth={1.8} />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Enrolments</h1>
+            <p className="mt-1 text-violet-100 text-sm md:text-base">
+              Manage learner enrolments for qualifications
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">All Enrolments</h2>
-          <p className="text-sm text-muted-foreground">
+      {/* Main card */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden border-l-4 border-l-violet-500">
+        <div className="border-b border-slate-200/80 dark:border-border bg-slate-50/30 dark:bg-muted/30 px-4 py-4 md:px-6 md:py-5">
+          <h2 className="text-lg font-semibold text-foreground">All Enrolments</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {enrolments.length} enrolment{enrolments.length !== 1 ? "s" : ""} found
             {searchQuery && ` matching "${searchQuery}"`}
           </p>
         </div>
-        <ResponsiveTable>
-            <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Learner</TableHead>
-                <TableHead>National ID</TableHead>
-                <TableHead>Qualification</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Expected Completion</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {enrolments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12">
-                    <EmptyState
-                      title="No enrolments found"
-                      description={
-                        searchQuery
-                          ? `No enrolments match "${searchQuery}". Try a different search term.`
-                          : "Create an enrolment to link a learner to a qualification. Enrolments track the progress and status of learners in their qualifications."
-                      }
-                      icon={<GraduationCap className="h-6 w-6" strokeWidth={1.5} />}
-                      variant={searchQuery ? "no-results" : "default"}
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                enrolments.map((enrolment) => (
-                  <TableRow key={enrolment.enrolment_id}>
-                    <TableCell className="font-medium">
-                      {enrolment.learner.first_name} {enrolment.learner.last_name}
-                    </TableCell>
-                    <TableCell>{enrolment.learner.national_id}</TableCell>
-                    <TableCell>
-                      {enrolment.qualification?.name || enrolment.qualification_title}
-                      {enrolment.qualification?.code && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({enrolment.qualification.code})
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(enrolment.start_date)}</TableCell>
-                    <TableCell>{formatDate(enrolment.expected_completion_date)}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          enrolment.enrolment_status === "ACTIVE"
-                            ? "bg-green-100 text-green-800"
-                            : enrolment.enrolment_status === "COMPLETED"
-                            ? "bg-blue-100 text-blue-800"
-                            : enrolment.enrolment_status === "TRANSFERRED"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {formatStatus(enrolment.enrolment_status)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/institution/enrolments/${enrolment.enrolment_id}`}
-                        className="text-primary hover:underline text-sm"
-                      >
-                        View
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </ResponsiveTable>
+        <div className="px-4 md:px-6 py-4 md:py-5">
+          <EnrolmentsTable enrolments={enrolments} searchQuery={searchQuery} />
+        </div>
       </div>
     </div>
   );

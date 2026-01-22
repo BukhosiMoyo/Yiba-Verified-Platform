@@ -10,7 +10,7 @@ export interface UploadedFilePillProps {
   status?: "idle" | "uploading" | "complete" | "error";
   progress?: number; // 0-100, only used when status is "uploading"
   error?: string;
-  onRemove?: () => void;
+  onRemove?: (e?: React.MouseEvent) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -101,11 +101,11 @@ export function UploadedFilePill({
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border border-gray-200/60 bg-white p-3 transition-all duration-200",
-        "hover:border-gray-300 hover:bg-gray-50/50",
-        status === "uploading" && "border-blue-200 bg-blue-50/20",
-        status === "complete" && "border-green-200 bg-green-50/20",
-        status === "error" && "border-red-200 bg-red-50/20",
+        "group relative rounded-2xl border border-border bg-card p-3 transition-all duration-200",
+        "hover:border-border-strong hover:bg-muted/50",
+        status === "uploading" && "border-primary/50 bg-primary/10",
+        status === "complete" && "border-emerald-200 dark:border-emerald-800 bg-emerald-50/20 dark:bg-emerald-950/20",
+        status === "error" && "border-destructive/50 bg-destructive/10",
         className
       )}
     >
@@ -127,14 +127,14 @@ export function UploadedFilePill({
         {/* File Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
+            <p className="text-sm font-semibold text-foreground truncate">
               {file.name}
             </p>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-xs text-gray-500">{fileType.type}</span>
-            <span className="text-xs text-gray-300">•</span>
-            <span className="text-xs text-gray-500">{fileSize}</span>
+            <span className="text-xs text-muted-foreground">{fileType.type}</span>
+            <span className="text-xs text-muted-foreground/50">•</span>
+            <span className="text-xs text-muted-foreground">{fileSize}</span>
           </div>
         </div>
 
@@ -149,8 +149,8 @@ export function UploadedFilePill({
         {onRemove && !disabled && status !== "uploading" && (
           <button
             type="button"
-            onClick={onRemove}
-            className="shrink-0 h-7 w-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-colors duration-150 flex items-center justify-center"
+            onClick={(e) => onRemove(e)}
+            className="shrink-0 h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex items-center justify-center"
             aria-label="Remove file"
           >
             <X className="h-4 w-4" strokeWidth={1.5} />

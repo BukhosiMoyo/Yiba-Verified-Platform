@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormItem, FormErrorMessage, FormHint } from "@/components/ui/form";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -205,5 +205,23 @@ export default function ResetPasswordPage() {
         </form>
       </AuthCard>
     </AuthLayout>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout>
+          <AuthCard title="Loading…" subtitle="Please wait">
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          </AuthCard>
+        </AuthLayout>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

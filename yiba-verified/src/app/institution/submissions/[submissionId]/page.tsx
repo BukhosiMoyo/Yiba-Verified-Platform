@@ -72,14 +72,16 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
       submittedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
       reviewedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
@@ -92,7 +94,8 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
           notes: true,
           addedByUser: {
             select: {
-              name: true,
+              first_name: true,
+              last_name: true,
               email: true,
             },
           },
@@ -201,7 +204,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Submitted By</p>
                 <p className="text-base">
-                  {submission.submittedByUser.name || submission.submittedByUser.email}
+                  {[submission.submittedByUser?.first_name, submission.submittedByUser?.last_name].filter(Boolean).join(" ") || submission.submittedByUser?.email}
                 </p>
               </div>
             )}
@@ -217,7 +220,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Reviewed By</p>
                     <p className="text-base">
-                      {submission.reviewedByUser.name || submission.reviewedByUser.email}
+                      {[submission.reviewedByUser?.first_name, submission.reviewedByUser?.last_name].filter(Boolean).join(" ") || submission.reviewedByUser?.email}
                     </p>
                   </div>
                 )}
@@ -276,7 +279,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
                     <p className="text-xs text-muted-foreground mt-1">
                       Added: {formatDateTime(resource.added_at)}
                       {resource.addedByUser && (
-                        <> by {resource.addedByUser.name || resource.addedByUser.email}</>
+                        <> by {[resource.addedByUser?.first_name, resource.addedByUser?.last_name].filter(Boolean).join(" ") || resource.addedByUser?.email}</>
                       )}
                     </p>
                   </div>

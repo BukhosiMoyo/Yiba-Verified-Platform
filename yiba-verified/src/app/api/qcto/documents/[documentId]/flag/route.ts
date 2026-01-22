@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
+import { canAccessQctoData } from "@/lib/rbac";
 
 interface RouteParams {
   params: Promise<{
@@ -22,9 +23,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const ctx = await requireApiContext(request);
     const { documentId } = await params;
 
-    // Only QCTO_USER and PLATFORM_ADMIN can flag documents
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO users can flag documents", 403));
+    if (!canAccessQctoData(ctx.role)) {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can flag documents", 403));
     }
 
     const body = await request.json();
@@ -48,9 +48,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       action: "DOCUMENT_FLAG",
       entityType: "DOCUMENT",
       entityId: documentId,
-      fn: async () => {
+      fn: async (tx) => {
         // Create flag
-        const newFlag = await prisma.evidenceFlag.create({
+        const newFlag = await tx.evidenceFlag.create({
           data: {
             document_id: documentId,
             flagged_by: ctx.userId,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
 
         // Update document status to FLAGGED if currently UPLOADED
-        await prisma.document.update({
+        await tx.document.update({
           where: { document_id: documentId },
           data: {
             status: document.status === "UPLOADED" ? "FLAGGED" : document.status,

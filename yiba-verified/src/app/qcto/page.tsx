@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessQctoData } from "@/lib/rbac";
 import { QctoDashboardClient } from "./QctoDashboardClient";
+import type { ApiContext } from "@/lib/api/context";
 
 /**
  * QCTO Dashboard
@@ -22,15 +24,82 @@ export default async function QCTODashboard() {
   const userRole = session.user.role;
   const userId = session.user.userId;
 
-  // Only QCTO_USER and PLATFORM_ADMIN can access
-  if (userRole !== "QCTO_USER" && userRole !== "PLATFORM_ADMIN") {
+  if (!canAccessQctoData(userRole)) {
     redirect("/unauthorized");
+  }
+
+  // Get province filter based on user's assigned provinces
+  let provinceFilter: string[] | null = null;
+  
+  if (userRole !== "PLATFORM_ADMIN" && userRole !== "QCTO_SUPER_ADMIN") {
+    // Get user's assigned provinces for province filtering
+    const user = await prisma.user.findUnique({
+      where: { user_id: userId },
+      select: { assigned_provinces: true },
+    });
+    
+    if (user?.assigned_provinces && user.assigned_provinces.length > 0) {
+      provinceFilter = user.assigned_provinces;
+    } else {
+      // No provinces assigned - return empty dashboard
+      provinceFilter = [];
+    }
   }
 
   // Build base where clause (all non-deleted submissions)
   const submissionsWhere: any = {
     deleted_at: null,
   };
+
+  // Apply province filtering to submissions (via institution)
+  if (provinceFilter !== null && provinceFilter.length > 0) {
+    submissionsWhere.institution = {
+      province: { in: provinceFilter },
+    };
+  } else if (provinceFilter !== null && provinceFilter.length === 0) {
+    // No provinces assigned - return empty dashboard
+    return (
+      <QctoDashboardClient
+        userRole={userRole as "QCTO_USER" | "QCTO_SUPER_ADMIN" | "QCTO_ADMIN" | "PLATFORM_ADMIN"}
+        submissionsTotal={0}
+        submissionsSubmitted={0}
+        submissionsUnderReview={0}
+        submissionsApproved={0}
+        submissionsRejected={0}
+        requestsTotal={0}
+        requestsPending={0}
+        readinessSubmitted={0}
+        readinessUnderReview={0}
+        pendingSubmissions={[]}
+        recentReviews={[]}
+        pendingReadiness={[]}
+      />
+    );
+  }
+
+  // Build requests where clause
+  const requestsWhere: any = {
+    deleted_at: null,
+  };
+
+  // Apply province filtering to requests (via institution)
+  if (provinceFilter !== null && provinceFilter.length > 0) {
+    requestsWhere.institution = {
+      province: { in: provinceFilter },
+    };
+  }
+
+  // Build readiness where clause
+  const readinessWhere: any = {
+    deleted_at: null,
+  };
+
+  // Apply province filtering to readiness (via institution)
+  if (provinceFilter !== null && provinceFilter.length > 0) {
+    readinessWhere.institution = {
+      province: { in: provinceFilter },
+    };
+  }
 
   // Fetch stats in parallel
   const [
@@ -62,16 +131,16 @@ export default async function QCTODashboard() {
       where: { ...submissionsWhere, status: "REJECTED" },
     }),
     // Request counts
-    prisma.qCTORequest.count({ where: { deleted_at: null } }),
+    prisma.qCTORequest.count({ where: requestsWhere }),
     prisma.qCTORequest.count({
-      where: { deleted_at: null, status: "PENDING" },
+      where: { ...requestsWhere, status: "PENDING" },
     }),
     // Readiness counts
     prisma.readiness.count({
-      where: { deleted_at: null, readiness_status: "SUBMITTED" },
+      where: { ...readinessWhere, readiness_status: "SUBMITTED" },
     }),
     prisma.readiness.count({
-      where: { deleted_at: null, readiness_status: "UNDER_REVIEW" },
+      where: { ...readinessWhere, readiness_status: "UNDER_REVIEW" },
     }),
     // Pending submissions (SUBMITTED or UNDER_REVIEW) - latest first
     prisma.submission.findMany({
@@ -139,7 +208,7 @@ export default async function QCTODashboard() {
     // Pending readiness records (SUBMITTED or UNDER_REVIEW) - latest first
     prisma.readiness.findMany({
       where: {
-        deleted_at: null,
+        ...readinessWhere,
         readiness_status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
       },
       take: 5,
@@ -158,7 +227,7 @@ export default async function QCTODashboard() {
 
   return (
     <QctoDashboardClient
-      userRole={userRole as "QCTO_USER" | "PLATFORM_ADMIN"}
+      userRole={userRole as "QCTO_USER" | "QCTO_SUPER_ADMIN" | "QCTO_ADMIN" | "PLATFORM_ADMIN"}
       submissionsTotal={submissionsTotal}
       submissionsSubmitted={submissionsSubmitted}
       submissionsUnderReview={submissionsUnderReview}

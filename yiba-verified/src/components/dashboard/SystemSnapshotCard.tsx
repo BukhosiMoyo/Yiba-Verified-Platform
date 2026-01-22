@@ -14,13 +14,13 @@ interface SystemSnapshotCardProps {
  */
 export function SystemSnapshotCard({ className }: SystemSnapshotCardProps) {
   return (
-    <Card className={`group relative flex flex-col h-full border border-gray-200/80 bg-white rounded-xl transition-all duration-200 hover:border-gray-300 hover:bg-gray-50/50 overflow-hidden ${className || ""}`}>
+    <Card className={`group relative flex flex-col h-full border border-gray-200/80 rounded-xl transition-all duration-200 hover:border-gray-300 overflow-hidden bg-gradient-to-br from-emerald-50/60 via-white to-white ${className || ""}`}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pt-5 pb-3 flex-shrink-0">
         <CardTitle className="text-sm font-medium text-gray-600 min-w-0 flex-1 pr-2">
           <span className="truncate block">System Snapshot</span>
         </CardTitle>
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-green-50 transition-colors duration-200 group-hover:bg-green-100">
-          <Activity className="h-5 w-5 text-green-600" strokeWidth={1.5} />
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 transition-colors duration-200 group-hover:bg-emerald-100">
+          <Activity className="h-5 w-5 text-emerald-600" strokeWidth={1.5} />
         </div>
       </CardHeader>
       <CardContent className="px-5 pb-5 pt-0 flex flex-col justify-between flex-1 min-h-0 space-y-4">

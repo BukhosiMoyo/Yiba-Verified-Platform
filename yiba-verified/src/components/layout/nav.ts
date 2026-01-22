@@ -11,6 +11,8 @@ export type NavItem = {
   badge?: number;
   /** Nested links (e.g. "All", "Pending" under Submissions). Shown as a dropdown. */
   children?: NavItem[];
+  /** Query param used by children for "active" state: "status" (default) or "province". */
+  childParam?: "status" | "province";
 };
 
 /**

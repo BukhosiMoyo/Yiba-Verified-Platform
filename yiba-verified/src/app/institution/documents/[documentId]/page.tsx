@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentVersionHistory } from "@/components/institution/DocumentVersionHistory";
 import { DocumentReplaceForm } from "@/components/institution/DocumentReplaceForm";
@@ -148,8 +149,9 @@ export default async function InstitutionDocumentDetailPage({ params }: PageProp
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Link href="/institution/documents" className="text-sm text-muted-foreground hover:text-primary">
-              ← Back to Documents
+            <Link href="/institution/documents" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+              Back to Documents
             </Link>
           </div>
           <h1 className="text-3xl font-bold mt-2">{document.file_name}</h1>
@@ -181,13 +183,13 @@ export default async function InstitutionDocumentDetailPage({ params }: PageProp
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Version</span>
-              <p className="text-lg">
+              <div className="text-lg">
                 <Badge variant="outline">v{document.version}</Badge>
-              </p>
+              </div>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Status</span>
-              <p className="text-lg">{getStatusBadge(document.status)}</p>
+              <div className="text-lg">{getStatusBadge(document.status)}</div>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Related Entity</span>

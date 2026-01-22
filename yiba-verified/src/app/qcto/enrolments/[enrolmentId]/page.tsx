@@ -4,10 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canReadForQCTO } from "@/lib/api/qctoAccess";
 import type { ApiContext } from "@/lib/api/context";
+import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { ArrowLeft, Building2, User, GraduationCap } from "lucide-react";
+import { ArrowLeft, Building2, User, GraduationCap, ClipboardCheck } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ enrolmentId: string }>;
@@ -27,12 +28,13 @@ export default async function QCTOEnrolmentDetailPage({ params }: PageProps) {
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;
-  if (role !== "QCTO_USER" && role !== "PLATFORM_ADMIN") redirect("/unauthorized");
+  if (!canAccessQctoData(role)) redirect("/unauthorized");
 
   const ctx: ApiContext = {
     userId: (session.user as { userId?: string }).userId ?? (session.user as { id?: string }).id ?? "",
     role: role!,
     institutionId: (session.user as { institutionId?: string }).institutionId ?? null,
+    qctoId: (session.user as { qctoId?: string | null }).qctoId ?? null,
   };
 
   const canRead = await canReadForQCTO(ctx, "ENROLMENT", enrolmentId);
@@ -83,6 +85,21 @@ export default async function QCTOEnrolmentDetailPage({ params }: PageProps) {
 
   if (!enrolment) notFound();
 
+  const records = await prisma.attendanceRecord.findMany({
+    where: { enrolment_id: enrolmentId },
+    select: {
+      record_id: true,
+      record_date: true,
+      status: true,
+      sickNote: { select: { reason: true, document_id: true } },
+    },
+    orderBy: { record_date: "desc" },
+    take: 100,
+  });
+
+  const count = { PRESENT: 0, ABSENT: 0, EXCUSED: 0, LATE: 0 };
+  for (const r of records) count[r.status as keyof typeof count]++;
+
   const formatDate = (d: Date | null) =>
     d ? new Date(d).toLocaleDateString("en-ZA", { year: "numeric", month: "long", day: "numeric" }) : "N/A";
   const formatDateTime = (d: Date | null) =>
@@ -101,6 +118,12 @@ export default async function QCTOEnrolmentDetailPage({ params }: PageProps) {
     COMPLETED: "bg-blue-100 text-blue-800",
     TRANSFERRED: "bg-amber-100 text-amber-800",
     ARCHIVED: "bg-gray-100 text-gray-800",
+  };
+  const attStatusClass: Record<string, string> = {
+    PRESENT: "bg-green-100 text-green-800",
+    ABSENT: "bg-red-100 text-red-800",
+    EXCUSED: "bg-amber-100 text-amber-800",
+    LATE: "bg-blue-100 text-blue-800",
   };
   const inst = enrolment.institution;
 
@@ -181,6 +204,55 @@ export default async function QCTOEnrolmentDetailPage({ params }: PageProps) {
               <p className="mt-0.5 text-[15px] text-gray-900">{formatDateTime(enrolment.updated_at)}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-gray-200/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-gray-500" />
+            Attendance register
+          </CardTitle>
+          <CardDescription>
+            Summary: {enrolment.attendance_percentage != null ? `${enrolment.attendance_percentage}%` : "—"} · Present: {count.PRESENT} · Absent: {count.ABSENT} · Excused: {count.EXCUSED} · Late: {count.LATE}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {records.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No attendance records yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2">Date</th>
+                    <th className="text-left py-2 px-2">Status</th>
+                    <th className="text-left py-2 px-2">Sick note / reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r) => (
+                    <tr key={r.record_id} className="border-b last:border-0">
+                      <td className="py-2 px-2">{formatDate(r.record_date)}</td>
+                      <td className="py-2 px-2">
+                        <Badge className={attStatusClass[r.status] || ""}>{r.status}</Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        {r.sickNote ? (
+                          <span>
+                            {r.sickNote.reason}
+                            {r.sickNote.document_id ? " (attachment on file)" : ""}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

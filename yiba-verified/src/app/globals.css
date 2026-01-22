@@ -1,15 +1,128 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Yiba Verified — Design tokens (Stripe/Linear-style SaaS)
+   Light + Dark: :root = light, .dark = dark (use next-themes or class on html)
+   ========================================================================== */
+
+:root {
+  /* Base: warm gray-white (not pure white), near-black in dark */
+  --background: #fafaf9;
+  --foreground: #0f172a;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+
+  /* Gradient stops (for hero, panel, CTA) */
+  --bg-gradient-hero-start: #fafaf9;
+  --bg-gradient-hero-mid: #f4f4f5;
+  --bg-gradient-hero-end: #ffffff;
+  --bg-gradient-panel-start: #fafaf9;
+  --bg-gradient-panel-end: #eef2ff;
+  --bg-gradient-cta-start: #f4f4f5;
+  --bg-gradient-cta-end: #e4e4e7;
+
+  /* Pattern opacity (dial down in dark) */
+  --pattern-opacity: 0.5;
+
+  /* Shadows */
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-float: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+
+  /* Border colors (use with border border-border-subtle) */
+  --border-subtle: rgb(228 228 231 / 0.8);
+  --border-strong: rgb(161 161 170);
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --border: #27272a;
+  --input: #27272a;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+
+  --bg-gradient-hero-start: #0c0c0d;
+  --bg-gradient-hero-mid: #0f0f11;
+  --bg-gradient-hero-end: #18181b;
+  --bg-gradient-panel-start: #0c0c0d;
+  --bg-gradient-panel-end: #0f172a;
+  --bg-gradient-cta-start: #18181b;
+  --bg-gradient-cta-end: #27272a;
+
+  --pattern-opacity: 0.25;
+
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+  --shadow-float: 0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.25);
+
+  --border-subtle: rgb(39 39 42 / 0.9);
+  --border-strong: rgb(63 63 70);
+}
+
 @theme inline {
-  /* Primary (blue) — main actions: Add, Save, Apply, Submit, Confirm */
+  --font-sans: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
   --color-primary: #2563eb;
   --color-primary-foreground: #ffffff;
-  /* Destructive (red) — Delete, Disable, Remove */
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  /* Focus ring and offset */
   --color-ring: #3b82f6;
-  --color-background: #ffffff;
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Primary button premium: subtle gradient + hover depth (max 250ms) */
+@layer components {
+  .btn-primary-premium {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition: box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary-premium:hover {
+    box-shadow: 0 4px 12px -2px rgb(37 99 235 / 0.35), 0 2px 4px -2px rgb(37 99 235 / 0.2);
+    filter: brightness(1.05);
+  }
+  .dark .btn-primary-premium:hover {
+    box-shadow: 0 4px 12px -2px rgb(37 99 235 / 0.4), 0 2px 4px -2px rgb(37 99 235 / 0.25);
+  }
 }
 
 /* Native date input: prevent text cut-off, ensure readable format */
@@ -51,14 +164,14 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
 }
 
 input[type="date"]::-webkit-datetime-edit-text {
-  color: rgb(107 114 128);
+  color: var(--muted-foreground);
   padding: 0 0.15rem;
 }
 
 input[type="date"]::-webkit-datetime-edit-month-field,
 input[type="date"]::-webkit-datetime-edit-day-field,
 input[type="date"]::-webkit-datetime-edit-year-field {
-  color: rgb(17 24 39);
+  color: var(--foreground);
   padding: 0 0.2rem;
   min-width: 1.5em;
 }
@@ -66,7 +179,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 input[type="date"]:focus::-webkit-datetime-edit-month-field,
 input[type="date"]:focus::-webkit-datetime-edit-day-field,
 input[type="date"]:focus::-webkit-datetime-edit-year-field {
-  background-color: rgb(239 246 255);
+  background-color: var(--accent);
   border-radius: 0.25rem;
 }
 
@@ -100,4 +213,92 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   background-repeat: repeat;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Google Places Autocomplete dropdown styling */
+.pac-container {
+  z-index: 9999 !important;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  margin-top: 0.25rem;
+  background: var(--card);
+}
+
+.pac-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background-color: var(--accent);
+}
+
+.pac-icon {
+  margin-right: 0.75rem;
+}
+
+.pac-item-query {
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+/* Institution overview: status-based dot pattern (dot color reflects status) */
+.institution-status-pattern {
+  position: relative;
+  overflow: hidden;
+}
+.institution-status-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
+}
+.institution-status-pattern--approved::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23059669' fill-opacity='0.14'/%3E%3C/svg%3E");
+}
+.institution-status-pattern--pending::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23d97706' fill-opacity='0.14'/%3E%3C/svg%3E");
+}
+.institution-status-pattern--rejected::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23dc2626' fill-opacity='0.14'/%3E%3C/svg%3E");
+}
+.institution-status-pattern--draft::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%2364748b' fill-opacity='0.12'/%3E%3C/svg%3E");
+}
+.institution-status-pattern--suspended::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23ea580c' fill-opacity='0.14'/%3E%3C/svg%3E");
+}
+.institution-status-pattern--default::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%2364748b' fill-opacity='0.10'/%3E%3C/svg%3E");
+}
+
+/* Form 5 Readiness: blue-tinted dot pattern for main form panel */
+.readiness-form-pattern {
+  position: relative;
+  overflow: hidden;
+}
+.readiness-form-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%232563eb' fill-opacity='0.08'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
 }

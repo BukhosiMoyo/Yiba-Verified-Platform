@@ -44,12 +44,14 @@ const platformAdminCtx: ApiContext = {
   userId: "platform-admin-123",
   role: "PLATFORM_ADMIN",
   institutionId: null,
+  qctoId: null,
 };
 
 const qctoUserCtx: ApiContext = {
   userId: "qcto-user-456",
   role: "QCTO_USER",
   institutionId: null,
+  qctoId: "qcto-org-1",
 };
 
 console.log("   - PLATFORM_ADMIN context:", platformAdminCtx.role === "PLATFORM_ADMIN" ? "✅" : "❌");

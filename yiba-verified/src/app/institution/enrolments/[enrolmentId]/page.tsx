@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 interface PageProps {
   params: {
@@ -189,7 +190,7 @@ export default async function EnrolmentDetailsPage({ params }: PageProps) {
                 <p className="text-sm font-medium text-muted-foreground">
                   Attendance Percentage
                 </p>
-                <p className="text-base">{enrolment.attendance_percentage}%</p>
+                <p className="text-base">{enrolment.attendance_percentage != null ? `${Number(enrolment.attendance_percentage)}%` : "—"}</p>
               </div>
             )}
 
@@ -283,7 +284,8 @@ export default async function EnrolmentDetailsPage({ params }: PageProps) {
               href={`/institution/learners/${enrolment.learner_id}`}
               className="text-primary hover:underline text-sm font-medium"
             >
-              View Full Learner Details →
+              View Full Learner Details
+              <ArrowRight className="ml-1.5 h-4 w-4 inline-block" aria-hidden />
             </Link>
           </div>
         </CardContent>

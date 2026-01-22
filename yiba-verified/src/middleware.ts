@@ -10,6 +10,8 @@ const AREA_PREFIXES: Array<{ prefix: string; area: RouteArea }> = [
   { prefix: "/qcto", area: "qcto" },
   { prefix: "/institution", area: "institution" },
   { prefix: "/student", area: "student" },
+  { prefix: "/account", area: "account" },
+  { prefix: "/announcements", area: "announcements" },
 ];
 
 function getAreaFromPath(pathname: string): RouteArea | null {
@@ -164,7 +166,11 @@ export async function middleware(req: NextRequest) {
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    // Only set "next" parameter if it's a safe internal path (prevents open redirects)
+    // Allow only paths that start with / and don't contain protocol separators
+    if (pathname && pathname.startsWith("/") && !pathname.includes("://") && !pathname.includes("//")) {
+      url.searchParams.set("next", pathname);
+    }
     let response = NextResponse.redirect(url);
     response = applySecurityHeaders(response);
     return response;
@@ -193,6 +199,10 @@ export const config = {
     "/qcto/:path*",
     "/institution/:path*",
     "/student/:path*",
+    "/account",
+    "/account/:path*",
+    "/announcements",
+    "/announcements/:path*",
     "/api/:path*",
     "/login",
     "/logout",

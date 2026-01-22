@@ -264,8 +264,8 @@ export async function POST(request: NextRequest) {
       action: "DOCUMENT_CREATE",
       entityType: "DOCUMENT",
       entityId: () => "", // Will be set after creation
-      fn: async () => {
-        return await prisma.document.create({
+      fn: async (tx) => {
+        return await tx.document.create({
           data: {
             related_entity: relatedEntity as any,
             related_entity_id: relatedEntityId,

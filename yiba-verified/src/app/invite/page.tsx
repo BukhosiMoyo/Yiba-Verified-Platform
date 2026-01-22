@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -18,12 +18,17 @@ import type { Role } from "@/lib/rbac";
 const roleRedirects: Record<Role, string> = {
   PLATFORM_ADMIN: "/platform-admin",
   QCTO_USER: "/qcto",
+  QCTO_SUPER_ADMIN: "/qcto",
+  QCTO_ADMIN: "/qcto",
+  QCTO_REVIEWER: "/qcto",
+  QCTO_AUDITOR: "/qcto",
+  QCTO_VIEWER: "/qcto",
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
 };
 
-export default function InvitePage() {
+function InviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -160,7 +165,20 @@ export default function InvitePage() {
         const role = session?.user?.role as Role | undefined;
 
         if (role && roleRedirects[role]) {
-          router.push(roleRedirects[role]);
+          // For STUDENT role, check onboarding status and redirect accordingly
+          if (role === "STUDENT") {
+            // Check onboarding status
+            const onboardingResponse = await fetch("/api/student/onboarding/status");
+            const onboardingData = await onboardingResponse.json();
+            
+            if (onboardingData.data && !onboardingData.data.completed) {
+              router.push("/student/onboarding");
+            } else {
+              router.push(roleRedirects[role]);
+            }
+          } else {
+            router.push(roleRedirects[role]);
+          }
           router.refresh();
         } else {
           router.push("/unauthorized");
@@ -391,5 +409,23 @@ export default function InvitePage() {
         </form>
       </AuthCard>
     </AuthLayout>
+  );
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout>
+          <AuthCard title="Loading…" subtitle="Please wait">
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          </AuthCard>
+        </AuthLayout>
+      }
+    >
+      <InviteContent />
+    </Suspense>
   );
 }

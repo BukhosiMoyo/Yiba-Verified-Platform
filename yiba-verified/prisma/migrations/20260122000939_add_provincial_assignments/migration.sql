@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "QCTOOrg" ALTER COLUMN "updated_at" DROP DEFAULT;

@@ -17,16 +17,16 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-red-500/50",
         /* Secondary — View, Cancel, Back, Export. Strong border + white bg so they never look faded. */
         outline:
-          "border border-gray-400 bg-white text-gray-900 shadow-sm hover:bg-gray-50 hover:border-gray-500 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-100 dark:shadow-none dark:hover:bg-gray-700 dark:hover:border-gray-400",
+          "border border-border bg-card text-foreground shadow-sm hover:bg-muted/60 hover:border-border dark:border-border dark:bg-card dark:text-card-foreground dark:shadow-none dark:hover:bg-muted dark:hover:border-border",
         /* Alias for outline; same visual tier. */
         secondary:
-          "border border-gray-400 bg-white text-gray-900 shadow-sm hover:bg-gray-50 hover:border-gray-500 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-100 dark:shadow-none dark:hover:bg-gray-700 dark:hover:border-gray-400",
+          "border border-border bg-card text-foreground shadow-sm hover:bg-muted/60 hover:border-border dark:border-border dark:bg-card dark:text-card-foreground dark:shadow-none dark:hover:bg-muted dark:hover:border-border",
         /* Low-emphasis: border, dark text, stronger hover. Must not look disabled. */
         ghost:
-          "border border-gray-300 bg-transparent text-gray-900 hover:bg-gray-100 hover:border-gray-400 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 dark:hover:border-gray-500",
+          "border border-transparent bg-transparent text-foreground hover:bg-muted/60 dark:border-transparent dark:text-foreground dark:hover:bg-muted",
         link: "text-primary underline-offset-4 hover:underline",
         pill:
-          "rounded-full border border-gray-300 bg-transparent text-gray-900 hover:bg-gray-100 hover:border-gray-400 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 dark:hover:border-gray-500",
+          "rounded-full border border-border bg-transparent text-foreground hover:bg-muted/60 dark:border-border dark:text-foreground dark:hover:bg-muted",
       },
       size: {
         default: "h-10 px-4 py-2",

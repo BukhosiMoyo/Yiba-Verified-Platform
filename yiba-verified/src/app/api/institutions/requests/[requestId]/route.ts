@@ -202,22 +202,25 @@ export async function PATCH(
             institution: {
               select: {
                 institution_id: true,
-                name: true,
-                code: true,
+                legal_name: true,
+                trading_name: true,
+                registration_number: true,
               },
             },
             requestedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             reviewedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             requestResources: {
@@ -313,23 +316,26 @@ export async function GET(
         institution: {
           select: {
             institution_id: true,
-            name: true,
-            code: true,
-            type: true,
+            legal_name: true,
+            trading_name: true,
+            registration_number: true,
+            institution_type: true,
           },
         },
         requestedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         reviewedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         requestResources: {

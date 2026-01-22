@@ -78,17 +78,9 @@ export async function GET(request: NextRequest) {
       deleted_at: null, // Only non-deleted learners
     };
 
-    // Filter by institution if provided
-    // If q is provided but institution_id is not, allow cross-institution search (for search functionality)
+    // Filter by institution if provided (optional: when omitted, returns all learners across institutions)
     if (institutionId) {
       where.institution_id = institutionId;
-    } else if (!searchQuery.trim()) {
-      // If no search query and no institution_id, require institution_id to prevent dumping all learners
-      throw new AppError(
-        ERROR_CODES.VALIDATION_ERROR,
-        "Either institution_id or search query (q) must be provided",
-        400
-      );
     }
 
     // Add search filter if provided

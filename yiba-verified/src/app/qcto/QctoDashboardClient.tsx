@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 interface QctoDashboardClientProps {
-  userRole: "QCTO_USER" | "PLATFORM_ADMIN";
+  userRole: "QCTO_USER" | "QCTO_SUPER_ADMIN" | "QCTO_ADMIN" | "PLATFORM_ADMIN";
   submissionsTotal: number;
   submissionsSubmitted: number;
   submissionsUnderReview: number;
@@ -113,60 +113,58 @@ export function QctoDashboardClient({
         </p>
       </div>
 
-      {/* Metric Cards - Dot-grid + light blue. 5 in a row on large screens. */}
-      <section className="qcto-metrics-pattern rounded-2xl border border-gray-200/70 bg-sky-50/60 px-6 py-6">
-        <div className="relative z-10 grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-          <DashboardMetricCard
-            title="Pending Reviews"
-            value={pendingReviewsCount}
-            subtext={`${submissionsSubmitted} submitted, ${submissionsUnderReview} under review`}
-            colorVariant="amber"
-            trendTint="amber"
-            icon={ClipboardList}
-            trendPlaceholder="—"
-          />
-          <DashboardMetricCard
-            title="Approved"
-            value={submissionsApproved}
-            subtext="Approved submissions"
-            colorVariant="green"
-            trendTint="green"
-            icon={CheckCircle2}
-            trendPlaceholder="—"
-          />
-          <DashboardMetricCard
-            title="Total Submissions"
-            value={submissionsTotal}
-            subtext={`${submissionsRejected} rejected`}
-            colorVariant="blue"
-            trendTint="blue"
-            icon={FileText}
-            trendPlaceholder="—"
-          />
-          <DashboardMetricCard
-            title="Pending Requests"
-            value={requestsPending}
-            subtext={`${requestsTotal} total requests`}
-            colorVariant="purple"
-            trendTint="blue"
-            icon={Inbox}
-            trendPlaceholder="—"
-          />
-          <DashboardMetricCard
-            title="Pending Readiness"
-            value={pendingReadinessCount}
-            subtext="Readiness records awaiting review"
-            colorVariant="cyan"
-            trendTint="blue"
-            icon={FileCheck}
-            trendPlaceholder="—"
-          />
-        </div>
-      </section>
+      {/* Metric Cards - 5 in a row on large screens. */}
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+        <DashboardMetricCard
+          title="Pending Reviews"
+          value={pendingReviewsCount}
+          subtext={`${submissionsSubmitted} submitted, ${submissionsUnderReview} under review`}
+          colorVariant="amber"
+          trendTint="amber"
+          icon={ClipboardList}
+          trendPlaceholder="—"
+        />
+        <DashboardMetricCard
+          title="Approved"
+          value={submissionsApproved}
+          subtext="Approved submissions"
+          colorVariant="green"
+          trendTint="green"
+          icon={CheckCircle2}
+          trendPlaceholder="—"
+        />
+        <DashboardMetricCard
+          title="Total Submissions"
+          value={submissionsTotal}
+          subtext={`${submissionsRejected} rejected`}
+          colorVariant="blue"
+          trendTint="blue"
+          icon={FileText}
+          trendPlaceholder="—"
+        />
+        <DashboardMetricCard
+          title="Pending Requests"
+          value={requestsPending}
+          subtext={`${requestsTotal} total requests`}
+          colorVariant="purple"
+          trendTint="blue"
+          icon={Inbox}
+          trendPlaceholder="—"
+        />
+        <DashboardMetricCard
+          title="Pending Readiness"
+          value={pendingReadinessCount}
+          subtext="Readiness records awaiting review"
+          colorVariant="cyan"
+          trendTint="blue"
+          icon={FileCheck}
+          trendPlaceholder="—"
+        />
+      </div>
 
       {/* Pending Reviews Table - Always visible in both modes */}
-      <Card className="overflow-hidden border border-gray-200/60 bg-white shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-        <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
+      <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+        <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50/80 text-amber-700">
@@ -194,10 +192,10 @@ export function QctoDashboardClient({
             <EmptyState
               title="No pending reviews"
               description="Submissions awaiting review will appear here."
-              icon={<ClipboardList className="h-8 w-8 text-gray-400" strokeWidth={1.5} />}
+              icon={<ClipboardList className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
             />
           ) : (
-            <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
+            <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
@@ -239,8 +237,8 @@ export function QctoDashboardClient({
       </Card>
 
       {/* Recent Reviews - Always visible in both modes */}
-      <Card className="overflow-hidden border border-gray-200/60 bg-white shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-        <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
+      <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+        <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50/80 text-emerald-700">
@@ -266,7 +264,7 @@ export function QctoDashboardClient({
             <EmptyState
               title="No recent reviews"
               description="Your recent review actions will appear here."
-              icon={<FileCheck className="h-8 w-8 text-gray-400" strokeWidth={1.5} />}
+              icon={<FileCheck className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
             />
           ) : (
             <div className="space-y-4">
@@ -305,8 +303,8 @@ export function QctoDashboardClient({
 
       {/* Pending Readiness Reviews Table - Always visible in both modes */}
       {pendingReadinessCount > 0 && (
-        <Card className="overflow-hidden border border-gray-200/60 bg-white shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-          <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
+        <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+          <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50/80 text-cyan-700">
@@ -332,10 +330,10 @@ export function QctoDashboardClient({
               <EmptyState
                 title="No pending readiness reviews"
                 description="Readiness records awaiting review will appear here."
-                icon={<FileCheck className="h-8 w-8 text-gray-400" strokeWidth={1.5} />}
+                icon={<FileCheck className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
               />
             ) : (
-              <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
+              <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Qualification</TableHead>

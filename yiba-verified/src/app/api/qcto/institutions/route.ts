@@ -2,6 +2,7 @@
 //
 // Query params:
 //   ?q=searchText - Search in legal_name, trading_name, or registration_number
+//   ?province=string - Filter by institution province
 //   ?limit=number - Limit results (default: 50, max: 200)
 //   ?offset=number - Offset for pagination
 
@@ -10,6 +11,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
+import { getProvinceFilterForQCTO } from "@/lib/api/qctoAccess";
 
 /**
  * GET /api/qcto/institutions
@@ -19,16 +22,17 @@ export async function GET(request: NextRequest) {
   try {
     const { ctx } = await requireAuth(request);
 
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
-        "Only QCTO_USER and PLATFORM_ADMIN can access this endpoint",
+        "Only QCTO and platform administrators can access this endpoint",
         403
       );
     }
 
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
+    const provinceParam = searchParams.get("province")?.trim() || "";
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
 
@@ -52,6 +56,37 @@ export async function GET(request: NextRequest) {
     }
 
     const where: any = { deleted_at: null };
+
+    // Get province filter based on user's assigned provinces
+    const provinceFilter = await getProvinceFilterForQCTO(ctx);
+    
+    // Apply province filtering
+    if (provinceFilter !== null) {
+      // User has assigned provinces - filter to those provinces
+      if (provinceFilter.length === 0) {
+        // No provinces assigned - return empty result
+        return ok({
+          count: 0,
+          total: 0,
+          items: [],
+        });
+      }
+      where.province = { in: provinceFilter };
+    }
+
+    // If user explicitly requested a specific province (and they have access), apply it
+    if (provinceParam) {
+      if (provinceFilter === null || provinceFilter.includes(provinceParam)) {
+        where.province = provinceParam; // Override with specific province
+      } else {
+        // User requested province they don't have access to - return empty
+        return ok({
+          count: 0,
+          total: 0,
+          items: [],
+        });
+      }
+    }
 
     if (searchQuery.trim()) {
       where.OR = [

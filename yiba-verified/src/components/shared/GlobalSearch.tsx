@@ -84,7 +84,7 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
 
     if (activeCategory === "mixed" || activeCategory === "learners") {
       // Learners search available for most roles
-      if (role === "PLATFORM_ADMIN" || role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "QCTO_USER") {
+      if (role === "PLATFORM_ADMIN" || role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "QCTO_USER" || role === "QCTO_SUPER_ADMIN" || role === "QCTO_ADMIN") {
         loadingSet.add("Learners");
         providers.push({
           name: "Learners",
@@ -195,7 +195,7 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
   // Group results with priority order
   const groupedResults = useMemo(() => {
     const grouped: Record<string, SearchProviderResult[]> = {};
-    const groupOrder = ["Pages", "Institutions", "Learners", "Users", "Submissions", "Requests", "Documents", "Audit Logs"];
+    const groupOrder = ["Pages", "Institutions", "Learners", "Users", "Submissions", "Requests", "Documents", "Readiness", "Enrolments", "Audit Logs"];
     
     allResults.forEach((result) => {
       if (!grouped[result.group]) {
@@ -295,7 +295,7 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
       categories.add("institutions");
       categories.add("users");
     }
-    if (role === "PLATFORM_ADMIN" || role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "QCTO_USER") {
+    if (role === "PLATFORM_ADMIN" || role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "QCTO_USER" || role === "QCTO_SUPER_ADMIN" || role === "QCTO_ADMIN") {
       categories.add("learners");
     }
 
@@ -311,12 +311,12 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
-      <DialogContent className="max-w-[720px] p-0 gap-0 rounded-xl border border-gray-200/60 bg-white shadow-xl">
+      <DialogContent className="max-w-[720px] p-0 gap-0 rounded-xl border border-border bg-card shadow-xl">
         <DialogTitle className="sr-only">Global Search</DialogTitle>
         {/* Search Input */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100/60">
+        <div className="px-6 pt-6 pb-4 border-b border-border/60">
           <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
+            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
             <Input
               ref={inputRef}
               type="text"
@@ -326,13 +326,13 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
                 setQuery(e.target.value);
                 setSelectedIndex(0);
               }}
-              className="h-11 pl-11 pr-4 text-base border-gray-200/80 bg-gray-50/50 rounded-lg focus:bg-white focus:border-gray-300 transition-all duration-200"
+              className="h-11 pl-11 pr-4 text-base border-border bg-muted/50 rounded-lg focus:bg-background focus:border-border transition-all duration-200"
             />
           </div>
         </div>
 
         {/* Tabs Row */}
-        <div className="px-6 py-3 border-b border-gray-100/60 flex items-center justify-between">
+        <div className="px-6 py-3 border-b border-border/60 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {availableCategories.map((category) => (
               <button
@@ -344,13 +344,13 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
                 className={cn(
                   "px-1 py-2 text-sm font-medium transition-colors duration-200 relative",
                   activeCategory === category
-                    ? "text-gray-900"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {CATEGORY_LABELS[category] || category}
                 {activeCategory === category && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
                 )}
               </button>
             ))}
@@ -358,7 +358,7 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />
@@ -369,15 +369,15 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
         <div className="max-h-[480px] overflow-y-auto px-2 py-4">
           {allResults.length === 0 && !isLoading && query.length >= 2 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <SearchIcon className="h-12 w-12 text-gray-300 mb-4" strokeWidth={1.5} />
-              <p className="text-sm font-medium text-gray-900 mb-1">No results found</p>
-              <p className="text-xs text-gray-500">Try a different search term</p>
+              <SearchIcon className="h-12 w-12 text-muted-foreground/50 mb-4" strokeWidth={1.5} />
+              <p className="text-sm font-medium text-foreground mb-1">No results found</p>
+              <p className="text-xs text-muted-foreground">Try a different search term</p>
             </div>
           ) : allResults.length === 0 && query.length < 2 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <SearchIcon className="h-12 w-12 text-gray-300 mb-4" strokeWidth={1.5} />
-              <p className="text-sm font-medium text-gray-900 mb-1">Start typing to search</p>
-              <p className="text-xs text-gray-500">Search pages, institutions, learners, and more</p>
+              <SearchIcon className="h-12 w-12 text-muted-foreground/50 mb-4" strokeWidth={1.5} />
+              <p className="text-sm font-medium text-foreground mb-1">Start typing to search</p>
+              <p className="text-xs text-muted-foreground">Search pages, institutions, learners, and more</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -389,11 +389,11 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
                 return (
                   <div key={group} className="space-y-1">
                     <div className="px-4 py-2 flex items-center gap-2">
-                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {groupLabel}
                       </h3>
                       {isGroupLoading && (
-                        <Loader2 className="h-3 w-3 text-gray-400 animate-spin" />
+                        <Loader2 className="h-3 w-3 text-muted-foreground animate-spin" />
                       )}
                     </div>
                     <div className="space-y-0.5">
@@ -409,16 +409,16 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
                             className={cn(
                               "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-150 text-left",
                               isSelected
-                                ? "bg-blue-50 text-gray-900"
-                                : "hover:bg-gray-50/80 text-gray-700"
+                                ? "bg-primary/10 text-foreground"
+                                : "hover:bg-muted/80 text-foreground"
                             )}
                             onMouseEnter={() => setSelectedIndex(flatIndex)}
                           >
-                            <Icon className="h-5 w-5 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+                            <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.5} />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-gray-900">{result.title}</div>
+                              <div className="text-sm font-semibold text-foreground">{result.title}</div>
                               {result.subtitle && (
-                                <div className="text-xs text-gray-500 mt-0.5">{result.subtitle}</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">{result.subtitle}</div>
                               )}
                             </div>
                             {result.badge && (
@@ -438,20 +438,20 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
         </div>
 
         {/* Footer hint */}
-        <div className="px-6 py-3 border-t border-gray-100/60 bg-gray-50/30">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="px-6 py-3 border-t border-border/60 bg-muted/30">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 text-xs font-mono">↑</kbd>
-                <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 text-xs font-mono">↓</kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-card border border-border text-xs font-mono">↑</kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-card border border-border text-xs font-mono">↓</kbd>
                 <span>Navigate</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 text-xs font-mono">↵</kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-card border border-border text-xs font-mono">↵</kbd>
                 <span>Select</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 text-xs font-mono">Esc</kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-card border border-border text-xs font-mono">Esc</kbd>
                 <span>Close</span>
               </span>
             </div>

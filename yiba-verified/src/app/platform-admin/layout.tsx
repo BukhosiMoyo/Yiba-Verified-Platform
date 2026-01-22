@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { AppShell } from "@/components/layout/AppShell";
-import { filterNavItems, type NavItem } from "@/components/layout/nav";
+import { filterNavItems } from "@/components/layout/nav";
+import { getPlatformAdminNavItems } from "@/lib/navigation";
 import { authOptions } from "@/lib/auth";
 import type { Role } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { getViewAsUserInfo } from "@/lib/viewAsUserServer";
 
 export default async function PlatformAdminLayout({
   children,
@@ -22,40 +24,72 @@ export default async function PlatformAdminLayout({
     redirect("/unauthorized");
   }
 
+  const now = new Date();
   let pendingInvitesCount = 0;
+  let activeAnnouncementsCount = 0;
   try {
-    pendingInvitesCount = await prisma.invite.count({
-      where: {
-        deleted_at: null,
-        status: { in: ["QUEUED", "SENDING", "SENT"] },
-        expires_at: { gt: new Date() },
-      },
-    });
+    [pendingInvitesCount, activeAnnouncementsCount] = await Promise.all([
+      prisma.invite.count({
+        where: {
+          deleted_at: null,
+          status: { in: ["QUEUED", "SENDING", "SENT"] },
+          expires_at: { gt: now },
+        },
+      }),
+      prisma.announcement.count({
+        where: {
+          status: "ACTIVE",
+          deleted_at: null,
+          OR: [{ expires_at: null }, { expires_at: { gt: now } }],
+        },
+      }),
+    ]);
   } catch (error) {
     console.error("Error fetching badge counts:", error);
   }
 
-  const allNavigationItems: NavItem[] = [
-    { label: "Dashboard", href: "/platform-admin", iconKey: "layout-dashboard" },
-    { label: "Institutions", href: "/platform-admin/institutions", iconKey: "building-2" },
-    { label: "Learners", href: "/platform-admin/learners", iconKey: "users" },
-    { label: "Qualifications", href: "/platform-admin/qualifications", iconKey: "graduation-cap" },
-    { label: "Users", href: "/platform-admin/users", iconKey: "users", capability: "STAFF_INVITE" },
-    { label: "Invites", href: "/platform-admin/invites", iconKey: "mail", badge: pendingInvitesCount },
-    { label: "Announcements", href: "/platform-admin/announcements", iconKey: "bell" },
-    { label: "Audit Logs", href: "/platform-admin/audit-logs", iconKey: "file-text", capability: "AUDIT_VIEW" },
-    { label: "Reports", href: "/platform-admin/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
-    { label: "System Health", href: "/platform-admin/system-health", iconKey: "activity" },
-  ];
-
-  const navigationItems = filterNavItems(role, allNavigationItems);
+  const filtered = filterNavItems(role, getPlatformAdminNavItems());
+  const navigationItems = filtered.map((item) => {
+    if (item.href === "/platform-admin/invites") return { ...item, badge: pendingInvitesCount };
+    if (item.href === "/platform-admin/announcements") return { ...item, badge: activeAnnouncementsCount };
+    return item;
+  });
   const userName = session.user.name || "User";
+
+  // Check onboarding status
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: {
+      onboarding_completed: true,
+    },
+  });
+
+  // Redirect to onboarding if not completed
+  if (!user?.onboarding_completed) {
+    redirect("/platform-admin/onboarding");
+  }
+
+  // Get View As User info if applicable
+  const viewAsInfo = await getViewAsUserInfo(
+    session.user.userId,
+    session.user.role,
+    userName
+  );
+
+  // Use viewing as user's context if present, otherwise use actual user's context
+  const displayRole = viewAsInfo?.viewingAsRole || role;
+  const displayUserName = viewAsInfo?.viewingAsUserName || userName;
 
   return (
     <AppShell
       navigationItems={navigationItems}
-      currentUserRole={role}
-      userName={userName}
+      currentUserRole={displayRole}
+      userName={displayUserName}
+      viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
+      viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
+      viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}
+      originalUserName={viewAsInfo?.originalUserName}
+      originalRole={viewAsInfo?.originalRole}
     >
       {children}
     </AppShell>

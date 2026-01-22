@@ -12,6 +12,7 @@ import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import Link from "next/link";
 import { ExportButton } from "@/components/shared/ExportButton";
 import { FileCheck, Eye, Search, X } from "lucide-react";
+import { PROVINCES } from "@/lib/provinces";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:qcto_submissions";
 const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100] as const;
@@ -28,6 +29,11 @@ const STATUS_OPTIONS = [
   { value: "RETURNED_FOR_CORRECTION", label: "Returned for Correction" },
 ];
 
+const PROVINCE_OPTIONS = [
+  { value: "", label: "All provinces" },
+  ...PROVINCES.map((p) => ({ value: p, label: p })),
+];
+
 function QctoSubmissionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -37,6 +43,7 @@ function QctoSubmissionsContent() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province") || "");
   const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
   const [offset, setOffset] = useState(0);
 
@@ -52,9 +59,20 @@ function QctoSubmissionsContent() {
     } catch (_) { /* ignore */ }
   }, []);
 
+  // Sync URL (status, q, province) into filter state when navigating via nav dropdown, back/forward, or shared link
+  useEffect(() => {
+    const s = searchParams.get("status") || "";
+    const q = searchParams.get("q") || "";
+    const p = searchParams.get("province") || "";
+    setStatusFilter(s);
+    setSearchQuery(q);
+    setProvinceFilter(p);
+    setOffset(0);
+  }, [searchParams]);
+
   useEffect(() => {
     fetchSubmissions();
-  }, [searchQuery, statusFilter, offset, pageSize]);
+  }, [searchQuery, statusFilter, provinceFilter, offset, pageSize]);
 
   const fetchSubmissions = async () => {
     try {
@@ -63,6 +81,7 @@ function QctoSubmissionsContent() {
       const params = new URLSearchParams();
       if (searchQuery.trim().length >= 2) params.set("q", searchQuery.trim());
       if (statusFilter) params.set("status", statusFilter);
+      if (provinceFilter) params.set("province", provinceFilter);
       params.set("limit", String(pageSize));
       params.set("offset", String(offset));
 
@@ -83,16 +102,18 @@ function QctoSubmissionsContent() {
     }
   };
 
-  const pushURL = (q: string, status: string) => {
+  const pushURL = (q: string, status: string, province: string) => {
     const p = new URLSearchParams();
     if (q.trim().length >= 2) p.set("q", q.trim());
     if (status) p.set("status", status);
+    if (province) p.set("province", province);
     router.push(`?${p.toString()}`, { scroll: false });
   };
 
-  const handleSearch = (v: string) => { setSearchQuery(v); setOffset(0); pushURL(v, statusFilter); };
-  const handleStatusFilter = (v: string) => { setStatusFilter(v); setOffset(0); pushURL(searchQuery, v); };
-  const clearFilters = () => { setSearchQuery(""); setStatusFilter(""); setOffset(0); router.push("?", { scroll: false }); };
+  const handleSearch = (v: string) => { setSearchQuery(v); setOffset(0); pushURL(v, statusFilter, provinceFilter); };
+  const handleStatusFilter = (v: string) => { setStatusFilter(v); setOffset(0); pushURL(searchQuery, v, provinceFilter); };
+  const handleProvinceFilter = (v: string) => { setProvinceFilter(v); setOffset(0); pushURL(searchQuery, statusFilter, v); };
+  const clearFilters = () => { setSearchQuery(""); setStatusFilter(""); setProvinceFilter(""); setOffset(0); router.push("?", { scroll: false }); };
   const handlePageSizeChange = (n: number) => {
     setPageSizeState(n);
     setOffset(0);
@@ -119,13 +140,27 @@ function QctoSubmissionsContent() {
     return map[status] || { label: status, className: "bg-gray-100 text-gray-800" };
   };
 
-  const hasActiveFilters = searchQuery.trim().length >= 2 || statusFilter;
+  const hasActiveFilters = searchQuery.trim().length >= 2 || statusFilter || provinceFilter;
 
   return (
     <div className="space-y-4 md:space-y-8 p-4 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Submissions</h1>
+          <h1 className="text-2xl md:text-3xl font-bold flex flex-wrap items-center gap-2">
+            Submissions
+            {statusFilter && (
+              <span
+                className={`inline-flex items-center rounded-full border border-gray-200/80 px-3 py-1 text-sm font-semibold shadow-sm ${formatStatus(statusFilter).className}`}
+              >
+                {formatStatus(statusFilter).label}
+              </span>
+            )}
+            {provinceFilter && (
+              <span className="inline-flex items-center rounded-full border border-gray-200/80 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800 shadow-sm">
+                {provinceFilter}
+              </span>
+            )}
+          </h1>
           <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
             Review institution submissions and compliance packs
           </p>
@@ -154,6 +189,15 @@ function QctoSubmissionsContent() {
               <option key={o.value || "_"} value={o.value}>{o.label}</option>
             ))}
           </Select>
+          <Select
+            value={provinceFilter}
+            onChange={(e) => handleProvinceFilter(e.target.value)}
+            className="w-[180px]"
+          >
+            {PROVINCE_OPTIONS.map((o) => (
+              <option key={o.value || "_"} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
           {hasActiveFilters && (
             <Button variant="outline" size="sm" onClick={clearFilters}>
               <X className="h-4 w-4 mr-1" />
@@ -169,6 +213,7 @@ function QctoSubmissionsContent() {
           <p className="text-sm text-muted-foreground">
             {loading ? "Loading…" : `${total} submission${total !== 1 ? "s" : ""} found`}
             {statusFilter && !loading && ` with status "${STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label || statusFilter}"`}
+            {provinceFilter && !loading && ` in ${provinceFilter}`}
           </p>
         </div>
 
@@ -216,7 +261,7 @@ function QctoSubmissionsContent() {
                     const resCount = s._count?.submissionResources ?? s.submissionResources?.length ?? 0;
                     return (
                       <TableRow key={s.submission_id} className="group hover:bg-sky-50/50 transition-colors duration-200">
-                        <TableCell className="py-3 whitespace-nowrap text-muted-foreground w-12">{offset + index + 1}</TableCell>
+                        <TableCell className="py-3 whitespace-nowrap text-gray-800 w-12 font-bold">{offset + index + 1}</TableCell>
                         <TableCell className="font-medium py-3 whitespace-nowrap">
                           {s.institution?.trading_name || s.institution?.legal_name || "—"}
                         </TableCell>
@@ -233,7 +278,7 @@ function QctoSubmissionsContent() {
                         </TableCell>
                         <TableCell className="py-3 whitespace-nowrap">{resCount}</TableCell>
                         <TableCell className="sticky right-0 z-10 bg-white group-hover:bg-sky-50/50 border-l border-gray-200 py-3 whitespace-nowrap">
-                          <Button variant="outline" size="sm" asChild className="h-7 min-w-0 px-2 text-xs gap-1">
+                          <Button variant="outline" size="sm" asChild className="h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-400">
                             <Link href={`/qcto/submissions/${s.submission_id}`}>
                               <Eye className="h-3 w-3" aria-hidden />
                               View

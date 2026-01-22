@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/context";
 import { prisma } from "@/lib/prisma";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
 import type { AuditEntityType, AuditChangeType } from "@prisma/client";
 
 /**
@@ -33,9 +34,8 @@ export async function GET(request: NextRequest) {
     // Authenticate and get context
     const { ctx } = await requireAuth(request);
 
-    // RBAC: PLATFORM_ADMIN and QCTO_USER can view audit logs (AUDIT_VIEW capability)
-    if (ctx.role !== "PLATFORM_ADMIN" && ctx.role !== "QCTO_USER") {
-      throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins and QCTO users can view audit logs", 403);
+    if (!canAccessQctoData(ctx.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can view audit logs", 403);
     }
 
     // Parse query parameters

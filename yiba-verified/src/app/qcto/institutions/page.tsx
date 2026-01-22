@@ -17,13 +17,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Building2, Eye, ChevronDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Building2, Eye, ChevronDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import Link from "next/link";
+import { PROVINCES } from "@/lib/provinces";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:qcto_institutions";
 const PINS_KEY = "yv_table_pins:qcto_institutions";
 const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
+
+const PROVINCE_OPTIONS = [
+  { value: "", label: "All provinces" },
+  ...PROVINCES.map((p) => ({ value: p, label: p })),
+];
+
+const NUM_COL_MIN = 48;
 
 const COLUMNS = [
   { id: "legal_name", label: "Legal Name", minWidth: 160, sortable: true },
@@ -42,10 +50,11 @@ function InstitutionsPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province") || "");
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
   const [offset, setOffset] = useState(0);
-  const [pins, setPinsState] = useState<Record<string, "left" | "right">>({});
+  const [pins, setPinsState] = useState<Record<string, "left" | "right">>({ actions: "right" });
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -61,15 +70,22 @@ function InstitutionsPageContent() {
       const storedPins = localStorage.getItem(PINS_KEY);
       if (storedPins) {
         const parsed = JSON.parse(storedPins) as Record<string, "left" | "right">;
-        if (parsed && typeof parsed === "object") setPinsState(parsed);
+        if (parsed && typeof parsed === "object") setPinsState({ ...parsed, actions: "right" });
       }
     } catch (_) { /* ignore */ }
   }, []);
 
+  // Sync URL (q, province) into state when navigating via sidebar or shared link
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") || "");
+    setProvinceFilter(searchParams.get("province") || "");
+    setOffset(0);
+  }, [searchParams]);
+
   useEffect(() => {
     fetchInstitutions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, offset, pageSize]);
+  }, [searchQuery, provinceFilter, offset, pageSize]);
 
   const fetchInstitutions = async () => {
     try {
@@ -78,6 +94,7 @@ function InstitutionsPageContent() {
 
       const params = new URLSearchParams();
       if (searchQuery) params.set("q", searchQuery);
+      if (provinceFilter) params.set("province", provinceFilter);
       params.set("limit", pageSize.toString());
       params.set("offset", offset.toString());
 
@@ -99,13 +116,30 @@ function InstitutionsPageContent() {
     }
   };
 
+  const pushURL = (q: string, province: string) => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (province) p.set("province", province);
+    router.push(`?${p.toString()}`, { scroll: false });
+  };
+
   const handleSearch = (value: string) => {
     setSearchQuery(value);
     setOffset(0);
-    const params = new URLSearchParams(searchParams);
-    if (value) params.set("q", value);
-    else params.delete("q");
-    router.push(`?${params.toString()}`, { scroll: false });
+    pushURL(value, provinceFilter);
+  };
+
+  const handleProvinceFilter = (value: string) => {
+    setProvinceFilter(value);
+    setOffset(0);
+    pushURL(searchQuery, value);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setProvinceFilter("");
+    setOffset(0);
+    router.push("?", { scroll: false });
   };
 
   const handlePageSizeChange = (size: number) => {
@@ -197,11 +231,20 @@ function InstitutionsPageContent() {
     });
   }, [institutions, sortKey, sortDir]);
 
+  const hasActiveFilters = !!searchQuery || !!provinceFilter;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Institutions</h1>
+          <h1 className="text-2xl md:text-3xl font-bold flex flex-wrap items-center gap-2">
+            Institutions
+            {provinceFilter && (
+              <span className="inline-flex items-center rounded-full border border-gray-200/80 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800 shadow-sm">
+                {provinceFilter}
+              </span>
+            )}
+          </h1>
           <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
             View institutions on the platform
           </p>
@@ -209,14 +252,31 @@ function InstitutionsPageContent() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-48 sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search institutions"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-48 sm:w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search institutions"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select
+            value={provinceFilter}
+            onChange={(e) => handleProvinceFilter(e.target.value)}
+            className="w-[180px]"
+          >
+            {PROVINCE_OPTIONS.map((o) => (
+              <option key={o.value || "_"} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 
@@ -227,17 +287,17 @@ function InstitutionsPageContent() {
       )}
 
       {loading ? (
-        <LoadingTable columns={7} rows={5} />
+        <LoadingTable columns={8} rows={5} />
       ) : institutions.length === 0 ? (
         <EmptyState
           title="No institutions found"
           description={
-            searchQuery
-              ? `No institutions match "${searchQuery}". Try a different search term.`
+            hasActiveFilters
+              ? "Try adjusting your filters or search."
               : "No institutions have been created yet."
           }
           icon={<Building2 className="h-6 w-6" strokeWidth={1.5} />}
-          variant={searchQuery ? "no-results" : "default"}
+          variant={hasActiveFilters ? "no-results" : "default"}
         />
       ) : (
         <>
@@ -245,6 +305,12 @@ function InstitutionsPageContent() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead
+                    className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-gray-500 w-12 bg-gray-50 border-r border-gray-200"
+                    style={{ position: "sticky", left: 0, zIndex: 2, minWidth: NUM_COL_MIN, backgroundColor: "rgb(249, 250, 251)" }}
+                  >
+                    #
+                  </TableHead>
                   {orderedCols.map((col) => {
                     const isLeft = pins[col.id] === "left";
                     const isRight = pins[col.id] === "right";
@@ -334,11 +400,17 @@ function InstitutionsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedInstitutions.map((institution) => {
+                {sortedInstitutions.map((institution, index) => {
                   const statusInfo = formatStatus(institution.status);
                   const createdStr = formatDate(institution.created_at);
                   return (
                     <TableRow key={institution.institution_id}>
+                      <TableCell
+                        className="whitespace-nowrap text-gray-800 font-bold w-12 bg-white border-r border-gray-200"
+                        style={{ position: "sticky", left: 0, zIndex: 1, minWidth: NUM_COL_MIN, backgroundColor: "white", boxShadow: "2px 0 4px -2px rgba(0,0,0,0.06)" }}
+                      >
+                        {offset + index + 1}
+                      </TableCell>
                       {orderedCols.map((col) => {
                         const isLeft = pins[col.id] === "left";
                         const isRight = pins[col.id] === "right";
@@ -502,22 +574,20 @@ function InstitutionsPageContent() {
                           return (
                             <TableCell
                               key={col.id}
-                              className="whitespace-nowrap"
+                              className="whitespace-nowrap border-l border-gray-200"
                               style={stickyStyle}
                             >
-                              <Link
-                                href={`/qcto/institutions/${institution.institution_id}`}
-                              >
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4 mr-2" />
+                              <Button variant="outline" size="sm" asChild className="h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-400">
+                                <Link href={`/qcto/institutions/${institution.institution_id}`}>
+                                  <Eye className="h-3 w-3" aria-hidden />
                                   View
-                                </Button>
-                              </Link>
+                                </Link>
+                              </Button>
                             </TableCell>
                           );
                         }
                         return (
-                          <TableCell key={col.id} className={cellClass} style={stickyStyle} />
+                          <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
                         );
                       })}
                     </TableRow>
@@ -574,7 +644,7 @@ function InstitutionsPageContent() {
 
 export default function QCTOInstitutionsPage() {
   return (
-    <Suspense fallback={<LoadingTable columns={7} rows={5} />}>
+    <Suspense fallback={<LoadingTable columns={8} rows={5} />}>
       <InstitutionsPageContent />
     </Suspense>
   );

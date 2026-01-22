@@ -3,6 +3,7 @@ import { requireApiContext } from "@/lib/api/context";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
+import { canAccessQctoData } from "@/lib/rbac";
 
 /**
  * GET /api/export/readiness
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
         return fail(new AppError(ERROR_CODES.UNAUTHENTICATED, "Unauthorized: Institution context required", 401));
       }
       where.institution_id = ctx.institutionId;
-    } else if (ctx.role === "PLATFORM_ADMIN" || ctx.role === "QCTO_USER") {
-      // PLATFORM_ADMIN and QCTO_USER can filter by institution_id if provided
+    } else if (canAccessQctoData(ctx.role)) {
+      // QCTO and platform administrators can filter by institution_id if provided
       const institutionId = searchParams.get("institution_id");
       if (institutionId) {
         where.institution_id = institutionId;

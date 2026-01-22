@@ -141,7 +141,10 @@ export function containsSQLInjection(input: string): boolean {
   if (!input) return false;
 
   const sqlPatterns = [
-    /('|(\\')|(;)|(--)|(\/\*)|(\*\/)|(xp_)|(sp_)|(exec)|(execute)|(union)|(select)|(insert)|(update)|(delete)|(drop)|(create)|(alter)|(script)/gi,
+    new RegExp(
+      "('|(\\\\')|(;)|(--)|(/\\*)|(\\*/)|(xp_)|(sp_)|(exec)|(execute)|(union)|(select)|(insert)|(update)|(delete)|(drop)|(create)|(alter)|(script)",
+      "gi"
+    ),
   ];
 
   return sqlPatterns.some((pattern) => pattern.test(input));
@@ -178,4 +181,139 @@ export function validationError(field: string, message: string) {
     field,
     message,
   };
+}
+
+/**
+ * Validate route parameter as UUID
+ * Returns the UUID if valid, throws AppError if invalid
+ * This prevents invalid IDs from reaching the database and provides consistent error handling
+ * 
+ * @throws AppError with VALIDATION_ERROR code and 400 status if invalid
+ */
+export function validateRouteParamUUID(
+  param: string | undefined | null,
+  paramName: string = "id"
+): string {
+  // Import here to avoid circular dependencies
+  const { AppError, ERROR_CODES } = require("@/lib/api/errors");
+  
+  if (!param || typeof param !== "string") {
+    throw new AppError(ERROR_CODES.VALIDATION_ERROR, `Invalid ${paramName}: parameter is required`, 400);
+  }
+
+  if (!isValidUUID(param)) {
+    throw new AppError(ERROR_CODES.VALIDATION_ERROR, `Invalid ${paramName}: must be a valid UUID`, 400);
+  }
+
+  return param;
+}
+
+/**
+ * Validate multiple route parameters as UUIDs
+ * Returns an object with validated UUIDs
+ * 
+ * @throws AppError with VALIDATION_ERROR code and 400 status if any parameter is invalid
+ */
+export function validateRouteParamsUUID<T extends Record<string, string | undefined | null>>(
+  params: T,
+  paramNames: (keyof T)[]
+): { [K in keyof T]: string } {
+  const validated: any = {};
+
+  for (const paramName of paramNames) {
+    const param = params[paramName];
+    validated[paramName] = validateRouteParamUUID(param as string, paramName as string);
+  }
+
+  return validated;
+}
+
+/**
+ * Province validation utilities
+ */
+import { PROVINCES } from "@/lib/provinces";
+
+/**
+ * Validate province name (must be one of the valid South African provinces)
+ */
+export function isValidProvince(province: string | null | undefined): boolean {
+  if (!province) return false;
+  return PROVINCES.includes(province as any);
+}
+
+/**
+ * Validate province assignment for a user role
+ * 
+ * Rules:
+ * - QCTO_SUPER_ADMIN: default_province is optional (can be national)
+ * - QCTO_ADMIN, QCTO_USER, QCTO_REVIEWER, QCTO_AUDITOR, QCTO_VIEWER: default_province is REQUIRED
+ * - default_province must be in assigned_provinces array
+ * - All provinces in assigned_provinces must be valid
+ * 
+ * @throws AppError with VALIDATION_ERROR code and 400 status if validation fails
+ */
+export function validateProvinceAssignment(
+  role: string,
+  defaultProvince: string | null | undefined,
+  assignedProvinces: string[] | null | undefined
+): void {
+  const { AppError, ERROR_CODES } = require("@/lib/api/errors");
+  
+  const QCTO_ROLES_REQUIRING_PROVINCE = [
+    "QCTO_ADMIN",
+    "QCTO_USER",
+    "QCTO_REVIEWER",
+    "QCTO_AUDITOR",
+    "QCTO_VIEWER",
+  ];
+  
+  const assigned = assignedProvinces || [];
+  
+  // Validate all assigned provinces are valid
+  for (const province of assigned) {
+    if (!isValidProvince(province)) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        `Invalid province: ${province}. Must be one of: ${PROVINCES.join(", ")}`,
+        400
+      );
+    }
+  }
+  
+  // QCTO roles (except QCTO_SUPER_ADMIN) require default_province
+  if (QCTO_ROLES_REQUIRING_PROVINCE.includes(role)) {
+    if (!defaultProvince) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        `Role ${role} requires a default_province`,
+        400
+      );
+    }
+    
+    if (!isValidProvince(defaultProvince)) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        `Invalid default_province: ${defaultProvince}. Must be one of: ${PROVINCES.join(", ")}`,
+        400
+      );
+    }
+    
+    // default_province must be in assigned_provinces array
+    if (!assigned.includes(defaultProvince)) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        `default_province (${defaultProvince}) must be included in assigned_provinces array`,
+        400
+      );
+    }
+  }
+  
+  // If default_province is provided, it must be in assigned_provinces
+  if (defaultProvince && !assigned.includes(defaultProvince)) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_ERROR,
+      `default_province (${defaultProvince}) must be included in assigned_provinces array`,
+      400
+    );
+  }
 }

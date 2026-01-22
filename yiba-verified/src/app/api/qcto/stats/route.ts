@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/api/context";
 import { prisma } from "@/lib/prisma";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
+import { getProvinceFilterForQCTO } from "@/lib/api/qctoAccess";
 
 /**
  * GET /api/qcto/stats
@@ -37,18 +39,58 @@ export async function GET(request: NextRequest) {
     // Authenticate and get context
     const { ctx } = await requireAuth(request);
 
-    // RBAC: Only QCTO_USER and PLATFORM_ADMIN can view QCTO stats
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO users and platform admins can view QCTO stats", 403);
+    if (!canAccessQctoData(ctx.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can view QCTO stats", 403);
     }
+
+    // Get province filter based on user's assigned provinces
+    const provinceFilter = await getProvinceFilterForQCTO(ctx);
 
     // Build base where clause (all non-deleted submissions)
     const submissionsWhere: any = {
       deleted_at: null,
     };
 
-    // QCTO_USER can see all submissions (they're reviewers), PLATFORM_ADMIN sees everything
-    // No institution scoping needed for QCTO
+    // Apply province filtering to submissions (via institution)
+    if (provinceFilter !== null && provinceFilter.length > 0) {
+      submissionsWhere.institution = {
+        province: { in: provinceFilter },
+      };
+    } else if (provinceFilter !== null && provinceFilter.length === 0) {
+      // No provinces assigned - return empty stats
+      return NextResponse.json(
+        {
+          submissions: {
+            total: 0,
+            submitted: 0,
+            under_review: 0,
+            approved: 0,
+            rejected: 0,
+            pending: 0,
+          },
+          requests: {
+            total: 0,
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+          },
+          recent_reviews: [],
+        },
+        { status: 200 }
+      );
+    }
+
+    // Build requests where clause
+    const requestsWhere: any = {
+      deleted_at: null,
+    };
+
+    // Apply province filtering to requests (via institution)
+    if (provinceFilter !== null && provinceFilter.length > 0) {
+      requestsWhere.institution = {
+        province: { in: provinceFilter },
+      };
+    }
 
     // Fetch submission stats in parallel
     const [
@@ -78,15 +120,15 @@ export async function GET(request: NextRequest) {
         where: { ...submissionsWhere, status: "REJECTED" },
       }),
       // QCTO Requests
-      prisma.qCTORequest.count({ where: { deleted_at: null } }),
+      prisma.qCTORequest.count({ where: requestsWhere }),
       prisma.qCTORequest.count({
-        where: { deleted_at: null, status: "PENDING" },
+        where: { ...requestsWhere, status: "PENDING" },
       }),
       prisma.qCTORequest.count({
-        where: { deleted_at: null, status: "APPROVED" },
+        where: { ...requestsWhere, status: "APPROVED" },
       }),
       prisma.qCTORequest.count({
-        where: { deleted_at: null, status: "REJECTED" },
+        where: { ...requestsWhere, status: "REJECTED" },
       }),
       // Recent reviews - submissions reviewed by this user (if QCTO_USER)
       // For PLATFORM_ADMIN, show all recently reviewed submissions

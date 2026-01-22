@@ -17,18 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Select } from "@/components/ui/select";
+import { SanitizedHtml } from "@/components/shared/SanitizedHtml";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ANNOUNCEMENT_TARGET_ROLES } from "@/lib/announcements";
 
 interface Announcement {
   announcement_id: string;
@@ -38,8 +33,11 @@ interface Announcement {
   status: "ACTIVE" | "ARCHIVED";
   created_by: {
     name: string;
+    role?: string; // e.g., "Platform Admin", "QCTO User"
     email: string;
   };
+  target_roles?: string[]; // Which roles can see this (empty = all users)
+  institution_id?: string | null; // Institution-scoped or null for platform-wide
   expires_at: string | null;
   created_at: string;
   updated_at?: string;
@@ -66,6 +64,7 @@ export default function AnnouncementsPage() {
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [expiresAt, setExpiresAt] = useState("");
+  const [targetRoles, setTargetRoles] = useState<string[]>([]); // Empty = all users
 
   useEffect(() => {
     fetchAnnouncements();
@@ -102,6 +101,7 @@ export default function AnnouncementsPage() {
     setMessage("");
     setPriority("MEDIUM");
     setExpiresAt("");
+    setTargetRoles([]); // Empty = all users
     setError("");
     setIsDialogOpen(true);
   };
@@ -112,6 +112,7 @@ export default function AnnouncementsPage() {
     setMessage(announcement.message);
     setPriority(announcement.priority);
     setExpiresAt(announcement.expires_at ? announcement.expires_at.split("T")[0] : "");
+    setTargetRoles(announcement.target_roles || []); // Empty = all users
     setError("");
     setIsDialogOpen(true);
   };
@@ -119,6 +120,11 @@ export default function AnnouncementsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const textOnly = (message || "").replace(/<[^>]+>/g, "").trim();
+    if (!textOnly) {
+      setError("Please enter a message.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -132,6 +138,9 @@ export default function AnnouncementsPage() {
         payload.expires_at = new Date(expiresAt).toISOString();
       }
 
+      // Include target_roles (empty array = visible to all users)
+      payload.target_roles = targetRoles;
+
       let response;
       if (editingAnnouncement) {
         // Update existing
@@ -139,6 +148,7 @@ export default function AnnouncementsPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          credentials: "include",
         });
       } else {
         // Create new
@@ -146,6 +156,7 @@ export default function AnnouncementsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          credentials: "include",
         });
       }
 
@@ -155,7 +166,7 @@ export default function AnnouncementsPage() {
         fetchAnnouncements();
       } else {
         const data = await response.json().catch(() => ({}));
-        setError(data.message || "Failed to save announcement");
+        setError(data.error || data.message || "Failed to save announcement");
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
@@ -172,6 +183,7 @@ export default function AnnouncementsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "ARCHIVED" }),
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -191,6 +203,7 @@ export default function AnnouncementsPage() {
     try {
       const response = await fetch(`/api/announcements/${announcementId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -260,13 +273,45 @@ export default function AnnouncementsPage() {
                                 <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
                                 <Badge className={config.className}>{config.label}</Badge>
                               </div>
-                              <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                                {announcement.message}
-                              </p>
+                              <SanitizedHtml
+                                html={announcement.message}
+                                className="text-sm text-gray-600 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                              />
                               <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                <span>Created by {announcement.created_by.name}</span>
+                                <span>
+                                  Created by {announcement.created_by.role || announcement.created_by.name}
+                                  {announcement.created_by.role && announcement.created_by.name && (
+                                    <span className="text-gray-400"> ({announcement.created_by.name})</span>
+                                  )}
+                                </span>
                                 <span>•</span>
                                 <span>{new Date(announcement.created_at).toLocaleDateString()}</span>
+                                {announcement.target_roles && announcement.target_roles.length > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-blue-600">
+                                      Target: {announcement.target_roles.join(", ")}
+                                    </span>
+                                  </>
+                                )}
+                                {(!announcement.target_roles || announcement.target_roles.length === 0) && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-gray-400">Visible to all users</span>
+                                  </>
+                                )}
+                                {announcement.institution_id && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-purple-600">Institution-scoped</span>
+                                  </>
+                                )}
+                                {!announcement.institution_id && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-blue-600">Platform-wide</span>
+                                  </>
+                                )}
                                 {announcement.expires_at && (
                                   <>
                                     <span>•</span>
@@ -337,9 +382,10 @@ export default function AnnouncementsPage() {
                                 <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
                                 <Badge variant="outline">Archived</Badge>
                               </div>
-                              <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                                {announcement.message}
-                              </p>
+                              <SanitizedHtml
+                                html={announcement.message}
+                                className="text-sm text-gray-600 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                              />
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -364,7 +410,7 @@ export default function AnnouncementsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white">
+        <DialogContent className="sm:max-w-[680px] bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
@@ -388,37 +434,37 @@ export default function AnnouncementsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="message">Message *</Label>
-                <Textarea
-                  id="message"
+                <RichTextEditor
+                  key={editingAnnouncement?.announcement_id ?? "new"}
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Announcement message"
-                  rows={5}
-                  required
+                  onChange={setMessage}
+                  placeholder="Announcement message – you can use bold, lists, links, and images."
                   disabled={isSubmitting}
+                  minHeight="200px"
+                  className="[&_.ProseMirror]:min-h-[200px]"
                 />
+                <p className="text-xs text-gray-500">
+                  Use the toolbar for formatting, links, and inserting images by URL.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
                 <Select
+                  id="priority"
                   value={priority}
-                  onValueChange={(value) => setPriority(value as typeof priority)}
+                  onChange={(e) => setPriority(e.target.value as typeof priority)}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LOW">Low</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
-                    <SelectItem value="URGENT">Urgent</SelectItem>
-                  </SelectContent>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expires_at">Expires At (Optional)</Label>
-                <DatePicker
+                <Input
+                  type="date"
                   id="expires_at"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
@@ -427,6 +473,37 @@ export default function AnnouncementsPage() {
                 <p className="text-xs text-gray-500">
                   Leave empty for announcements that don't expire
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="target_roles">Target Audience (Optional)</Label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Select which user types can see this announcement. Leave all unchecked to show to everyone.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ANNOUNCEMENT_TARGET_ROLES.map((role) => (
+                    <label key={role.value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetRoles.includes(role.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTargetRoles([...targetRoles, role.value]);
+                          } else {
+                            setTargetRoles(targetRoles.filter((r) => r !== role.value));
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{role.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {targetRoles.length === 0 && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    All users will see this announcement
+                  </p>
+                )}
               </div>
               {error && (
                 <Alert variant="error" description={error} />

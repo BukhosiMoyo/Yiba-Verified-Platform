@@ -9,6 +9,8 @@ interface ExportButtonProps {
   filename?: string;
   className?: string;
   format?: "csv" | "json";
+  /** Optional label, e.g. "Submissions" → "Export Submissions (CSV)" */
+  label?: string;
 }
 
 /**
@@ -17,7 +19,7 @@ interface ExportButtonProps {
  * Reusable button component for exporting data to CSV or JSON.
  * If format is specified, shows a single button. Otherwise, shows two buttons.
  */
-export function ExportButton({ exportUrl, filename, className, format }: ExportButtonProps) {
+export function ExportButton({ exportUrl, filename, className, format, label }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async (exportFormat: "csv" | "json") => {
@@ -79,7 +81,7 @@ export function ExportButton({ exportUrl, filename, className, format }: ExportB
         ) : (
           <Download className="mr-2 h-4 w-4" />
         )}
-        {isExporting ? "Exporting..." : `Export ${format.toUpperCase()}`}
+        {isExporting ? "Exporting..." : label ? `Export ${label} (${format.toUpperCase()})` : `Export ${format.toUpperCase()}`}
       </Button>
     );
   }

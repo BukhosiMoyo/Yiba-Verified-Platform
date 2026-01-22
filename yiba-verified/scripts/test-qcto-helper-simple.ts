@@ -20,18 +20,21 @@ const createPlatformAdminCtx = (): ApiContext => ({
   userId: "platform-admin-test",
   role: "PLATFORM_ADMIN",
   institutionId: null,
+  qctoId: null,
 });
 
 const createQCTOUserCtx = (): ApiContext => ({
   userId: "qcto-user-test",
   role: "QCTO_USER",
   institutionId: null,
+  qctoId: "qcto-org-1",
 });
 
 const createInstitutionAdminCtx = (): ApiContext => ({
   userId: "inst-admin-test",
   role: "INSTITUTION_ADMIN",
   institutionId: "test-institution-id",
+  qctoId: null,
 });
 
 async function main() {

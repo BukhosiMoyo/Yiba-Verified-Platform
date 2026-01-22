@@ -3,6 +3,7 @@ import { requireApiContext } from "@/lib/api/context";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
+import { canAccessQctoData } from "@/lib/rbac";
 
 /**
  * GET /api/export/audit-logs
@@ -19,9 +20,8 @@ export async function GET(request: NextRequest) {
   try {
     const ctx = await requireApiContext(request);
 
-    // PLATFORM_ADMIN and QCTO_USER can export audit logs (AUDIT_EXPORT capability)
-    if (ctx.role !== "PLATFORM_ADMIN" && ctx.role !== "QCTO_USER") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins and QCTO users can export audit logs", 403));
+    if (!canAccessQctoData(ctx.role)) {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only QCTO and platform administrators can export audit logs", 403));
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             old_value: log.old_value,
             new_value: log.new_value,
             change_type: log.change_type,
-            action: log.action,
+            action: log.change_type,
             institution_id: log.institution_id,
             institution_name: log.institution
               ? log.institution.trading_name || log.institution.legal_name
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
         (log.old_value || "").replace(/,/g, ";").replace(/\n/g, " "),
         (log.new_value || "").replace(/,/g, ";").replace(/\n/g, " "),
         log.change_type,
-        log.action || "",
+        log.change_type,
         log.institution_id || "",
         log.institution
           ? (log.institution.trading_name || log.institution.legal_name || "").replace(/,/g, ";")

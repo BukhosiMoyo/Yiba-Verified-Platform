@@ -8,11 +8,11 @@ export type DashboardMetricTrendTint = "green" | "amber" | "blue";
 
 /** Faint top gradient + light blue wash at bottom. */
 const gradientByVariant: Record<DashboardMetricColorVariant, string> = {
-  amber: "bg-gradient-to-b from-amber-50/40 to-sky-50/30",
-  green: "bg-gradient-to-b from-emerald-50/40 to-sky-50/30",
-  blue: "bg-gradient-to-b from-blue-50/40 to-sky-50/30",
-  purple: "bg-gradient-to-b from-indigo-50/40 to-sky-50/30",
-  cyan: "bg-gradient-to-b from-cyan-50/40 to-sky-50/30",
+  amber: "bg-gradient-to-b from-amber-50/60 to-sky-50/50",
+  green: "bg-gradient-to-b from-emerald-50/60 to-sky-50/50",
+  blue: "bg-gradient-to-b from-blue-50/60 to-sky-50/50",
+  purple: "bg-gradient-to-b from-indigo-50/60 to-sky-50/50",
+  cyan: "bg-gradient-to-b from-cyan-50/60 to-sky-50/50",
 };
 
 /** Icon chip: rounded-xl p-2.5, tinted bg. */
@@ -66,6 +66,7 @@ export function DashboardMetricCard({
     <div
       className={cn(
         "overflow-hidden rounded-xl border border-gray-200/70 shadow-sm",
+        "backdrop-blur-sm bg-white/95",
         gradientByVariant[colorVariant],
         compact ? "p-4" : "p-5",
         "flex flex-col gap-3",

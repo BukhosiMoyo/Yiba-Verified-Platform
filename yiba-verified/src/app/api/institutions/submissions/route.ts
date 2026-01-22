@@ -196,15 +196,17 @@ export async function POST(request: NextRequest) {
             institution: {
               select: {
                 institution_id: true,
-                name: true,
-                code: true,
+                legal_name: true,
+                trading_name: true,
+                registration_number: true,
               },
             },
             submittedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             submissionResources: {
@@ -218,7 +220,8 @@ export async function POST(request: NextRequest) {
                   select: {
                     user_id: true,
                     email: true,
-                    name: true,
+                    first_name: true,
+                    last_name: true,
                   },
                 },
               },

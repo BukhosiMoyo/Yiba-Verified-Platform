@@ -2,89 +2,88 @@ import Link from "next/link";
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          {/* Company */}
-          <div>
-            <h3 className="text-sm font-semibold">Company</h3>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/" className="hover:text-foreground">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-foreground">
-                  Contact
-                </Link>
-              </li>
-            </ul>
+    <footer className="border-t border-border/60 bg-muted/20">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Brand */}
+          <div className="lg:col-span-2">
+            <Link href="/" className="inline-block">
+              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-8 w-auto max-w-[140px] object-contain object-left opacity-90" />
+            </Link>
+            <p className="mt-3 text-sm text-muted-foreground max-w-[220px]">
+              QCTO compliance and oversight, simplified.
+            </p>
+            <p className="mt-4 text-xs text-muted-foreground/80">Built for South Africa</p>
           </div>
 
-          {/* Product */}
+          {/* Compliance */}
           <div>
-            <h3 className="text-sm font-semibold">Product</h3>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <h3 className="text-sm font-semibold text-foreground">Compliance</h3>
+            <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <Link href="/features" className="hover:text-foreground">
+                <Link href="/features" className="transition-colors hover:text-foreground">
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-foreground">
+                <Link href="/how-it-works" className="transition-colors hover:text-foreground">
                   How it works
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-foreground">
+                <Link href="/pricing" className="transition-colors hover:text-foreground">
                   Pricing
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Security */}
           <div>
-            <h3 className="text-sm font-semibold">Legal</h3>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <h3 className="text-sm font-semibold text-foreground">Security</h3>
+            <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <Link href="/security" className="hover:text-foreground">
+                <Link href="/security" className="transition-colors hover:text-foreground">
                   Security & Compliance
                 </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground">
-                  Terms of Service
+                <a href="mailto:info@yibaverified.com" className="transition-colors hover:text-foreground">
+                  info@yibaverified.com
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold">Contact</h3>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <h3 className="text-sm font-semibold text-foreground">Legal</h3>
+            <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <Link href="/contact" className="hover:text-foreground">
-                  Get in touch
+                <Link href="/" className="transition-colors hover:text-foreground">
+                  About
                 </Link>
               </li>
               <li>
-                <a href="mailto:info@yibaverified.com" className="hover:text-foreground">
-                  info@yibaverified.com
+                <Link href="/contact" className="transition-colors hover:text-foreground">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <a href="#" className="transition-colors hover:text-foreground">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="#" className="transition-colors hover:text-foreground">
+                  Terms of Service
                 </a>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
+        <div className="mt-12 pt-8 border-t border-border/50 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Yiba Verified. All rights reserved.</p>
         </div>
       </div>

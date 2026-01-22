@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
 
 /**
  * GET /api/qcto/institutions/[institutionId]
@@ -18,10 +19,10 @@ export async function GET(
     const { ctx } = await requireAuth(request);
     const { institutionId } = await params;
 
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
-        "Only QCTO_USER and PLATFORM_ADMIN can access this endpoint",
+        "Only QCTO and platform administrators can access this endpoint",
         403
       );
     }

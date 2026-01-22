@@ -2,9 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { ReadinessReviewForm } from "@/components/qcto/ReadinessReviewForm";
 
 interface PageProps {
@@ -31,8 +33,7 @@ export default async function QCTOReadinessDetailPage({ params }: PageProps) {
 
   const userRole = session.user.role;
 
-  // Only QCTO_USER and PLATFORM_ADMIN can access
-  if (userRole !== "QCTO_USER" && userRole !== "PLATFORM_ADMIN") {
+  if (!canAccessQctoData(userRole)) {
     redirect("/unauthorized");
   }
 
@@ -109,8 +110,9 @@ export default async function QCTOReadinessDetailPage({ params }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Link href="/qcto/readiness" className="text-sm text-muted-foreground hover:text-primary">
-              ← Back to Readiness Records
+            <Link href="/qcto/readiness" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+              Back to Readiness Records
             </Link>
           </div>
           <h1 className="text-3xl font-bold mt-2">
@@ -155,7 +157,7 @@ export default async function QCTOReadinessDetailPage({ params }: PageProps) {
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Status</span>
-              <p className="text-lg">{getStatusBadge(readiness.readiness_status)}</p>
+              <div className="text-lg">{getStatusBadge(readiness.readiness_status)}</div>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Institution</span>
@@ -189,9 +191,9 @@ export default async function QCTOReadinessDetailPage({ params }: PageProps) {
             <div className="space-y-4">
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Recommendation</span>
-                <p className="text-lg">
+                <div className="text-lg">
                   <Badge variant="outline">{readiness.recommendation.recommendation}</Badge>
-                </p>
+                </div>
               </div>
               {readiness.recommendation.remarks && (
                 <div>

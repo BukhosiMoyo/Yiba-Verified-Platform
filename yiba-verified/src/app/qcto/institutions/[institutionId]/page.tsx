@@ -19,8 +19,74 @@ import {
   FileCheck,
   Award,
   MessageSquare,
+  MapPin,
+  Phone,
+  User,
+  Hash,
+  Layers,
+  GraduationCap,
+  Users,
+  LayoutDashboard,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
+
+const STATUS_CONFIG: Record<
+  string,
+  { pattern: string; gradient: string; gradientTop: string; badge: string; iconBg: string; iconColor: string }
+> = {
+  APPROVED: {
+    pattern: "institution-status-pattern--approved",
+    gradient: "bg-gradient-to-b from-emerald-50/70 to-white",
+    gradientTop: "before:from-emerald-50/30",
+    badge: "bg-emerald-100 text-emerald-800 border-emerald-200/60",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+  },
+  PENDING: {
+    pattern: "institution-status-pattern--pending",
+    gradient: "bg-gradient-to-b from-amber-50/70 to-white",
+    gradientTop: "before:from-amber-50/30",
+    badge: "bg-amber-100 text-amber-800 border-amber-200/60",
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
+  },
+  REJECTED: {
+    pattern: "institution-status-pattern--rejected",
+    gradient: "bg-gradient-to-b from-red-50/70 to-white",
+    gradientTop: "before:from-red-50/30",
+    badge: "bg-red-100 text-red-800 border-red-200/60",
+    iconBg: "bg-red-50",
+    iconColor: "text-red-600",
+  },
+  DRAFT: {
+    pattern: "institution-status-pattern--draft",
+    gradient: "bg-gradient-to-b from-slate-50/70 to-white",
+    gradientTop: "before:from-slate-50/30",
+    badge: "bg-slate-100 text-slate-800 border-slate-200/60",
+    iconBg: "bg-slate-50",
+    iconColor: "text-slate-600",
+  },
+  SUSPENDED: {
+    pattern: "institution-status-pattern--suspended",
+    gradient: "bg-gradient-to-b from-orange-50/70 to-white",
+    gradientTop: "before:from-orange-50/30",
+    badge: "bg-orange-100 text-orange-800 border-orange-200/60",
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-600",
+  },
+};
+const DEFAULT_STATUS = {
+  pattern: "institution-status-pattern--default",
+  gradient: "bg-gradient-to-b from-gray-50/60 to-white",
+  gradientTop: "before:from-gray-50/25",
+  badge: "bg-gray-100 text-gray-800 border-gray-200/60",
+  iconBg: "bg-gray-50",
+  iconColor: "text-gray-600",
+};
+function getStatusConfig(status: string) {
+  return STATUS_CONFIG[status] || DEFAULT_STATUS;
+}
 
 export default function QCTOInstitutionDetailPage() {
   const params = useParams();
@@ -65,15 +131,15 @@ export default function QCTOInstitutionDetailPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
-      APPROVED: { label: "Approved", variant: "default" },
-      PENDING: { label: "Pending", variant: "secondary" },
-      REJECTED: { label: "Rejected", variant: "destructive" },
-      DRAFT: { label: "Draft", variant: "secondary" },
-      SUSPENDED: { label: "Suspended", variant: "secondary" },
+    const labels: Record<string, string> = {
+      APPROVED: "Approved",
+      PENDING: "Pending",
+      REJECTED: "Rejected",
+      DRAFT: "Draft",
+      SUSPENDED: "Suspended",
     };
-    const statusInfo = statusMap[status] || { label: status, variant: "secondary" as const };
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    const cfg = getStatusConfig(status);
+    return <Badge className={`${cfg.badge} border font-semibold`}>{labels[status] || status}</Badge>;
   };
 
   const getReadinessStatusBadge = (status: string) => {
@@ -112,136 +178,188 @@ export default function QCTOInstitutionDetailPage() {
     );
   }
 
+  const cfg = getStatusConfig(institution.status);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {institution.trading_name || institution.legal_name}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Institution overview</p>
+    <div
+      className={`relative space-y-6 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-0 before:h-64 before:bg-gradient-to-b before:to-transparent ${cfg.gradientTop}`}
+    >
+      <Button variant="ghost" size="sm" onClick={() => router.back()} className="relative z-10 -ml-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+        <ArrowLeft className="h-4 w-4 mr-2" aria-hidden />
+        Back
+      </Button>
+
+      {/* Hero: dots + status-themed gradient */}
+      <section
+        className={`institution-status-pattern ${cfg.pattern} ${cfg.gradient} relative z-10 rounded-2xl border border-gray-200/70 px-6 py-5`}
+      >
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${cfg.iconBg} ${cfg.iconColor}`}>
+              <Building2 className="h-6 w-6" strokeWidth={2} aria-hidden />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{institution.trading_name || institution.legal_name}</h1>
+              <p className="text-gray-600 mt-1">Comprehensive institution overview</p>
+              <div className="mt-3">{getStatusBadge(institution.status)}</div>
+            </div>
           </div>
         </div>
-        {getStatusBadge(institution.status)}
-      </div>
+      </section>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="relative z-10 space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="accreditation">Readiness ({institution._count?.readinessRecords || 0})</TabsTrigger>
-          <TabsTrigger value="qcto">QCTO Requests ({institution._count?.qctoRequests || 0})</TabsTrigger>
-          <TabsTrigger value="submissions">Submissions ({institution._count?.submissions || 0})</TabsTrigger>
+          <TabsTrigger value="overview" className="gap-2">
+            <LayoutDashboard className="h-4 w-4" aria-hidden />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="accreditation" className="gap-2">
+            <Award className="h-4 w-4" aria-hidden />
+            Readiness ({institution._count?.readinessRecords || 0})
+          </TabsTrigger>
+          <TabsTrigger value="qcto" className="gap-2">
+            <MessageSquare className="h-4 w-4" aria-hidden />
+            QCTO ({institution._count?.qctoRequests || 0})
+          </TabsTrigger>
+          <TabsTrigger value="submissions" className="gap-2">
+            <FileText className="h-4 w-4" aria-hidden />
+            Submissions ({institution._count?.submissions || 0})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden border border-gray-200/60">
+              <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-gray-500" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <Building2 className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                  </span>
                   Basic Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Legal Name</p>
-                  <p className="text-sm text-gray-900 mt-1">{institution.legal_name}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Legal Name</p>
+                  <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
+                    <Building2 className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                    {institution.legal_name}
+                  </p>
                 </div>
                 {institution.trading_name && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Trading Name</p>
-                    <p className="text-sm text-gray-900 mt-1">{institution.trading_name}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Trading Name</p>
+                    <p className="mt-1 text-sm text-gray-900">{institution.trading_name}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Registration Number</p>
-                  <p className="text-sm text-gray-900 font-mono mt-1">{institution.registration_number}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Registration Number</p>
+                  <p className="mt-1 flex items-center gap-2 text-sm font-mono text-gray-900">
+                    <Hash className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                    {institution.registration_number}
+                  </p>
                 </div>
                 {institution.tax_compliance_pin && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Tax Compliance PIN</p>
-                    <p className="text-sm text-gray-900 font-mono mt-1">{institution.tax_compliance_pin}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tax Compliance PIN</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm font-mono text-gray-900">
+                      <Hash className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                      {institution.tax_compliance_pin}
+                    </p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Institution Type</p>
-                  <p className="text-sm text-gray-900 mt-1">{institution.institution_type}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Institution Type</p>
+                  <p className="mt-1 text-sm text-gray-900">{institution.institution_type}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Province</p>
-                  <p className="text-sm text-gray-900 mt-1">{institution.province}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Province</p>
+                  <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
+                    <MapPin className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                    {institution.province}
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden border border-gray-200/60">
+              <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-gray-500" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <Mail className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                  </span>
                   Contact Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {institution.contact_person_name && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Contact Person</p>
-                    <p className="text-sm text-gray-900 mt-1">{institution.contact_person_name}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contact Person</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
+                      <User className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                      {institution.contact_person_name}
+                    </p>
                   </div>
                 )}
                 {institution.contact_email && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Email</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Email</p>
                     <a
                       href={`mailto:${institution.contact_email}`}
-                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline mt-1 block"
+                      className="mt-1 flex items-center gap-2 text-sm text-blue-600 hover:underline"
                     >
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden />
                       {institution.contact_email}
                     </a>
                   </div>
                 )}
                 {institution.contact_number && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Phone</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Phone</p>
                     <a
                       href={`tel:${institution.contact_number}`}
-                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline mt-1 block"
+                      className="mt-1 flex items-center gap-2 text-sm text-blue-600 hover:underline"
                     >
+                      <Phone className="h-4 w-4 shrink-0" aria-hidden />
                       {institution.contact_number}
                     </a>
                   </div>
                 )}
                 {institution.physical_address && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Physical Address</p>
-                    <p className="text-sm text-gray-900 mt-1">{institution.physical_address}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Physical Address</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
+                      <MapPin className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                      {institution.physical_address}
+                    </p>
                   </div>
                 )}
                 {institution.postal_address && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Postal Address</p>
-                    <p className="text-sm text-gray-900 mt-1">{institution.postal_address}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Postal Address</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
+                      <MapPin className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                      {institution.postal_address}
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {institution.delivery_modes && institution.delivery_modes.length > 0 && (
-              <Card>
-                <CardHeader>
+              <Card className="overflow-hidden border border-gray-200/60">
+                <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-gray-500" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                      <Layers className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                    </span>
                     Delivery Modes
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {institution.delivery_modes.map((mode: string) => (
-                      <Badge key={mode} variant="outline">
+                      <Badge key={mode} variant="outline" className="font-medium">
                         {mode.replace(/_/g, " ")}
                       </Badge>
                     ))}
@@ -250,46 +368,69 @@ export default function QCTOInstitutionDetailPage() {
               </Card>
             )}
 
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden border border-gray-200/60">
+              <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-gray-500" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+                    <FileCheck className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                  </span>
                   Statistics
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
-                      <ClipboardList className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Readiness</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {institution._count?.readinessRecords || 0}
-                      </p>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                      <Users className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Users</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.users ?? 0}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-                      <FileText className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Submissions</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {institution._count?.submissions || 0}
-                      </p>
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                      <ClipboardList className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Enrolments</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.enrolments ?? 0}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <GraduationCap className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Learners</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.learners ?? 0}</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">QCTO Requests</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {institution._count?.qctoRequests || 0}
-                      </p>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                      <Award className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Readiness</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.readinessRecords ?? 0}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                      <FileText className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Submissions</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.submissions ?? 0}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <MessageSquare className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">QCTO Requests</p>
+                      <p className="text-lg font-bold text-gray-900">{institution._count?.qctoRequests ?? 0}</p>
                     </div>
                   </div>
                 </div>
@@ -299,10 +440,12 @@ export default function QCTOInstitutionDetailPage() {
         </TabsContent>
 
         <TabsContent value="accreditation" className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border border-gray-200/60">
+            <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-gray-500" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                  <Award className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </span>
                 Readiness Records
               </CardTitle>
               <CardDescription>
@@ -334,11 +477,12 @@ export default function QCTOInstitutionDetailPage() {
                             {record.submission_date ? formatDate(record.submission_date) : "—"}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/qcto/readiness/${record.readiness_id}`}>
-                              <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/qcto/readiness/${record.readiness_id}`} className="gap-1.5">
+                                <Eye className="h-3.5 w-3.5" aria-hidden />
                                 View
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -357,10 +501,12 @@ export default function QCTOInstitutionDetailPage() {
         </TabsContent>
 
         <TabsContent value="qcto" className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border border-gray-200/60">
+            <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-gray-500" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <MessageSquare className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </span>
                 QCTO Requests
               </CardTitle>
               <CardDescription>
@@ -394,11 +540,12 @@ export default function QCTOInstitutionDetailPage() {
                             {formatDate(request.updated_at)}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/qcto/requests/${request.request_id}`}>
-                              <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/qcto/requests/${request.request_id}`} className="gap-1.5">
+                                <Eye className="h-3.5 w-3.5" aria-hidden />
                                 View
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -417,10 +564,12 @@ export default function QCTOInstitutionDetailPage() {
         </TabsContent>
 
         <TabsContent value="submissions" className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border border-gray-200/60">
+            <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-gray-500" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                  <FileText className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </span>
                 Submissions
               </CardTitle>
               <CardDescription>
@@ -454,11 +603,12 @@ export default function QCTOInstitutionDetailPage() {
                             {formatDate(submission.created_at)}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/qcto/submissions/${submission.submission_id}`}>
-                              <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/qcto/submissions/${submission.submission_id}`} className="gap-1.5">
+                                <Eye className="h-3.5 w-3.5" aria-hidden />
                                 View
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

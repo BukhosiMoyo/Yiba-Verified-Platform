@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Building2, Users, ClipboardList, GraduationCap, Activity, Mail, Clock, FileText, CheckCircle2, ArrowUpRight } from "lucide-react";
+import { Building2, Users, ClipboardList, GraduationCap, Activity, Mail, Clock, FileText, CheckCircle2, ArrowUpRight, Hand, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
 import { useDashboardMode } from "@/hooks/useDashboardMode";
@@ -13,6 +13,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { SystemSnapshotCard } from "@/components/dashboard/SystemSnapshotCard";
 import { SystemHealthCard } from "@/components/dashboard/SystemHealthCard";
 import { ChartPlaceholder } from "@/components/dashboard/ChartPlaceholder";
+import { formatFieldLabel } from "@/lib/audit-display";
 
 interface PlatformAdminDashboardClientProps {
   greeting: string;
@@ -31,7 +32,23 @@ interface PlatformAdminDashboardClientProps {
   requestsPending: number;
   usersTotal: number;
   usersActive: number;
+  invitesSent7d: number;
+  invitesAccepted: number;
+  pendingInvites: number;
+  acceptanceRate: number;
   recentActivity: any[];
+  dailyActiveUsers: number[];
+  weeklyActiveInstitutions: number[];
+  engagementLabels: string[];
+  avgReviewTimeDays: number;
+  avgReviewTimeTrend: number;
+  overdueSubmissions: number;
+  submissionsReturned: number;
+  submissionsApproved: number;
+  submissionsToday: number;
+  databaseStatus: "healthy" | "degraded" | "down";
+  recentErrors: number;
+  lastChecked: string;
 }
 
 export function PlatformAdminDashboardClient({
@@ -51,7 +68,23 @@ export function PlatformAdminDashboardClient({
   requestsPending,
   usersTotal,
   usersActive,
+  invitesSent7d,
+  invitesAccepted,
+  pendingInvites,
+  acceptanceRate,
   recentActivity,
+  dailyActiveUsers,
+  weeklyActiveInstitutions,
+  engagementLabels,
+  avgReviewTimeDays,
+  avgReviewTimeTrend,
+  overdueSubmissions,
+  submissionsReturned,
+  submissionsApproved,
+  submissionsToday,
+  databaseStatus,
+  recentErrors,
+  lastChecked,
 }: PlatformAdminDashboardClientProps) {
   const { mode, setMode } = useDashboardMode();
 
@@ -90,6 +123,30 @@ export function PlatformAdminDashboardClient({
     }).format(new Date(date));
   };
 
+  // Format review time for display
+  const formatReviewTime = (days: number) => {
+    if (days === 0) return "0 days";
+    if (days < 1) return `${Math.round(days * 24 * 10) / 10} hours`;
+    return `${Math.round(days * 10) / 10} days`;
+  };
+
+  // Calculate returned vs approved ratio
+  const getReturnedApprovedRatio = () => {
+    if (submissionsApproved === 0 && submissionsReturned === 0) {
+      return { value: 0, label: "0:0 (no data)" };
+    }
+    if (submissionsApproved === 0 && submissionsReturned > 0) {
+      return { value: submissionsReturned, label: `${submissionsReturned}:0` };
+    }
+    const ratio = submissionsReturned / submissionsApproved;
+    return {
+      value: Math.round(ratio * 100) / 100,
+      label: `${submissionsReturned}:${submissionsApproved}`,
+    };
+  };
+
+  const returnedApprovedRatio = getReturnedApprovedRatio();
+
   return (
     <div className="space-y-6">
           {/* Dashboard Header Hero */}
@@ -100,7 +157,8 @@ export function PlatformAdminDashboardClient({
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">
-                      {greeting}, {userName} 👋
+                      {greeting}, {userName}{" "}
+                      <Hand className="inline-block h-5 w-5 text-gray-500 ml-1 align-middle" aria-hidden />
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">
                       {todayDate}
@@ -145,6 +203,7 @@ export function PlatformAdminDashboardClient({
                   value={institutionsActive}
                   icon={Building2}
                   subtitle={`${institutionsTotal} total`}
+                  accent="blue"
                   delta={{
                     value: 5.2,
                     label: "+5 today",
@@ -158,6 +217,7 @@ export function PlatformAdminDashboardClient({
                   value={usersActive}
                   icon={Users}
                   subtitle={`${usersTotal} total`}
+                  accent="indigo"
                   delta={{
                     value: 12.1,
                     label: "+12 since yesterday",
@@ -171,6 +231,7 @@ export function PlatformAdminDashboardClient({
                   value={learnersActive}
                   icon={GraduationCap}
                   subtitle={`${learnersTotal} total`}
+                  accent="amber"
                   delta={{
                     value: 8.7,
                     label: "+8.7%",
@@ -184,6 +245,7 @@ export function PlatformAdminDashboardClient({
                   value={pendingReviews}
                   icon={ClipboardList}
                   subtitle={`${submissionsPending + submissionsUnderReview} submissions`}
+                  accent="purple"
                   delta={{
                     value: -3.5,
                     label: "-2 since yesterday",
@@ -208,27 +270,27 @@ export function PlatformAdminDashboardClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   <MetricCard
                     title="Invites Sent (7 days)"
-                    value={0}
+                    value={invitesSent7d}
                     icon={Mail}
-                    subtitle="Coming soon"
+                    subtitle="in last 7 days"
                   />
                   <MetricCard
                     title="Invites Accepted"
-                    value={0}
+                    value={invitesAccepted}
                     icon={CheckCircle2}
-                    subtitle="Coming soon"
+                    subtitle="all time"
                   />
                   <MetricCard
                     title="Pending Invites"
-                    value={0}
+                    value={pendingInvites}
                     icon={Mail}
-                    subtitle="Coming soon"
+                    subtitle="not expired"
                   />
                   <MetricCard
                     title="Acceptance Rate %"
-                    value={0}
+                    value={acceptanceRate}
                     icon={ArrowUpRight}
-                    subtitle="Coming soon"
+                    subtitle="of invites sent"
                   />
                   <MetricCard
                     title="Institutions Onboarded (30d)"
@@ -250,13 +312,17 @@ export function PlatformAdminDashboardClient({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <ChartPlaceholder
                     title="Daily Active Users"
-                    description="User activity over the past 7 days"
+                    description="Distinct users with audit activity over the past 7 days"
                     type="line"
+                    data={dailyActiveUsers}
+                    labels={engagementLabels}
                   />
                   <ChartPlaceholder
                     title="Weekly Active Institutions"
-                    description="Institution engagement trends"
+                    description="Distinct institutions with audit activity over the past 7 days"
                     type="bar"
+                    data={weeklyActiveInstitutions}
+                    labels={engagementLabels}
                   />
                 </div>
               </div>
@@ -269,39 +335,47 @@ export function PlatformAdminDashboardClient({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <MetricCard
                       title="Avg Review Time"
-                      value={0}
+                      value={Math.round(avgReviewTimeDays * 10) / 10}
                       icon={Clock}
-                      subtitle="2.3 days (trend placeholder)"
-                      delta={{
-                        value: -0.5,
-                        label: "-0.5 days",
-                        trend: "up",
-                      }}
+                      subtitle={formatReviewTime(avgReviewTimeDays)}
+                      delta={
+                        avgReviewTimeTrend !== 0
+                          ? {
+                              value: Math.abs(Math.round(avgReviewTimeTrend * 10) / 10),
+                              label: `${avgReviewTimeTrend > 0 ? "+" : ""}${Math.round(avgReviewTimeTrend * 10) / 10} days`,
+                              trend: avgReviewTimeTrend < 0 ? "up" : "down",
+                            }
+                          : undefined
+                      }
                     />
                     <MetricCard
                       title="Submissions Today"
-                      value={submissionsPending + submissionsUnderReview}
+                      value={submissionsToday}
                       icon={FileText}
                       subtitle={`${submissionsTotal} total`}
                     />
                     <MetricCard
                       title="Overdue Submissions"
-                      value={0}
+                      value={overdueSubmissions}
                       icon={ClipboardList}
-                      subtitle="> X days (placeholder)"
+                      subtitle={overdueSubmissions > 0 ? "> 7 days overdue" : "None overdue"}
                     />
                     <MetricCard
                       title="Returned vs Approved"
-                      value={0}
+                      value={returnedApprovedRatio.value}
                       icon={CheckCircle2}
-                      subtitle="Ratio (placeholder)"
+                      subtitle={returnedApprovedRatio.label}
                     />
                   </div>
                 </div>
 
                 {/* System Health Panel */}
                 <div className="lg:col-span-1">
-                  <SystemHealthCard />
+                  <SystemHealthCard 
+                    databaseStatus={databaseStatus}
+                    recentErrors={recentErrors}
+                    lastChecked={lastChecked}
+                  />
                 </div>
               </div>
             </div>
@@ -321,7 +395,8 @@ export function PlatformAdminDashboardClient({
                   href="/platform-admin/audit-logs"
                   className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors duration-150"
                 >
-                  View all audit logs →
+                  View all audit logs
+                  <ArrowRight className="ml-1.5 h-4 w-4 inline-block" aria-hidden />
                 </Link>
               </div>
             </CardHeader>
@@ -390,7 +465,7 @@ export function PlatformAdminDashboardClient({
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-sm text-gray-900 py-3 truncate">{log.field_name || "—"}</TableCell>
+                          <TableCell className="font-medium text-sm text-gray-900 py-3 truncate">{formatFieldLabel(log.field_name)}</TableCell>
                           <TableCell className="py-3">
                             {log.institution ? (
                               <Link

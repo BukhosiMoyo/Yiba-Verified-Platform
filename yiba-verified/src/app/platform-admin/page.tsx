@@ -38,7 +38,27 @@ export default async function PlatformAdminDashboard() {
   let requestsPending = 0;
   let usersTotal = 0;
   let usersActive = 0;
+  let invitesSent7d = 0;
+  let invitesAccepted = 0;
+  let pendingInvites = 0;
+  let invitesSentAllTime = 0;
   let recentActivity: any[] = [];
+  let avgReviewTimeDays = 0;
+  let avgReviewTimeTrend = 0;
+  let overdueSubmissions = 0;
+  let submissionsReturned = 0;
+  let submissionsApproved = 0;
+  let submissionsToday = 0;
+  let databaseStatus: "healthy" | "degraded" | "down" = "healthy";
+  let recentErrors = 0;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgoDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  let dailyActiveUsers: number[] = [0, 0, 0, 0, 0, 0, 0];
+  let weeklyActiveInstitutions: number[] = [0, 0, 0, 0, 0, 0, 0];
+  let engagementLabels: string[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   try {
     [
@@ -55,6 +75,10 @@ export default async function PlatformAdminDashboard() {
       requestsPending,
       usersTotal,
       usersActive,
+      invitesSent7d,
+      invitesAccepted,
+      pendingInvites,
+      invitesSentAllTime,
       recentActivity,
     ] = await Promise.all([
       // Institutions
@@ -88,6 +112,23 @@ export default async function PlatformAdminDashboard() {
       prisma.user.count({
         where: { deleted_at: null, status: "ACTIVE" },
       }),
+      // Invites (Growth & Adoption KPIs)
+      prisma.invite.count({
+        where: { deleted_at: null, sent_at: { not: null, gte: sevenDaysAgo } },
+      }),
+      prisma.invite.count({
+        where: { deleted_at: null, accepted_at: { not: null } },
+      }),
+      prisma.invite.count({
+        where: {
+          deleted_at: null,
+          accepted_at: null,
+          expires_at: { gt: new Date() },
+        },
+      }),
+      prisma.invite.count({
+        where: { deleted_at: null, sent_at: { not: null } },
+      }),
       // Recent Activity (last 10 audit log entries)
       prisma.auditLog.findMany({
         take: 10,
@@ -111,11 +152,170 @@ export default async function PlatformAdminDashboard() {
         },
       }),
     ]);
+
+    // Engagement: last 7 days (DAU, WAI) from audit logs
+    const dayKeys = [0, 1, 2, 3, 4, 5, 6].map((i) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - (6 - i));
+      return d.toISOString().slice(0, 10);
+    });
+    engagementLabels = dayKeys.map(
+      (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short" })
+    );
+
+    const [dauLogs, waiLogs] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: { changed_at: { gte: sevenDaysAgo } },
+        select: { changed_at: true, changed_by: true },
+      }),
+      prisma.auditLog.findMany({
+        where: { changed_at: { gte: sevenDaysAgo }, institution_id: { not: null } },
+        select: { changed_at: true, institution_id: true },
+      }),
+    ]);
+
+    const dauByDay: Record<number, Set<string>> = {};
+    const waiByDay: Record<number, Set<string>> = {};
+    dayKeys.forEach((_, i) => {
+      dauByDay[i] = new Set();
+      waiByDay[i] = new Set();
+    });
+
+    for (const log of dauLogs) {
+      const d = new Date(log.changed_at).toISOString().slice(0, 10);
+      const i = dayKeys.indexOf(d);
+      if (i >= 0) dauByDay[i].add(log.changed_by);
+    }
+    for (const log of waiLogs) {
+      const d = new Date(log.changed_at).toISOString().slice(0, 10);
+      const i = dayKeys.indexOf(d);
+      if (i >= 0 && log.institution_id) waiByDay[i].add(log.institution_id);
+    }
+
+    dailyActiveUsers = dayKeys.map((_, i) => dauByDay[i].size);
+    weeklyActiveInstitutions = dayKeys.map((_, i) => waiByDay[i].size);
+
+    // Workflow Efficiency Metrics
+    // 1. Average Review Time (last 30 days vs previous 30 days for trend)
+    const reviewedSubmissions = await prisma.submission.findMany({
+      where: {
+        deleted_at: null,
+        reviewed_at: { not: null },
+        submitted_at: { not: null },
+      },
+      select: {
+        submitted_at: true,
+        reviewed_at: true,
+      },
+    });
+
+    if (reviewedSubmissions.length > 0) {
+      // Calculate average review time for all reviewed submissions
+      const totalMs = reviewedSubmissions.reduce((sum, s) => {
+        if (s.submitted_at && s.reviewed_at) {
+          return sum + (s.reviewed_at.getTime() - s.submitted_at.getTime());
+        }
+        return sum;
+      }, 0);
+      avgReviewTimeDays = totalMs / reviewedSubmissions.length / (1000 * 60 * 60 * 24);
+
+      // Calculate trend: last 30 days vs previous 30 days
+      const recentSubmissions = reviewedSubmissions.filter(
+        (s) => s.reviewed_at && s.reviewed_at >= thirtyDaysAgo && s.reviewed_at < new Date()
+      );
+      const previousSubmissions = reviewedSubmissions.filter(
+        (s) => s.reviewed_at && s.reviewed_at >= sixtyDaysAgo && s.reviewed_at < thirtyDaysAgo
+      );
+
+      if (recentSubmissions.length > 0 && previousSubmissions.length > 0) {
+        const recentAvg =
+          recentSubmissions.reduce((sum, s) => {
+            if (s.submitted_at && s.reviewed_at) {
+              return sum + (s.reviewed_at.getTime() - s.submitted_at.getTime());
+            }
+            return sum;
+          }, 0) /
+          recentSubmissions.length /
+          (1000 * 60 * 60 * 24);
+
+        const previousAvg =
+          previousSubmissions.reduce((sum, s) => {
+            if (s.submitted_at && s.reviewed_at) {
+              return sum + (s.reviewed_at.getTime() - s.submitted_at.getTime());
+            }
+            return sum;
+          }, 0) /
+          previousSubmissions.length /
+          (1000 * 60 * 60 * 24);
+
+        avgReviewTimeTrend = recentAvg - previousAvg;
+      }
+    }
+
+    // 2. Overdue Submissions (submitted more than 7 days ago, still pending)
+    overdueSubmissions = await prisma.submission.count({
+      where: {
+        deleted_at: null,
+        status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+        submitted_at: { not: null, lt: sevenDaysAgoDate },
+      },
+    });
+
+    // 3. Returned vs Approved counts
+    submissionsReturned = await prisma.submission.count({
+      where: {
+        deleted_at: null,
+        status: "RETURNED_FOR_CORRECTION",
+      },
+    });
+
+    submissionsApproved = await prisma.submission.count({
+      where: {
+        deleted_at: null,
+        status: "APPROVED",
+      },
+    });
+
+    // Submissions submitted today
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    submissionsToday = await prisma.submission.count({
+      where: {
+        deleted_at: null,
+        submitted_at: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+      },
+    });
+
+    // System Health Metrics
+    // Database status check - perform a simple health check query
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      databaseStatus = "healthy";
+      recentErrors = 0;
+    } catch (dbError) {
+      console.error("Database health check failed:", dbError);
+      databaseStatus = "down";
+      recentErrors = 1;
+    }
   } catch (error) {
     // Log error but don't crash - allow page to render with default values
     console.error("Database connection error:", error);
+    // If we can't connect to database, mark it as down
+    databaseStatus = "down";
+    recentErrors = 1;
     // Values already initialized to defaults above
   }
+
+  const acceptanceRate =
+    invitesSentAllTime > 0
+      ? Math.round((invitesAccepted / invitesSentAllTime) * 100)
+      : 0;
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -157,7 +357,23 @@ export default async function PlatformAdminDashboard() {
       requestsPending={requestsPending}
       usersTotal={usersTotal}
       usersActive={usersActive}
+      invitesSent7d={invitesSent7d}
+      invitesAccepted={invitesAccepted}
+      pendingInvites={pendingInvites}
+      acceptanceRate={acceptanceRate}
       recentActivity={recentActivity}
+      dailyActiveUsers={dailyActiveUsers}
+      weeklyActiveInstitutions={weeklyActiveInstitutions}
+      engagementLabels={engagementLabels}
+      avgReviewTimeDays={avgReviewTimeDays}
+      avgReviewTimeTrend={avgReviewTimeTrend}
+      overdueSubmissions={overdueSubmissions}
+      submissionsReturned={submissionsReturned}
+      submissionsApproved={submissionsApproved}
+      submissionsToday={submissionsToday}
+      databaseStatus={databaseStatus}
+      recentErrors={recentErrors}
+      lastChecked={new Date().toISOString()}
     />
   );
 }

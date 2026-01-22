@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { AppShell } from "@/components/layout/AppShell";
-import type { NavItem } from "@/components/layout/nav";
+import { filterNavItems } from "@/components/layout/nav";
+import { getQctoNavItems } from "@/lib/navigation";
 import { authOptions } from "@/lib/auth";
-import type { Role } from "@/lib/rbac";
+import { canAccessArea } from "@/lib/rbac";
+import { getViewAsUserInfo } from "@/lib/viewAsUserServer";
+import { prisma } from "@/lib/prisma";
 
 export default async function QCTOLayout({
   children,
@@ -17,62 +20,51 @@ export default async function QCTOLayout({
   }
 
   const role = session.user.role;
-  // Allow QCTO_USER and PLATFORM_ADMIN (app owners see everything! 🦸)
-  if (role !== "QCTO_USER" && role !== "PLATFORM_ADMIN") {
+  // Allow QCTO_* roles and PLATFORM_ADMIN
+  if (!canAccessArea(role, "qcto") && role !== "PLATFORM_ADMIN") {
     redirect("/unauthorized");
   }
 
-  const navigationItems: NavItem[] = [
-    { label: "Dashboard", href: "/qcto", iconKey: "layout-dashboard" },
-    {
-      label: "Submissions",
-      href: "/qcto/submissions",
-      iconKey: "upload",
-      children: [
-        { label: "All", href: "/qcto/submissions" },
-        { label: "Pending", href: "/qcto/submissions?status=SUBMITTED" },
-        { label: "Under review", href: "/qcto/submissions?status=UNDER_REVIEW" },
-        { label: "Approved", href: "/qcto/submissions?status=APPROVED" },
-        { label: "Rejected", href: "/qcto/submissions?status=REJECTED" },
-      ],
-    },
-    {
-      label: "Requests",
-      href: "/qcto/requests",
-      iconKey: "file-question",
-      children: [
-        { label: "All", href: "/qcto/requests" },
-        { label: "Pending", href: "/qcto/requests?status=PENDING" },
-        { label: "Approved", href: "/qcto/requests?status=APPROVED" },
-        { label: "Rejected", href: "/qcto/requests?status=REJECTED" },
-      ],
-    },
-    { label: "Institutions", href: "/qcto/institutions", iconKey: "building-2" },
-    {
-      label: "Readiness Reviews",
-      href: "/qcto/readiness",
-      iconKey: "eye",
-      capability: "FORM5_VIEW",
-      children: [
-        { label: "All", href: "/qcto/readiness" },
-        { label: "Pending", href: "/qcto/readiness?status=SUBMITTED" },
-        { label: "Under review", href: "/qcto/readiness?status=UNDER_REVIEW" },
-        { label: "Recommended", href: "/qcto/readiness?status=RECOMMENDED" },
-        { label: "Rejected", href: "/qcto/readiness?status=REJECTED" },
-      ],
-    },
-    { label: "Evidence Flags", href: "/qcto/evidence-flags", iconKey: "flag", capability: "EVIDENCE_VIEW" },
-    { label: "Audit Logs", href: "/qcto/audit-logs", iconKey: "file-text", capability: "AUDIT_VIEW" },
-    { label: "Reports", href: "/qcto/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
-  ];
-
+  const navigationItems = filterNavItems(role, getQctoNavItems());
   const userName = session.user.name || "User";
+
+  // Check onboarding status for QCTO roles (except QCTO_SUPER_ADMIN who can skip)
+  if (role !== "QCTO_SUPER_ADMIN" && role !== "PLATFORM_ADMIN") {
+    const user = await prisma.user.findUnique({
+      where: { user_id: session.user.userId },
+      select: {
+        onboarding_completed: true,
+        default_province: true,
+      },
+    });
+
+    // Redirect to onboarding if not completed
+    if (!user?.onboarding_completed) {
+      redirect("/qcto/onboarding");
+    }
+  }
+
+  // Get View As User info if applicable
+  const viewAsInfo = await getViewAsUserInfo(
+    session.user.userId,
+    session.user.role,
+    userName
+  );
+
+  // Use viewing as user's context if present, otherwise use actual user's context
+  const displayRole = viewAsInfo?.viewingAsRole || role;
+  const displayUserName = viewAsInfo?.viewingAsUserName || userName;
 
   return (
     <AppShell
       navigationItems={navigationItems}
-      currentUserRole={role}
-      userName={userName}
+      currentUserRole={displayRole}
+      userName={displayUserName}
+      viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
+      viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
+      viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}
+      originalUserName={viewAsInfo?.originalUserName}
+      originalRole={viewAsInfo?.originalRole}
     >
       {children}
     </AppShell>

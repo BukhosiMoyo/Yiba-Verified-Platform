@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,7 +20,7 @@ type AccountMenuProps = {
   role: Role;
   trigger: React.ReactNode;
   align?: "start" | "end";
-  side?: "top" | "bottom";
+  side?: "top" | "bottom" | "left" | "right";
 };
 
 export function AccountMenu({
@@ -28,10 +29,15 @@ export function AccountMenu({
   align = "end",
   side = "bottom",
 }: AccountMenuProps) {
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const navItems = getAccountNavItems(role);
   const isAccountPageActive = pathname?.startsWith("/account");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -44,15 +50,22 @@ export function AccountMenu({
     return pathname?.startsWith(href + "/") ?? false;
   };
 
+  const triggerClassName = cn(
+    "cursor-pointer transition-colors duration-150",
+    isAccountPageActive && "[&_span]:text-blue-700 [&_p]:text-blue-700 [&_svg]:text-blue-700"
+  );
+
+  // Defer Radix DropdownMenu until after mount to avoid hydration mismatch from
+  // Radix's auto-generated IDs differing between server and client (e.g. when
+  // multiple AccountMenus exist in Sidebar desktop + mobile).
+  if (!mounted) {
+    return <div className={triggerClassName}>{trigger}</div>;
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div
-          className={cn(
-            "cursor-pointer transition-colors duration-150",
-            isAccountPageActive && "[&_span]:text-blue-700 [&_p]:text-blue-700 [&_svg]:text-blue-700"
-          )}
-        >
+        <div className={triggerClassName}>
           {trigger}
         </div>
       </DropdownMenuTrigger>

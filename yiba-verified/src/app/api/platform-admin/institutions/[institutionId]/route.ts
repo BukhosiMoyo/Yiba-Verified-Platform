@@ -73,18 +73,6 @@ export async function GET(
           },
           orderBy: { created_at: "desc" },
         },
-        learners: {
-          where: { deleted_at: null },
-          select: {
-            learner_id: true,
-            national_id: true,
-            first_name: true,
-            last_name: true,
-            created_at: true,
-          },
-          orderBy: { created_at: "desc" },
-          take: 100, // Limit to recent 100
-        },
         readinessRecords: {
           where: { deleted_at: null },
           select: {

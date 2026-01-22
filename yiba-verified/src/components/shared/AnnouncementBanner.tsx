@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, AlertCircle, Info, AlertTriangle, Bell } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
+import { SanitizedHtml } from "@/components/shared/SanitizedHtml";
 import { cn } from "@/lib/utils";
 
 interface Announcement {
@@ -10,6 +11,10 @@ interface Announcement {
   title: string;
   message: string;
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  created_by?: {
+    name?: string;
+    role?: string;
+  };
   created_at: string;
   expires_at: string | null;
 }
@@ -115,9 +120,10 @@ export function AnnouncementBanner({ className }: AnnouncementBannerProps) {
               <h4 className="text-sm font-semibold mb-1">
                 {topAnnouncement.title}
               </h4>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {topAnnouncement.message}
-              </p>
+              <SanitizedHtml
+                html={topAnnouncement.message}
+                className="text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+              />
             </div>
             <button
               onClick={() => handleDismiss(topAnnouncement.announcement_id)}

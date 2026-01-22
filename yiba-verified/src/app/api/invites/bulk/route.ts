@@ -106,14 +106,14 @@ export async function POST(request: NextRequest) {
             continue;
           }
           // Use their institution_id
-          if (!ctx.institution_id) {
+          if (!ctx.institutionId) {
             errors.push({
               email,
               error: "Institution ID is required for institution-scoped invites",
             });
             continue;
           }
-          finalInstitutionId = ctx.institution_id;
+          finalInstitutionId = ctx.institutionId;
         } else if (ctx.role === "PLATFORM_ADMIN") {
           // PLATFORM_ADMIN can invite anyone
           // If role requires institution, institution_id must be provided

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { canAccessQctoData } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { AuditLogFilters } from "@/components/platform-admin/AuditLogFilters";
 import { AuditLogsTableClient } from "@/app/platform-admin/audit-logs/AuditLogsTableClient";
@@ -37,7 +38,7 @@ export default async function QctoAuditLogsPage({ searchParams }: PageProps) {
   }
 
   const role = session.user.role;
-  if (role !== "QCTO_USER" && role !== "PLATFORM_ADMIN") {
+  if (!canAccessQctoData(role)) {
     redirect("/unauthorized");
   }
 

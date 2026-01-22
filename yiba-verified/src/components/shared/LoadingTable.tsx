@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 
 interface LoadingTableProps {
-  columns: number;
+  columns?: number;
   rows?: number;
   showHeader?: boolean;
 }
@@ -18,7 +18,7 @@ interface LoadingTableProps {
  * <LoadingTable columns={5} rows={8} showHeader />
  * ```
  */
-export function LoadingTable({ columns, rows = 5, showHeader = true }: LoadingTableProps) {
+export function LoadingTable({ columns = 5, rows = 5, showHeader = true }: LoadingTableProps) {
   return (
     <Table>
       {showHeader && (

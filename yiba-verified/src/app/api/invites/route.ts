@@ -66,23 +66,24 @@ export async function POST(request: NextRequest) {
     let finalInstitutionId = institution_id;
 
     if (ctx.role === "INSTITUTION_ADMIN") {
-      // INSTITUTION_ADMIN can only invite INSTITUTION_STAFF and STUDENT
-      if (role !== "INSTITUTION_STAFF" && role !== "STUDENT") {
+      // INSTITUTION_ADMIN can invite INSTITUTION_ADMIN, INSTITUTION_STAFF, and STUDENT
+      const allowed = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"];
+      if (!allowed.includes(role)) {
         throw new AppError(
           ERROR_CODES.FORBIDDEN,
-          "INSTITUTION_ADMIN can only invite INSTITUTION_STAFF and STUDENT",
+          "INSTITUTION_ADMIN can only invite Institution Admin, Staff, or Student",
           403
         );
       }
       // Use their institution_id
-      if (!ctx.institution_id) {
+      if (!ctx.institutionId) {
         throw new AppError(
           ERROR_CODES.VALIDATION_ERROR,
           "Institution ID is required for institution-scoped invites",
           400
         );
       }
-      finalInstitutionId = ctx.institution_id;
+      finalInstitutionId = ctx.institutionId;
     } else if (ctx.role === "PLATFORM_ADMIN") {
       // PLATFORM_ADMIN can invite anyone
       // If role requires institution, institution_id must be provided

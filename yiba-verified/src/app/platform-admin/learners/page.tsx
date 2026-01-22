@@ -25,6 +25,7 @@ const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
 
 const COLUMNS = [
+  { id: "row_num", label: "#", minWidth: 48, sortable: false },
   { id: "national_id", label: "National ID", minWidth: 130, sortable: true },
   { id: "first_name", label: "First Name", minWidth: 120, sortable: true },
   { id: "last_name", label: "Last Name", minWidth: 120, sortable: true },
@@ -72,7 +73,7 @@ function LearnersPageContent() {
     const fetchInstitutions = async () => {
       try {
         setLoadingInstitutions(true);
-        const response = await fetch("/api/dev/institutions?limit=100");
+        const response = await fetch("/api/platform-admin/institutions?limit=100");
         if (response.ok) {
           const data = await response.json();
           setInstitutions(data.items || []);
@@ -87,14 +88,7 @@ function LearnersPageContent() {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() || institutionId) {
-      fetchLearners();
-    } else {
-      setLoading(false);
-      setLearners([]);
-      setTotal(0);
-      setError(null);
-    }
+    fetchLearners();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, institutionId, offset, pageSize]);
 
@@ -265,21 +259,21 @@ function LearnersPageContent() {
         )}
 
         {loading ? (
-          <LoadingTable columns={6} rows={5} />
+          <LoadingTable columns={7} rows={5} />
         ) : error ? (
           <div className="py-12 text-center">
             <p className="text-sm text-red-600 mb-2">{error}</p>
             <p className="text-xs text-gray-500">
-              Please select an institution or enter a search query to view learners.
+              Check your connection and try again, or refine your filters.
             </p>
           </div>
         ) : learners.length === 0 ? (
           <EmptyState
-            title={searchQuery || institutionId ? "No learners found" : "Select an institution or search"}
+            title={searchQuery || institutionId ? "No learners found" : "No learners yet"}
             description={
               searchQuery || institutionId
                 ? "No learners match your filters. Try adjusting your search or institution filter."
-                : "Please select an institution from the dropdown above or enter a search query to view learners."
+                : "No learners have been added yet. They will appear here when institutions register them."
             }
             icon={<Users className="h-6 w-6" strokeWidth={1.5} />}
             variant={searchQuery || institutionId ? "no-results" : "default"}
@@ -379,10 +373,11 @@ function LearnersPageContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedLearners.map((learner) => {
+                  {sortedLearners.map((learner, index) => {
                     const instName =
                       learner.institution?.trading_name || learner.institution?.legal_name || "";
                     const createdStr = formatDate(learner.created_at);
+                    const rowNum = offset + index + 1;
                     return (
                       <TableRow key={learner.learner_id}>
                         {orderedCols.map((col) => {
@@ -418,6 +413,17 @@ function LearnersPageContent() {
                             "whitespace-nowrap truncate overflow-hidden text-ellipsis max-w-0 " +
                             (col.id === "actions" ? "whitespace-normal" : "");
 
+                          if (col.id === "row_num") {
+                            return (
+                              <TableCell
+                                key={col.id}
+                                className={`text-muted-foreground text-sm font-medium tabular-nums ${cellClass}`}
+                                style={stickyStyle}
+                              >
+                                {rowNum}
+                              </TableCell>
+                            );
+                          }
                           if (col.id === "national_id") {
                             const v = learner.national_id || "—";
                             return (
@@ -553,7 +559,7 @@ function LearnersPageContent() {
                             );
                           }
                           return (
-                            <TableCell key={col.id} className={cellClass} style={stickyStyle} />
+                            <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
                           );
                         })}
                       </TableRow>
@@ -610,7 +616,7 @@ function LearnersPageContent() {
 
 export default function LearnersPage() {
   return (
-    <Suspense fallback={<LoadingTable columns={6} rows={5} />}>
+    <Suspense fallback={<LoadingTable columns={7} rows={5} />}>
       <LearnersPageContent />
     </Suspense>
   );

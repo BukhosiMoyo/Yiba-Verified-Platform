@@ -215,7 +215,8 @@ export async function POST(
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },

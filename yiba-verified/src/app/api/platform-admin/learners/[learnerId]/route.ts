@@ -82,12 +82,11 @@ export async function GET(
           orderBy: { created_at: "desc" },
         },
         documents: {
-          where: { deleted_at: null },
           select: {
             document_id: true,
             document_type: true,
             file_name: true,
-            file_size: true,
+            file_size_bytes: true,
             uploaded_at: true,
             status: true,
           },

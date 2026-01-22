@@ -23,6 +23,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AuditLogDiffViewer } from "@/components/platform-admin/AuditLogDiffViewer";
+import { formatFieldLabel, formatValueForDisplay } from "@/lib/audit-display";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Eye, ClipboardList } from "lucide-react";
 
@@ -58,31 +59,26 @@ function AuditCellWithTooltip({
   );
 }
 
-const CHIP_BASE = "text-xs px-2 py-0.5 rounded-full border shrink-0";
+const PILL_BASE = "rounded-full px-2.5 py-1 text-xs font-medium border shrink-0";
+
 function getRoleChip(role: string) {
   const label = role.replace(/_/g, " ");
-  const R: Record<string, string> = {
-    PLATFORM_ADMIN: "bg-blue-100 text-blue-800 border-blue-200",
-    QCTO_USER: "bg-purple-100 text-purple-800 border-purple-200",
-    INSTITUTION_ADMIN: "bg-indigo-100 text-indigo-800 border-indigo-200",
-    INSTITUTION_STAFF: "bg-slate-100 text-slate-700 border-slate-200",
-    STUDENT: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  };
   return (
-    <span className={`${CHIP_BASE} ${R[role] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+    <span className={`${PILL_BASE} bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:border-slate-700`}>
       {label}
     </span>
   );
 }
+
 function getActionChip(changeType: string) {
   const T: Record<string, { label: string; c: string }> = {
-    CREATE: { label: "Created", c: "bg-blue-100 text-blue-800 border-blue-200" },
-    UPDATE: { label: "Updated", c: "bg-amber-100 text-amber-800 border-amber-200" },
-    STATUS_CHANGE: { label: "Status changed", c: "bg-amber-100 text-amber-800 border-amber-200" },
-    DELETE: { label: "Deleted", c: "bg-red-100 text-red-800 border-red-200" },
+    CREATE: { label: "Created", c: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800" },
+    UPDATE: { label: "Updated", c: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700" },
+    STATUS_CHANGE: { label: "Status changed", c: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800" },
+    DELETE: { label: "Deleted", c: "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/50 dark:text-red-200 dark:border-red-800" },
   };
-  const t = T[changeType] ?? { label: changeType, c: "bg-slate-100 text-slate-600 border-slate-200" };
-  return <span className={`${CHIP_BASE} ${t.c}`}>{t.label}</span>;
+  const t = T[changeType] ?? { label: changeType, c: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700" };
+  return <span className={`${PILL_BASE} ${t.c}`}>{t.label}</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +257,7 @@ export function AuditLogsTableClient({
       <div className="w-full min-w-0 space-y-0">
         {logs.length === 0 ? (
           <EmptyState
-            title={hasActiveFilters ? "No results" : "No audit entries yet"}
+            title="No audit entries found."
             description={
               hasActiveFilters
                 ? "Try adjusting your filters."
@@ -271,50 +267,53 @@ export function AuditLogsTableClient({
             variant={hasActiveFilters ? "no-results" : "default"}
           />
         ) : (
-          <div className="w-full min-w-0 rounded-2xl border border-gray-200/60 bg-white shadow-sm overflow-hidden">
+          <div className="w-full min-w-0 rounded-xl border border-gray-200/60 dark:border-gray-800/60 bg-white dark:bg-gray-950 shadow-sm">
             <div className="overflow-x-auto">
-              <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
+              <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-800 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-800">
                 <TableHeader>
-                  <TableRow className="hover:bg-gray-100 border-b border-gray-200">
-                    <TableHead className="sticky left-0 top-0 z-20 bg-gray-100 border-r border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5 w-12">
+                  <TableRow className="bg-gray-50/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-12">
                       #
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-[152px]">
                       Timestamp
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 min-w-[180px]">
                       User
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
                       Action
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
                       Entity
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
                       Field
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 py-2.5 min-w-[200px]">
                       Change
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 py-2.5 min-w-[120px] max-w-[180px]">
                       Reason
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 min-w-[140px]">
                       Related
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap py-2.5 w-12">
-                      View
+                    <TableHead className="sticky right-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 border-l border-gray-200 dark:border-gray-800 text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-[88px]">
+                      Actions
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logs.map((log, index) => {
-                    const userLabel =
-                      log.changedBy?.first_name && log.changedBy?.last_name
-                        ? `${log.changedBy.first_name} ${log.changedBy.last_name}`
-                        : log.changedBy?.email || log.changed_by || "—";
-                    const userTooltip = [userLabel, log.changedBy?.email || log.changed_by].filter(Boolean).join("\n") || "—";
+                    const userName =
+                      log.changedBy?.first_name || log.changedBy?.last_name
+                        ? `${(log.changedBy.first_name || "").trim()} ${(log.changedBy.last_name || "").trim()}`.trim()
+                        : null;
+                    const userEmail = log.changedBy?.email || log.changed_by || null;
+                    const userLine1 = userName || userEmail || "—";
+                    const userLine2 = userName && userEmail ? userEmail : null;
+                    const userTooltip = [userLine1, userLine2].filter(Boolean).join("\n") || "—";
                     const relatedLines: string[] = [];
                     if (log.institution) {
                       relatedLines.push(`Institution: ${log.institution.trading_name || log.institution.legal_name || log.institution.institution_id}`);
@@ -360,20 +359,25 @@ export function AuditLogsTableClient({
                         : "—";
 
                     return (
-                      <TableRow key={log.audit_id} className="group hover:bg-gray-50/50 even:bg-muted/20">
-                        <TableCell className="sticky left-0 z-10 bg-white border-r border-gray-200 group-hover:bg-gray-50/50 py-2 whitespace-nowrap text-muted-foreground w-12">
+                      <TableRow key={log.audit_id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
+                        <TableCell className="py-2 whitespace-nowrap w-12 text-gray-800 dark:text-gray-200 font-bold align-top">
                           {offset + index + 1}
                         </TableCell>
-                        <TableCell className="font-mono text-xs py-2 whitespace-nowrap">
+                        <TableCell className="font-mono text-xs py-2 whitespace-nowrap w-[152px] text-gray-700 dark:text-gray-300">
                           {formatDate(log.changed_at)}
                         </TableCell>
-                        <TableCell className="py-2 min-w-0">
+                        <TableCell className="py-2 min-w-[180px]">
                           <TooltipProvider>
                             <Tooltip delayDuration={200}>
                               <TooltipTrigger asChild>
-                                <div className="flex flex-col gap-0.5 min-w-0 max-w-[180px]">
-                                  <span className="font-medium truncate">{userLabel}</span>
-                                  {getRoleChip(log.role_at_time)}
+                                <div className="flex items-start justify-between gap-2 min-w-0">
+                                  <div className="min-w-0 flex flex-col gap-0.5">
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{userLine1}</span>
+                                    {userLine2 && (
+                                      <span className="text-xs text-muted-foreground truncate">{userLine2}</span>
+                                    )}
+                                  </div>
+                                  <span className="shrink-0 mt-0.5">{getRoleChip(log.role_at_time)}</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-sm text-xs whitespace-pre-wrap">
@@ -398,34 +402,37 @@ export function AuditLogsTableClient({
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className="py-2 min-w-0">
-                          <AuditCellWithTooltip value={log.field_name ?? "—"} maxWidth="max-w-[120px]" />
+                          <AuditCellWithTooltip value={formatFieldLabel(log.field_name)} maxWidth="max-w-[120px]" />
                         </TableCell>
-                        <TableCell className="py-2 min-w-0 max-w-[240px]">
+                        <TableCell className="py-2 min-w-0 max-w-[260px]">
                           <TooltipProvider>
                             <Tooltip delayDuration={200}>
                               <TooltipTrigger asChild>
-                                <div className="min-w-0 truncate">
+                                <div className="min-w-0 break-words">
                                   <AuditLogDiffViewer
                                     oldValue={log.old_value}
                                     newValue={log.new_value}
                                     changeType={log.change_type}
+                                    fieldName={log.field_name}
                                   />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-sm text-xs whitespace-pre-wrap break-words">
-                                {`Old: ${formatValue(log.old_value)}\n\nNew: ${formatValue(log.new_value)}`}
+                                {`From: ${formatValueForDisplay(log.old_value, log.field_name)}\nTo: ${formatValueForDisplay(log.new_value, log.field_name)}`}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="py-2 min-w-0 max-w-[160px]">
-                          <AuditCellWithTooltip value={log.reason || "No reason provided"} maxWidth="max-w-[160px]" />
+                        <TableCell className="py-2 min-w-0 max-w-[180px]" title={log.reason || "No reason provided"}>
+                          <span className="line-clamp-2 text-xs text-gray-700 dark:text-gray-300">
+                            {log.reason || "No reason provided"}
+                          </span>
                         </TableCell>
                         <TableCell className="py-2 min-w-0 max-w-[160px]">
                           <TooltipProvider>
                             <Tooltip delayDuration={200}>
                               <TooltipTrigger asChild>
-                                <div className="flex flex-col gap-0.5 min-w-0 truncate">
+                                <div className="flex flex-col gap-0.5 min-w-0 truncate overflow-hidden">
                                   {relatedCell === "—" ? (
                                     <span className="text-xs text-muted-foreground">—</span>
                                   ) : (
@@ -439,21 +446,21 @@ export function AuditLogsTableClient({
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="py-2 w-12 whitespace-nowrap">
+                        <TableCell className="sticky right-0 z-10 bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900 py-2 w-[88px] whitespace-nowrap align-top">
                           <TooltipProvider>
                             <Tooltip delayDuration={200}>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 shrink-0"
+                                  className="h-8 w-8 shrink-0 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                                   onClick={() => setViewEntry(log)}
-                                  aria-label="View entry"
+                                  aria-label="View audit entry"
                                 >
-                                  <Eye className="h-4 w-4 text-gray-700" />
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent side="top">View entry</TooltipContent>
+                              <TooltipContent side="top">View audit entry</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
@@ -465,7 +472,7 @@ export function AuditLogsTableClient({
             </div>
 
             {/* Footer: Rows per page, Showing X–Y of Z, Prev / Next */}
-            <footer className="border-t border-gray-200/60 px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-gray-50/30">
+            <footer className="border-t border-gray-200 dark:border-gray-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-900/30">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">Rows per page</span>
@@ -559,10 +566,14 @@ export function AuditLogsTableClient({
               </div>
               <div>
                 <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Field</p>
-                <p className="text-sm font-mono mt-0.5">{viewEntry.field_name ?? "—"}</p>
+                <p className="text-sm mt-0.5">{formatFieldLabel(viewEntry.field_name)}</p>
               </div>
               <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Change (full payload)</p>
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Change</p>
+                <p className="text-sm mt-0.5">
+                  From: {formatValueForDisplay(viewEntry.old_value, viewEntry.field_name)} → To: {formatValueForDisplay(viewEntry.new_value, viewEntry.field_name)}
+                </p>
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mt-3">Raw (technical)</p>
                 <div className="mt-1.5 rounded-lg border border-gray-200/60 bg-gray-50/50 p-3 max-h-64 overflow-auto">
                   <pre className="text-xs font-mono whitespace-pre-wrap break-words">
                     {`Old: ${formatValue(viewEntry.old_value)}\n\nNew: ${formatValue(viewEntry.new_value)}`}

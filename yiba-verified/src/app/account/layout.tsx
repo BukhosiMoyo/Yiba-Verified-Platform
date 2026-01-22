@@ -5,57 +5,8 @@ import { AccountLayout } from "@/components/account/AccountLayout";
 import { authOptions } from "@/lib/auth";
 import type { Role } from "@/lib/rbac";
 import { filterNavItems, type NavItem } from "@/components/layout/nav";
+import { getNavigationItemsForRole } from "@/lib/navigation";
 import { prisma } from "@/lib/prisma";
-
-/**
- * Get navigation items based on user role.
- * Account pages show the main sidebar navigation; AccountLayout provides account-specific nav inside content.
- */
-function getNavigationItemsForRole(role: Role): NavItem[] {
-  switch (role) {
-    case "PLATFORM_ADMIN":
-      return [
-        { label: "Dashboard", href: "/platform-admin", iconKey: "layout-dashboard" },
-        { label: "Institutions", href: "/platform-admin/institutions", iconKey: "building-2" },
-        { label: "Learners", href: "/platform-admin/learners", iconKey: "users" },
-        { label: "Qualifications", href: "/platform-admin/qualifications", iconKey: "graduation-cap" },
-        { label: "Users", href: "/platform-admin/users", iconKey: "users", capability: "STAFF_INVITE" },
-        { label: "Invites", href: "/platform-admin/invites", iconKey: "mail" },
-        { label: "Announcements", href: "/platform-admin/announcements", iconKey: "bell" },
-        { label: "Audit Logs", href: "/platform-admin/audit-logs", iconKey: "file-text", capability: "AUDIT_VIEW" },
-        { label: "Reports", href: "/platform-admin/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
-        { label: "System Health", href: "/platform-admin/system-health", iconKey: "activity" },
-      ];
-    case "INSTITUTION_ADMIN":
-    case "INSTITUTION_STAFF":
-      return [
-        { label: "Dashboard", href: "/institution", iconKey: "layout-dashboard" },
-        { label: "Institution Profile", href: "/institution/profile", iconKey: "building-2", capability: "INSTITUTION_PROFILE_EDIT" },
-        { label: "Staff", href: "/institution/staff", iconKey: "users", capability: "STAFF_INVITE" },
-        { label: "Invites", href: "/institution/invites", iconKey: "mail", capability: "STAFF_INVITE" },
-        { label: "Learners", href: "/institution/learners", iconKey: "graduation-cap", capability: "LEARNER_VIEW" },
-        { label: "Enrolments", href: "/institution/enrolments", iconKey: "clipboard-list", capability: "LEARNER_VIEW" },
-        { label: "Submissions", href: "/institution/submissions", iconKey: "upload", capability: "LEARNER_VIEW" },
-        { label: "QCTO Requests", href: "/institution/requests", iconKey: "file-question", capability: "LEARNER_VIEW" },
-        { label: "Readiness (Form 5)", href: "/institution/readiness", iconKey: "file-text", capability: "FORM5_VIEW" },
-        { label: "Evidence Vault", href: "/institution/documents", iconKey: "folder-open", capability: "EVIDENCE_VIEW" },
-        { label: "Reports", href: "/institution/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
-      ];
-    case "QCTO_USER":
-      return [
-        { label: "Dashboard", href: "/qcto", iconKey: "layout-dashboard" },
-        { label: "Readiness", href: "/qcto/readiness", iconKey: "file-text" },
-        { label: "Submissions", href: "/qcto/submissions", iconKey: "upload" },
-        { label: "Requests", href: "/qcto/requests", iconKey: "file-question" },
-      ];
-    case "STUDENT":
-      return [
-        { label: "Dashboard", href: "/student", iconKey: "layout-dashboard" },
-      ];
-    default:
-      return [];
-  }
-}
 
 export default async function AccountLayoutWrapper({
   children,
@@ -72,28 +23,32 @@ export default async function AccountLayoutWrapper({
   const userName = session.user.name || "User";
   const userEmail = session.user.email;
 
-  // Fetch badge counts for platform-admin role (invites and learners)
+  // Fetch badge counts for platform-admin role (invites, learners, active announcements)
+  const now = new Date();
   let pendingInvitesCount = 0;
   let learnersCount = 0;
+  let activeAnnouncementsCount = 0;
 
   if (role === "PLATFORM_ADMIN") {
     try {
-      [pendingInvitesCount, learnersCount] = await Promise.all([
-        // Pending invites: QUEUED, SENDING, SENT status and not expired
+      [pendingInvitesCount, learnersCount, activeAnnouncementsCount] = await Promise.all([
         prisma.invite.count({
           where: {
             deleted_at: null,
             status: { in: ["QUEUED", "SENDING", "SENT"] },
-            expires_at: { gt: new Date() },
+            expires_at: { gt: now },
           },
         }),
-        // Total learners count
-        prisma.learner.count({
-          where: { deleted_at: null },
+        prisma.learner.count({ where: { deleted_at: null } }),
+        prisma.announcement.count({
+          where: {
+            status: "ACTIVE",
+            deleted_at: null,
+            OR: [{ expires_at: null }, { expires_at: { gt: now } }],
+          },
         }),
       ]);
     } catch (error) {
-      // If there's an error, just use 0 counts
       console.error("Error fetching badge counts:", error);
     }
   }
@@ -107,6 +62,7 @@ export default async function AccountLayoutWrapper({
     if (role === "PLATFORM_ADMIN") {
       if (item.href === "/platform-admin/invites") next.badge = pendingInvitesCount;
       else if (item.href === "/platform-admin/learners") next.badge = learnersCount;
+      else if (item.href === "/platform-admin/announcements") next.badge = activeAnnouncementsCount;
     }
     return next;
   });

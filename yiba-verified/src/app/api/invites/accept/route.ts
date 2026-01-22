@@ -6,6 +6,7 @@ import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
+import { validateProvinceAssignment } from "@/lib/security/validation";
 
 /**
  * POST /api/invites/accept
@@ -98,6 +99,13 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Validate province assignment if provided in body (for QCTO roles)
+    const defaultProvince = body.default_province || null;
+    const assignedProvinces = body.assigned_provinces || [];
+    
+    // Validate province assignment based on role
+    validateProvinceAssignment(invite.role, defaultProvince, assignedProvinces);
+
     // Create user in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create user
@@ -110,11 +118,21 @@ export async function POST(request: NextRequest) {
           role: invite.role,
           institution_id: invite.institution_id,
           status: "ACTIVE",
+          onboarding_completed: false, // Students must complete onboarding
+          default_province: defaultProvince,
+          assigned_provinces: assignedProvinces,
         },
       });
 
-      // If STUDENT role, optionally create Learner record
-      // (This depends on your domain logic - for now we'll skip it as it requires more data)
+      // If STUDENT role, create OnboardingProgress record for tracking
+      if (invite.role === "STUDENT") {
+        await tx.onboardingProgress.create({
+          data: {
+            user_id: user.user_id,
+            current_step: 1,
+          },
+        });
+      }
 
       // Mark invite as used and accepted
       await tx.invite.update({

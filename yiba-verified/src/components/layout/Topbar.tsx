@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/rbac";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { AccountMenu } from "@/components/account/AccountMenu";
+import { ViewAsUserSelector } from "@/components/shared/ViewAsUserBanner";
 
 type TopbarProps = {
   userName: string;
@@ -19,6 +21,11 @@ type TopbarProps = {
 const roleLabels: Record<Role, string> = {
   PLATFORM_ADMIN: "Platform Admin",
   QCTO_USER: "QCTO User",
+  QCTO_SUPER_ADMIN: "QCTO Super Admin",
+  QCTO_ADMIN: "QCTO Admin",
+  QCTO_REVIEWER: "QCTO Reviewer",
+  QCTO_AUDITOR: "QCTO Auditor",
+  QCTO_VIEWER: "QCTO Viewer",
   INSTITUTION_ADMIN: "Institution Admin",
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Student",
@@ -61,12 +68,12 @@ export function Topbar({ userName, userRole, onMenuClick }: TopbarProps) {
   const userInitials = getInitials(userName);
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200/60 bg-white px-6 min-w-0 overflow-hidden">
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-card/90 backdrop-blur-md px-6 min-w-0 overflow-hidden shadow-[var(--shadow-soft)] dark:bg-card/80">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
         size="icon"
-        className="lg:hidden h-9 w-9 border-transparent text-blue-700 hover:text-blue-800 hover:bg-blue-50/80 transition-colors duration-200 flex-shrink-0"
+        className="lg:hidden h-9 w-9 border-transparent text-foreground hover:bg-muted transition-colors duration-200 flex-shrink-0"
         onClick={onMenuClick}
         aria-label="Toggle menu"
       >
@@ -84,11 +91,11 @@ export function Topbar({ userName, userRole, onMenuClick }: TopbarProps) {
         <Button
           variant="ghost"
           onClick={() => setSearchOpen(true)}
-          className="hidden md:flex h-9 items-center gap-2 px-3 rounded-full border-2 border-blue-300 bg-blue-50/60 hover:bg-blue-50/80 hover:border-blue-400 text-blue-700 hover:text-blue-800 transition-all duration-200"
+          className="hidden md:flex h-9 items-center gap-2 px-3 rounded-full border-2 border-border bg-muted/60 hover:bg-muted hover:border-border text-foreground transition-all duration-200"
         >
           <Search className="h-4 w-4" strokeWidth={1.5} />
           <span className="text-sm font-medium">Search...</span>
-          <kbd className="hidden lg:inline-flex ml-2 px-1.5 py-0.5 rounded bg-white/80 border border-blue-300 text-xs font-mono text-blue-700 font-semibold">
+          <kbd className="hidden lg:inline-flex ml-2 px-1.5 py-0.5 rounded bg-card/80 border border-border text-xs font-mono text-muted-foreground font-semibold">
             {shortcutKey}K
           </kbd>
         </Button>
@@ -98,11 +105,17 @@ export function Topbar({ userName, userRole, onMenuClick }: TopbarProps) {
           variant="ghost"
           size="icon"
           onClick={() => setSearchOpen(true)}
-          className="md:hidden h-9 w-9 border-transparent text-blue-700 hover:text-blue-800 hover:bg-blue-50/80 transition-colors duration-200"
+          className="md:hidden h-9 w-9 border-transparent text-foreground hover:bg-muted transition-colors duration-200"
           aria-label="Search"
         >
           <Search className="h-4 w-4" strokeWidth={1.5} />
         </Button>
+
+        {/* Theme: light / dark */}
+        <ThemeToggle variant="icon-sm" aria-label="Toggle light or dark mode" />
+
+        {/* View As User selector (for privileged users) */}
+        <ViewAsUserSelector currentRole={userRole} onStart={() => {}} />
 
         {/* Notification Bell */}
         <NotificationBell />
@@ -113,7 +126,7 @@ export function Topbar({ userName, userRole, onMenuClick }: TopbarProps) {
             asChild
             variant="ghost"
             size="icon"
-            className="h-9 w-9 border-transparent text-blue-700 hover:text-blue-800 hover:bg-blue-50/80 transition-colors duration-200"
+            className="h-9 w-9 border-transparent text-foreground hover:bg-muted transition-colors duration-200"
             title="API Documentation"
           >
             <Link href="/api-docs">
@@ -131,20 +144,20 @@ export function Topbar({ userName, userRole, onMenuClick }: TopbarProps) {
             <div className="flex items-center gap-2">
               {/* Avatar with initials */}
               <div className="hidden sm:flex sm:items-center sm:gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
                   {userInitials}
                 </div>
                 <div className="hidden lg:flex lg:flex-col lg:gap-0.5">
-                  <span className="text-sm font-semibold text-gray-900 leading-tight">{userName}</span>
-                  <span className="text-xs text-gray-500 leading-tight">{roleLabels[userRole]}</span>
+                  <span className="text-sm font-semibold text-foreground leading-tight">{userName}</span>
+                  <span className="text-xs text-muted-foreground leading-tight">{roleLabels[userRole]}</span>
                 </div>
               </div>
               {/* Mobile: Just show avatar */}
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md sm:hidden">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md sm:hidden">
                 {userInitials}
               </div>
               {/* Down arrow indicator */}
-              <ChevronDown className="h-4 w-4 text-blue-700 hidden sm:block" strokeWidth={1.5} />
+              <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" strokeWidth={1.5} />
             </div>
           }
         />

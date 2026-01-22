@@ -109,22 +109,25 @@ export async function GET(request: NextRequest) {
           institution: {
             select: {
               institution_id: true,
-              name: true,
-              code: true,
+              legal_name: true,
+              trading_name: true,
+              registration_number: true,
             },
           },
           requestedByUser: {
             select: {
               user_id: true,
               email: true,
-              name: true,
+              first_name: true,
+              last_name: true,
             },
           },
           reviewedByUser: {
             select: {
               user_id: true,
               email: true,
-              name: true,
+              first_name: true,
+              last_name: true,
             },
           },
           requestResources: {

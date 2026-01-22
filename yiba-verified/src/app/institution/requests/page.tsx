@@ -82,13 +82,15 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
       created_at: true,
       requestedByUser: {
         select: {
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
       reviewedByUser: {
         select: {
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
@@ -199,7 +201,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
                         </span>
                       </TableCell>
                       <TableCell>
-                        {request.requestedByUser?.name || request.requestedByUser?.email || "N/A"}
+                        {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser?.email || "N/A"}
                       </TableCell>
                       <TableCell>{formatDateTime(request.requested_at)}</TableCell>
                       <TableCell>

@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { getStorageService } from "@/lib/storage";
+import { canAccessQctoData } from "@/lib/rbac";
 
 export async function DELETE(
   request: NextRequest,
@@ -15,8 +16,8 @@ export async function DELETE(
 ) {
   try {
     const { ctx } = await requireAuth(request);
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform admins can remove review attachments", 403);
+    if (!canAccessQctoData(ctx.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can remove review attachments", 403);
     }
 
     const { submissionId, attachmentId } = await params;

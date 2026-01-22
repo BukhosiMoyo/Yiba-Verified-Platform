@@ -1,6 +1,8 @@
 # System Login Credentials
 
-This document contains the test user credentials for the Yiba Verified platform. These accounts are created by the database seed script (`prisma/seed.ts`).
+This document contains the **development/test** user credentials for the Yiba Verified platform. These accounts are created by the **default** database seed (`npx prisma db seed`).
+
+> **Demo accounts** (e.g. `thabo.mokoena@demo.yibaverified.local` / `Demo@123!`) are created by a separate seed. See [DEMO-LOGINS.md](DEMO-LOGINS.md) and run `npm run seed:demo` first.
 
 ## 🔑 Primary Development Login
 
@@ -32,12 +34,18 @@ This document contains the test user credentials for the Yiba Verified platform.
 - **Access:** Institution staff dashboard
 - **Institution:** Test Institution (TEST-INST-001)
 
-### Student
-- **Email:** `student@yibaverified.co.za`
-- **Password:** `Student@123!`
+### Students (all use password: `Student@123!`)
+
+| Email | Name | National ID |
+|-------|------|-------------|
+| `student@yibaverified.co.za` | Test Student | 9001015009087 |
+| `lerato.student@yibaverified.co.za` | Lerato Dlamini | 9203155011082 |
+| `sipho.student@yibaverified.co.za` | Sipho Khumalo | 9506205007085 |
+| `thandi.student@yibaverified.co.za` | Thandi Nkosi | 9808125013081 |
+| `bongani.student@yibaverified.co.za` | Bongani Sithole | 0012255015083 |
+
 - **Role:** `STUDENT`
-- **Access:** Student dashboard
-- **Linked Learner:** National ID 9001015009087
+- **Access:** Student dashboard (`/student`)
 
 ## User Roles & Access
 
@@ -57,11 +65,7 @@ To create these accounts in your database, run:
 npx prisma db seed
 ```
 
-Or if you have a custom seed script configured:
-
-```bash
-npm run seed
-```
+This runs the **default** seed (no `DEMO_MODE`). It does **not** create demo users; for those, use `npm run seed:demo` and see [DEMO-LOGINS.md](DEMO-LOGINS.md).
 
 ## Notes
 

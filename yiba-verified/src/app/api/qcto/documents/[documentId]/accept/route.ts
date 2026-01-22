@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
+import { canAccessQctoData } from "@/lib/rbac";
+import { validateRouteParamUUID } from "@/lib/security/validation";
+import { applyRateLimit, RATE_LIMITS, enforceRequestSizeLimit } from "@/lib/api/routeHelpers";
 
 interface RouteParams {
   params: Promise<{
@@ -19,12 +22,19 @@ interface RouteParams {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    // Enforce request size limit
+    await enforceRequestSizeLimit(request);
+    
     const ctx = await requireApiContext(request);
-    const { documentId } = await params;
+    
+    // Apply rate limiting
+    const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
+    
+    const { documentId: rawDocumentId } = await params;
+    const documentId = validateRouteParamUUID(rawDocumentId, "documentId");
 
-    // Only QCTO_USER and PLATFORM_ADMIN can accept documents
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO users can accept documents", 403));
+    if (!canAccessQctoData(ctx.role)) {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can accept documents", 403));
     }
 
     // Find document
@@ -46,16 +56,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       action: "DOCUMENT_ACCEPT",
       entityType: "DOCUMENT",
       entityId: documentId,
-      fn: async () => {
+      fn: async (tx) => {
         // Update document status to ACCEPTED
-        await prisma.document.update({
+        await tx.document.update({
           where: { document_id: documentId },
           data: { status: "ACCEPTED" },
         });
 
         // Resolve all active flags
         if (document.flags.length > 0) {
-          await prisma.evidenceFlag.updateMany({
+          await tx.evidenceFlag.updateMany({
             where: {
               document_id: documentId,
               status: "ACTIVE",
@@ -72,11 +82,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    return NextResponse.json({
-      document_id: document.document_id,
-      status: "ACCEPTED",
-      message: "Document accepted and all flags resolved",
-    });
+    return NextResponse.json(
+      {
+        document_id: document.document_id,
+        status: "ACCEPTED",
+        message: "Document accepted and all flags resolved",
+      },
+      {
+        status: 200,
+        headers: rateLimitHeaders,
+      }
+    );
   } catch (error) {
     if (error instanceof AppError) {
       return fail(error);

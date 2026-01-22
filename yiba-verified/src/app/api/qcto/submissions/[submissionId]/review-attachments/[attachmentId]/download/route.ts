@@ -8,6 +8,7 @@ import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { getStorageService } from "@/lib/storage";
 import { Readable } from "stream";
+import { canAccessQctoData } from "@/lib/rbac";
 
 export async function GET(
   request: NextRequest,
@@ -15,8 +16,8 @@ export async function GET(
 ) {
   try {
     const { ctx } = await requireAuth(request);
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform admins can download review attachments", 403);
+    if (!canAccessQctoData(ctx.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can download review attachments", 403);
     }
 
     const { submissionId, attachmentId } = await params;

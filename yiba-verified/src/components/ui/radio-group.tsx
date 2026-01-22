@@ -21,13 +21,13 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
       >
         {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
+            const p = (child.props as { name?: string; value?: string });
             return React.cloneElement(child, {
-              // @ts-ignore
-              name: child.props.name || "radio-group",
-              checked: child.props.value === value,
+              name: p.name || "radio-group",
+              checked: p.value === value,
               onCheckedChange: onValueChange,
               error,
-            } as any);
+            } as React.ComponentProps<typeof RadioItem>);
           }
           return child;
         })}
@@ -84,18 +84,18 @@ const RadioItem = React.forwardRef<HTMLInputElement, RadioItemProps>(
             checked={checked}
             onChange={handleChange}
             className={cn(
-              "peer h-4 w-4 shrink-0 rounded-full border border-gray-300 bg-white text-blue-600 transition-all duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:ring-offset-1",
+              "peer h-4 w-4 shrink-0 rounded-full border border-border bg-background text-primary transition-all duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-1",
               "disabled:cursor-not-allowed disabled:opacity-50",
-              "checked:border-blue-600",
-              error && "border-red-300 focus-visible:ring-red-500/20",
+              "checked:border-primary",
+              error && "border-destructive focus-visible:ring-destructive/20",
               className
             )}
             {...props}
           />
           <div
             className={cn(
-              "pointer-events-none absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600 opacity-0 transition-opacity duration-150",
+              "pointer-events-none absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary opacity-0 transition-opacity duration-150",
               "peer-checked:opacity-100"
             )}
           />
@@ -105,8 +105,8 @@ const RadioItem = React.forwardRef<HTMLInputElement, RadioItemProps>(
             htmlFor={radioId}
             className={cn(
               "text-sm font-medium leading-none cursor-pointer select-none",
-              "text-gray-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-              error && "text-red-700"
+              "text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+              error && "text-destructive"
             )}
           >
             {label}

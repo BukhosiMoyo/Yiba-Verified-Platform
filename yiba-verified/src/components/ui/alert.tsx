@@ -10,11 +10,16 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-gray-200/60 bg-gray-50 text-gray-900",
-        success: "border-green-200/60 bg-green-50/50 text-green-900",
-        warning: "border-amber-200/60 bg-amber-50/50 text-amber-900",
-        error: "border-red-200/60 bg-red-50/50 text-red-900",
-        info: "border-blue-200/60 bg-blue-50/50 text-blue-900",
+        default:
+          "border-border bg-muted/60 text-foreground dark:border-border dark:bg-muted dark:text-foreground",
+        success:
+          "border-emerald-200/60 bg-emerald-50/50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200",
+        warning:
+          "border-amber-200/60 bg-amber-50/50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200",
+        error:
+          "border-red-200/60 bg-red-50/50 text-red-900 dark:border-destructive/40 dark:bg-destructive/10 dark:text-red-200",
+        info:
+          "border-blue-200/60 bg-blue-50/50 text-blue-900 dark:border-primary/40 dark:bg-primary/10 dark:text-blue-200",
       },
     },
     defaultVariants: {
@@ -26,11 +31,11 @@ const alertVariants = cva(
 const alertIconVariants = cva("h-5 w-5 shrink-0", {
   variants: {
     variant: {
-      default: "text-gray-600",
-      success: "text-green-600",
-      warning: "text-amber-600",
-      error: "text-red-600",
-      info: "text-blue-600",
+      default: "text-muted-foreground dark:text-muted-foreground",
+      success: "text-emerald-600 dark:text-emerald-400",
+      warning: "text-amber-600 dark:text-amber-400",
+      error: "text-red-600 dark:text-red-400",
+      info: "text-blue-600 dark:text-blue-400",
     },
   },
 });
@@ -149,11 +154,11 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
             {title && (
               <h4 className={cn(
                 "text-sm font-semibold leading-tight mb-1",
-                variant === "success" && "text-green-900",
-                variant === "warning" && "text-amber-900",
-                variant === "error" && "text-red-900",
-                variant === "info" && "text-blue-900",
-                variant === "default" && "text-gray-900"
+                variant === "success" && "text-emerald-900 dark:text-emerald-200",
+                variant === "warning" && "text-amber-900 dark:text-amber-200",
+                variant === "error" && "text-red-900 dark:text-red-200",
+                variant === "info" && "text-blue-900 dark:text-blue-200",
+                variant === "default" && "text-foreground"
               )}>
                 {title}
               </h4>
@@ -161,11 +166,11 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
             {description && (
               <div className={cn(
                 "text-sm leading-relaxed",
-                variant === "success" && "text-green-700/80",
-                variant === "warning" && "text-amber-700/80",
-                variant === "error" && "text-red-700/80",
-                variant === "info" && "text-blue-700/80",
-                variant === "default" && "text-gray-600"
+                variant === "success" && "text-emerald-700/90 dark:text-emerald-300/90",
+                variant === "warning" && "text-amber-700/90 dark:text-amber-300/90",
+                variant === "error" && "text-red-700/90 dark:text-red-300/90",
+                variant === "info" && "text-blue-700/90 dark:text-blue-300/90",
+                variant === "default" && "text-muted-foreground"
               )}>
                 {description}
               </div>
@@ -182,7 +187,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
             {dismissible && (
               <button
                 type="button"
-                className="h-6 w-6 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-colors duration-150 flex items-center justify-center"
+                className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex items-center justify-center"
                 onClick={handleDismiss}
                 aria-label="Dismiss alert"
               >

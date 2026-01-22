@@ -3,6 +3,7 @@ import { requireApiContext } from "@/lib/api/context";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
+import { canAccessQctoData } from "@/lib/rbac";
 
 /**
  * GET /api/export/evidence-flags
@@ -18,9 +19,9 @@ export async function GET(request: NextRequest) {
   try {
     const ctx = await requireApiContext(request);
 
-    if (ctx.role !== "PLATFORM_ADMIN" && ctx.role !== "QCTO_USER") {
+    if (!canAccessQctoData(ctx.role)) {
       return fail(
-        new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins and QCTO users can export evidence flags", 403)
+        new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only QCTO and platform administrators can export evidence flags", 403)
       );
     }
 

@@ -5,6 +5,7 @@ import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { getStorageService } from "@/lib/storage";
+import { validateRouteParamUUID } from "@/lib/security/validation";
 
 interface RouteParams {
   params: Promise<{
@@ -20,7 +21,10 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const ctx = await requireApiContext(request);
-    const { documentId } = await params;
+    const { documentId: rawDocumentId } = await params;
+    
+    // Validate UUID format to prevent invalid IDs from reaching the database
+    const documentId = validateRouteParamUUID(rawDocumentId, "documentId");
 
     // Build where clause with institution scoping
     const where: any = {
@@ -248,8 +252,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       action: "DOCUMENT_REPLACE",
       entityType: "DOCUMENT",
       entityId: () => "", // Will be set after creation
-      fn: async () => {
-        return await prisma.document.create({
+      fn: async (tx) => {
+        return await tx.document.create({
           data: {
             related_entity: currentDoc.related_entity,
             related_entity_id: currentDoc.related_entity_id,

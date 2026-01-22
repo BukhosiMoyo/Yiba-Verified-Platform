@@ -7,17 +7,23 @@ export interface InputProps
   withSearchIcon?: boolean;
 }
 
+const baseInput =
+  "flex h-10 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2 focus-visible:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50";
+
+const invalidInput = "border-destructive/70 focus-visible:ring-destructive/25 focus-visible:border-destructive/60";
+
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, withSearchIcon, ...props }, ref) => {
     if (withSearchIcon) {
       return (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
           <input
             type={type}
             className={cn(
-              "flex h-10 w-full rounded-lg border border-gray-200/80 bg-gray-50/50 pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-300 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50",
-              props["aria-invalid"] === true && "border-red-300 focus-visible:ring-red-500/20 focus-visible:border-red-400",
+              baseInput,
+              "pl-10 pr-3",
+              props["aria-invalid"] === true && invalidInput,
               className
             )}
             ref={ref}
@@ -30,8 +36,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-lg border border-gray-200/80 bg-white px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-300 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50",
-          props["aria-invalid"] === true && "border-red-300 focus-visible:ring-red-500/20 focus-visible:border-red-400",
+          baseInput,
+          props["aria-invalid"] === true && invalidInput,
           className
         )}
         ref={ref}

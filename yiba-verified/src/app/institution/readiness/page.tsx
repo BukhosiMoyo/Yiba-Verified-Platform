@@ -2,14 +2,12 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import Link from "next/link";
-import { FileCheck } from "lucide-react";
+import { FileCheck, Eye } from "lucide-react";
 
 interface PageProps {
   searchParams: Promise<{
@@ -138,11 +136,11 @@ export default async function InstitutionReadinessPage({ searchParams }: PagePro
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 md:space-y-8 p-4 md:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Form 5 Readiness</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold">Form 5 Readiness</h1>
+          <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
             Programme delivery readiness records for QCTO review
           </p>
         </div>
@@ -151,84 +149,81 @@ export default async function InstitutionReadinessPage({ searchParams }: PagePro
         </Link>
       </div>
 
-      {/* Readiness Records Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Readiness Records</CardTitle>
-          <CardDescription>
-            Form 5 readiness submissions for qualification delivery
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-2xl border border-slate-200/80 dark:border-border bg-white dark:bg-card shadow-sm overflow-hidden border-l-4 border-l-emerald-500">
+        <div className="border-b border-slate-200/80 dark:border-border bg-slate-50/30 dark:bg-muted/30 px-4 py-4 md:px-6 md:py-5">
+          <h2 className="text-lg font-semibold text-foreground">Readiness Records</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {readinessRecords.length} record{readinessRecords.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="overflow-x-auto">
           {readinessRecords.length === 0 ? (
-            <EmptyState
-              title="No readiness records found"
-              description="Form 5 readiness records demonstrate your institution's capability to deliver a qualification. Create your first readiness record to get started."
-              action={{
-                label: "Create Readiness Record",
-                href: "/institution/readiness/new",
-              }}
-              icon={<FileCheck className="h-6 w-6" strokeWidth={1.5} />}
-            />
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-border bg-gray-50/50 dark:bg-muted/30 mx-4 md:mx-6 my-6 py-16">
+              <EmptyState
+                title="No readiness records found"
+                description="Form 5 readiness records demonstrate your institution's capability to deliver a qualification. Create your first readiness record to get started."
+                action={{
+                  label: "Create Readiness Record",
+                  href: "/institution/readiness/new",
+                }}
+                icon={<FileCheck className="h-6 w-6" strokeWidth={1.5} />}
+              />
+            </div>
           ) : (
-            <ResponsiveTable>
-              <Table>
+            <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 dark:[&_th]:border-border [&_td]:border [&_td]:border-gray-200 dark:[&_td]:border-border">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Qualification</TableHead>
-                  <TableHead>SAQA ID</TableHead>
-                  <TableHead>NQF Level</TableHead>
-                  <TableHead>Delivery Mode</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Documents</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="bg-gray-50/80 dark:bg-muted/50 border-b border-gray-200 dark:border-border hover:bg-gray-50/80 dark:hover:bg-muted/50">
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground w-12 text-center py-2.5 px-4">#</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground min-w-[180px] py-2.5 px-4">Qualification</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[100px]">SAQA ID</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[90px]">NQF</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[110px]">Delivery</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[100px]">Status</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[90px]">Docs</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground py-2.5 px-4 w-[100px]">Updated</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-muted-foreground text-right py-2.5 px-4 w-28">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {readinessRecords.map((readiness) => (
-                  <TableRow key={readiness.readiness_id}>
-                    <TableCell className="font-medium">
-                      {readiness.qualification_title}
+                {readinessRecords.map((r, i) => (
+                  <TableRow key={r.readiness_id} className="group hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-colors">
+                    <TableCell className="text-center tabular-nums font-semibold text-gray-700 dark:text-muted-foreground py-2.5 px-4 w-12">{i + 1}</TableCell>
+                    <TableCell className="font-medium text-foreground py-2.5 px-4 min-w-0 max-w-[220px] truncate" title={r.qualification_title || undefined}>
+                      {r.qualification_title}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {readiness.saqa_id}
-                    </TableCell>
-                    <TableCell>{readiness.nqf_level || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {readiness.delivery_mode.replace(/_/g, " ")}
+                    <TableCell className="font-mono text-sm py-2.5 px-4">{r.saqa_id}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground py-2.5 px-4">{r.nqf_level || "—"}</TableCell>
+                    <TableCell className="py-2.5 px-4">
+                      <Badge variant="outline" className="text-xs">
+                        {r.delivery_mode.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(readiness.readiness_status)}>
-                        {formatStatus(readiness.readiness_status)}
+                    <TableCell className="py-2.5 px-4">
+                      <Badge variant={getStatusVariant(r.readiness_status)}>
+                        {formatStatus(r.readiness_status)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {readiness._count.documents} {readiness._count.documents === 1 ? "document" : "documents"}
-                      </span>
+                    <TableCell className="text-sm text-muted-foreground py-2.5 px-4">
+                      {r._count.documents} {r._count.documents === 1 ? "doc" : "docs"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(readiness.updated_at)}
+                    <TableCell className="text-sm text-muted-foreground py-2.5 px-4 whitespace-nowrap">
+                      {formatDate(r.updated_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-2.5 px-4 text-right">
                       <Link
-                        href={`/institution/readiness/${readiness.readiness_id}`}
-                        className="text-sm text-primary hover:underline"
+                        href={`/institution/readiness/${r.readiness_id}`}
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 dark:border-border bg-white dark:bg-background text-gray-700 dark:text-foreground hover:bg-emerald-50 hover:border-emerald-200/80 dark:hover:border-emerald-800/50 transition-colors"
                       >
-                        View / Edit
+                        <Eye className="h-4 w-4" aria-hidden />
                       </Link>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            </ResponsiveTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

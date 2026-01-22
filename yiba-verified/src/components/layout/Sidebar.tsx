@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -13,6 +13,7 @@ import {
   Activity,
   GraduationCap,
   ClipboardList,
+  ClipboardCheck,
   FolderOpen,
   Eye,
   Flag,
@@ -51,6 +52,7 @@ const ICONS: Record<string, LucideIcon> = {
   activity: Activity,
   "graduation-cap": GraduationCap,
   "clipboard-list": ClipboardList,
+  "clipboard-check": ClipboardCheck,
   "folder-open": FolderOpen,
   eye: Eye,
   flag: Flag,
@@ -59,6 +61,7 @@ const ICONS: Record<string, LucideIcon> = {
   mail: Mail,
   settings: Settings,
   shield: Shield,
+  user: User,
 };
 
 // Map role to home dashboard path
@@ -70,6 +73,11 @@ const getRoleHomePath = (role: Role): string => {
     case "INSTITUTION_STAFF":
       return "/institution";
     case "QCTO_USER":
+    case "QCTO_SUPER_ADMIN":
+    case "QCTO_ADMIN":
+    case "QCTO_REVIEWER":
+    case "QCTO_AUDITOR":
+    case "QCTO_VIEWER":
       return "/qcto";
     case "STUDENT":
       return "/student";
@@ -105,12 +113,17 @@ function isParentActive(item: NavItem, pathname: string): boolean {
   return false;
 }
 
-/** Child is active when path and status (if any) match. */
-function isChildActive(child: NavItem, pathname: string, statusParam: string | null): boolean {
+/** Child is active when path and filter param (status or province) match. */
+function isChildActive(
+  child: NavItem,
+  pathname: string,
+  filterVal: string | null,
+  paramKey: "status" | "province" = "status"
+): boolean {
   const [p, q] = child.href.split("?");
-  const childStatus = q ? new URLSearchParams(q).get("status") : null;
+  const childVal = q ? new URLSearchParams(q).get(paramKey) : null;
   if (pathname !== p) return false;
-  return childStatus === null ? !statusParam : statusParam === childStatus;
+  return childVal === null ? !filterVal : filterVal === childVal;
 }
 
 type SidebarProps = {
@@ -125,12 +138,10 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const statusParam = searchParams.get("status");
+  const provinceParam = searchParams.get("province");
   const [collapsed, setCollapsed] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [groupExpanded, setGroupExpanded] = useState<Set<string>>(() => new Set());
   const [groupCollapsed, setGroupCollapsed] = useState<Set<string>>(() => new Set());
-  const navRef = useRef<HTMLDivElement>(null);
-  const hoverIndicatorRef = useRef<HTMLDivElement>(null);
 
   const isGroupOpen = (href: string, item: NavItem) => {
     const active = isParentActive(item, pathname);
@@ -167,67 +178,35 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
   // Get home path for current role
   const homePath = getRoleHomePath(role);
 
-  // Update hover indicator position (liquid hover effect)
-  useEffect(() => {
-    if (!hoverIndicatorRef.current || !navRef.current) {
-      return;
-    }
-
-    if (hoveredIndex === null) {
-      // Hide hover indicator with fade out
-      if (hoverIndicatorRef.current) {
-        hoverIndicatorRef.current.style.opacity = "0";
-      }
-      return;
-    }
-
-    const navItems = navRef.current.querySelectorAll('[data-nav-item]');
-    if (navItems[hoveredIndex]) {
-      const item = navItems[hoveredIndex] as HTMLElement;
-      const navRect = navRef.current.getBoundingClientRect();
-      const itemRect = item.getBoundingClientRect();
-      
-      const top = itemRect.top - navRect.top;
-      const height = itemRect.height;
-      
-      // Set position - CSS transition will handle smooth movement
-      requestAnimationFrame(() => {
-        if (hoverIndicatorRef.current) {
-          hoverIndicatorRef.current.style.transform = `translateY(${top}px)`;
-          hoverIndicatorRef.current.style.height = `${height}px`;
-          hoverIndicatorRef.current.style.opacity = "1";
-        }
-      });
-    }
-  }, [hoveredIndex, collapsed]);
-
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div
       className={cn(
-        "flex h-full flex-col bg-gray-50/50 transition-[width] duration-250 ease-in-out overflow-hidden",
+        "flex h-full flex-col bg-gradient-to-b from-card via-card to-muted/20 transition-[width] duration-250 ease-in-out overflow-hidden dark:from-card dark:via-card dark:to-muted/30",
         collapsed && !isMobile ? "w-[72px]" : "w-[280px]",
-        !collapsed && !isMobile && "rounded-r-2xl border-r border-gray-100"
+        !collapsed && !isMobile && "rounded-r-2xl border-r border-border/80"
       )}
     >
       {/* Logo/Brand - Clickable */}
-      <div className="flex h-20 items-center justify-between px-6">
+      <div className={cn("flex h-20 items-center justify-between", collapsed && !isMobile ? "px-2" : "px-6")}>
         <Link
           href={homePath}
           className={cn(
-            "transition-all duration-250 ease-in-out",
-            collapsed && !isMobile ? "opacity-0 w-0 overflow-hidden -translate-x-1" : "opacity-100 translate-x-0"
+            "flex items-center transition-all duration-250 ease-in-out flex-shrink-0",
+            collapsed && !isMobile ? "w-9" : "min-w-0"
           )}
           onClick={onClose}
         >
-          <h1 className="text-lg font-semibold text-gray-900 tracking-tight hover:text-gray-700 cursor-pointer transition-colors duration-150">
-            Yiba Verified
-          </h1>
+          {collapsed && !isMobile ? (
+            <img src="/Yiba%20Verified%20Icon.webp" alt="Yiba Verified" className="h-9 w-9 object-contain" />
+          ) : (
+            <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-8 max-w-[180px] object-contain object-left" />
+          )}
         </Link>
         {!isMobile && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 border-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 transition-colors duration-150"
+            className="h-8 w-8 border-transparent text-primary hover:bg-primary/15 transition-colors duration-150"
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -245,15 +224,8 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
         "flex-1 pb-4",
         collapsed && !isMobile ? "px-2" : "px-3"
       )}>
-        <nav className="relative space-y-1" ref={navRef}>
-          {/* Liquid hover indicator */}
-          <div
-            ref={hoverIndicatorRef}
-            className="absolute left-0 right-0 rounded-lg bg-blue-50/60 border border-blue-100/50 pointer-events-none transition-[transform,height,opacity] duration-250 ease-out opacity-0 z-0"
-            style={{ transform: "translateY(0px)", height: "40px" }}
-          />
-
-          {filteredItems.map((item, index) => {
+        <nav className="relative space-y-1">
+          {filteredItems.map((item) => {
             const hasChildren = item.children && item.children.length > 0 && !(collapsed && !isMobile);
             const active = hasChildren
               ? isParentActive(item, pathname)
@@ -268,19 +240,17 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                   <div
                     data-nav-item
                     className={cn(
-                      "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2",
+                      "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background",
                       collapsed && !isMobile ? "justify-center px-0" : "gap-1 pr-1 pl-3",
                       active
                         ? collapsed && !isMobile
-                          ? "bg-transparent text-blue-700"
-                          : "bg-blue-50/60 border border-blue-100/60 text-blue-700 shadow-[0_1px_0_rgba(0,0,0,0.03)] z-20"
-                        : "text-gray-700"
+                          ? "bg-transparent text-primary"
+                          : "bg-primary/10 border border-primary/20 text-primary shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none z-20"
+                        : "text-muted-foreground hover:bg-muted/70"
                     )}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
                   >
                     {active && !collapsed && !isMobile && (
-                      <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 transition-all duration-200 ease-out" />
+                      <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-200 ease-out" />
                     )}
                     <Link
                       href={item.href}
@@ -295,14 +265,14 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                           className={cn(
                             "relative flex flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out",
                             collapsed && !isMobile ? "h-9 w-9 mx-auto" : "h-9 w-9",
-                            collapsed && !isMobile && active && "bg-blue-50/80 ring-1 ring-blue-200/60"
+                            collapsed && !isMobile && active && "bg-primary/15 ring-1 ring-primary/30"
                           )}
                         >
                           {active && collapsed && !isMobile && (
-                            <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-blue-600" />
+                            <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-primary" />
                           )}
                           <Icon
-                            className={cn("h-5 w-5 transition-colors duration-200 ease-out", active ? "text-blue-700" : "text-gray-500")}
+                            className={cn("h-5 w-5 transition-colors duration-200 ease-out", active ? "text-primary" : "text-muted-foreground")}
                             strokeWidth={1.5}
                           />
                         </div>
@@ -318,8 +288,8 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                       {item.badge !== undefined && !active && (
                         <span
                           className={cn(
-                            "inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold text-white",
-                            item.badge === 0 ? "bg-gray-400" : "bg-red-600",
+                            "inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                            item.badge === 0 ? "bg-muted text-muted-foreground" : "bg-destructive text-destructive-foreground",
                             collapsed && !isMobile && "opacity-0 w-0 overflow-hidden"
                           )}
                         >
@@ -335,7 +305,7 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                         toggleGroup(item.href, item);
                       }}
                       className={cn(
-                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200/60 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
+                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
                         collapsed && !isMobile && "hidden"
                       )}
                       aria-expanded={groupOpen}
@@ -345,9 +315,10 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                     </button>
                   </div>
                   {groupOpen && (
-                    <div className="mt-0.5 space-y-0.5 border-l border-gray-200/60 py-1 pl-4 ml-3">
+                    <div className="mt-0.5 space-y-0.5 border-l border-border py-1 pl-4 ml-3">
                       {item.children!.map((child) => {
-                        const childActive = isChildActive(child, pathname, statusParam);
+                        const filterVal = item.childParam === "province" ? provinceParam : statusParam;
+                        const childActive = isChildActive(child, pathname, filterVal, item.childParam || "status");
                         return (
                           <Link
                             key={child.href}
@@ -355,7 +326,7 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                             onClick={onClose}
                             className={cn(
                               "block rounded-md py-1.5 pl-3 text-sm transition-colors",
-                              childActive ? "font-medium text-blue-700 bg-blue-50/70" : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+                              childActive ? "font-medium text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                           >
                             {child.label}
@@ -375,36 +346,34 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                 href={item.href}
                 onClick={onClose}
                 className="block relative z-10 focus:outline-none"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
               >
                 <div
                   data-nav-item
                   className={cn(
-                    "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2",
+                    "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background",
                     collapsed && !isMobile ? "justify-center px-0" : "gap-3 px-3",
                     active
                       ? collapsed && !isMobile
-                        ? "bg-transparent text-blue-700"
-                        : "bg-blue-50/60 border border-blue-100/60 text-blue-700 shadow-[0_1px_0_rgba(0,0,0,0.03)] z-20"
-                      : "text-gray-700"
+                        ? "bg-transparent text-primary"
+                        : "bg-primary/10 border border-primary/20 text-primary shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none z-20"
+                      : "text-muted-foreground hover:bg-muted/70"
                   )}
                 >
                   {active && !collapsed && !isMobile && (
-                    <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 transition-all duration-200 ease-out" />
+                    <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-200 ease-out" />
                   )}
                   {Icon && (
                     <div
                       className={cn(
                         "relative flex flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out",
                         collapsed && !isMobile ? "h-9 w-9 mx-auto" : "h-9 w-9",
-                        collapsed && !isMobile && active && "bg-blue-50/80 ring-1 ring-blue-200/60"
+                        collapsed && !isMobile && active && "bg-primary/15 ring-1 ring-primary/30"
                       )}
                     >
                       {active && collapsed && !isMobile && (
-                        <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-blue-600" />
+                        <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-primary" />
                       )}
-                      <Icon className={cn("h-5 w-5 transition-colors duration-200 ease-out", active ? "text-blue-700" : "text-gray-500")} strokeWidth={1.5} />
+                      <Icon className={cn("h-5 w-5 transition-colors duration-200 ease-out", active ? "text-primary" : "text-muted-foreground")} strokeWidth={1.5} />
                     </div>
                   )}
                   <span
@@ -418,8 +387,8 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
                   {item.badge !== undefined && !active && (
                     <span
                       className={cn(
-                        "inline-flex items-center justify-center rounded-full text-white text-xs font-semibold min-w-[20px] h-5 px-1.5 transition-all duration-250 ease-in-out",
-                        item.badge === 0 ? "bg-gray-400" : "bg-red-600",
+                        "inline-flex items-center justify-center rounded-full text-xs font-semibold min-w-[20px] h-5 px-1.5 transition-all duration-250 ease-in-out",
+                        item.badge === 0 ? "bg-muted text-muted-foreground" : "bg-destructive text-destructive-foreground",
                         collapsed && !isMobile ? "opacity-0 w-0 overflow-hidden -translate-x-1" : "opacity-100 translate-x-0"
                       )}
                     >
@@ -435,32 +404,32 @@ export function Sidebar({ items, role, isOpen, onClose, userName = "User" }: Sid
 
       {/* Account Section - Bottom */}
       <div className={cn(
-        "border-t border-gray-100/60 px-3 py-3",
+        "border-t border-border/60 px-3 py-3",
         collapsed && !isMobile && "px-2"
       )}>
         <AccountMenu
           role={role}
           align="start"
-          side="top"
+          side="right"
           trigger={
             collapsed && !isMobile ? (
               /* Collapsed: Show avatar only */
               <div className="flex items-center justify-center">
-                <div className="h-9 w-9 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md">
+                <div className="h-9 w-9 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
                   {getInitials(userName)}
                 </div>
               </div>
             ) : (
               /* Expanded: Show user info with chevron */
-              <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors duration-200 hover:bg-gray-50/60 cursor-pointer group">
-                <div className="h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-xs font-semibold text-white shadow-sm transition-all duration-200 group-hover:shadow-md">
+              <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors duration-200 hover:bg-muted cursor-pointer group">
+                <div className="h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 group-hover:shadow-md">
                   {getInitials(userName)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
-                  <p className="text-xs text-gray-500 truncate">Account</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{userName}</p>
+                  <p className="text-xs text-muted-foreground truncate">Account</p>
                 </div>
-                <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0 transition-transform duration-200" strokeWidth={1.5} />
+                <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform duration-200" strokeWidth={1.5} />
               </div>
             )
           }

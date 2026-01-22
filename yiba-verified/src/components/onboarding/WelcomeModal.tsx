@@ -40,7 +40,7 @@ export function WelcomeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="welcome-modal-pattern sm:max-w-[420px] rounded-2xl border border-gray-200/70 bg-sky-50/60 p-8 pb-7 text-center shadow-xl">
+      <DialogContent className="welcome-modal-pattern sm:max-w-[420px] rounded-2xl border border-gray-200/70 bg-sky-50/60 p-8 pb-7 text-center shadow-xl !left-1/2 !top-1/2 !-translate-x-1/2 !-translate-y-1/2">
         <DialogHeader className="relative z-10 text-center space-y-4">
           {/* Icon */}
           <div className="flex justify-center">

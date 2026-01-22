@@ -33,21 +33,256 @@ export type QCTOResourceType =
  * @param resourceId The actual ID of the resource (readiness_id, learner_id, etc.)
  * @returns Promise<boolean> - true if QCTO can access, false otherwise
  */
+/**
+ * Helper to get province filter for QCTO user queries
+ * Returns array of provinces to filter by, or null if no filtering needed
+ */
+export async function getProvinceFilterForQCTO(ctx: ApiContext): Promise<string[] | null> {
+  // PLATFORM_ADMIN: no province filtering
+  if (ctx.role === "PLATFORM_ADMIN") {
+    return null; // null means no filtering (see all provinces)
+  }
+
+  // QCTO_SUPER_ADMIN: no province filtering (can be national)
+  if (ctx.role === "QCTO_SUPER_ADMIN") {
+    return null; // null means no filtering (see all provinces)
+  }
+
+  // QCTO_ADMIN, QCTO_USER, QCTO_REVIEWER, QCTO_AUDITOR, QCTO_VIEWER: filter by assigned provinces
+  const QCTO_PROVINCE_FILTERED_ROLES = [
+    "QCTO_ADMIN",
+    "QCTO_USER",
+    "QCTO_REVIEWER",
+    "QCTO_AUDITOR",
+    "QCTO_VIEWER",
+  ];
+
+  if (QCTO_PROVINCE_FILTERED_ROLES.includes(ctx.role)) {
+    // Get user's assigned provinces
+    const user = await prisma.user.findUnique({
+      where: { user_id: ctx.userId },
+      select: { assigned_provinces: true },
+    });
+
+    if (!user || !user.assigned_provinces || user.assigned_provinces.length === 0) {
+      // No provinces assigned - return empty array (will filter to nothing)
+      return [];
+    }
+
+    return user.assigned_provinces;
+  }
+
+  return null; // Default: no filtering
+}
+
+/**
+ * Helper to check if user's assigned provinces match institution's province
+ */
+async function matchesProvinceFilter(
+  ctx: ApiContext,
+  institutionProvince: string | null
+): Promise<boolean> {
+  // PLATFORM_ADMIN: no province filtering
+  if (ctx.role === "PLATFORM_ADMIN") {
+    return true;
+  }
+
+  // QCTO_SUPER_ADMIN: no province filtering (can be national)
+  if (ctx.role === "QCTO_SUPER_ADMIN") {
+    return true;
+  }
+
+  // QCTO_ADMIN, QCTO_USER, QCTO_REVIEWER, QCTO_AUDITOR, QCTO_VIEWER: check assigned provinces
+  const QCTO_PROVINCE_FILTERED_ROLES = [
+    "QCTO_ADMIN",
+    "QCTO_USER",
+    "QCTO_REVIEWER",
+    "QCTO_AUDITOR",
+    "QCTO_VIEWER",
+  ];
+
+  if (QCTO_PROVINCE_FILTERED_ROLES.includes(ctx.role)) {
+    // Get user's assigned provinces
+    const user = await prisma.user.findUnique({
+      where: { user_id: ctx.userId },
+      select: { assigned_provinces: true },
+    });
+
+    if (!user || !user.assigned_provinces || user.assigned_provinces.length === 0) {
+      // No provinces assigned - deny access (shouldn't happen if validation is working)
+      return false;
+    }
+
+    // If institution has no province, deny (shouldn't happen, but safety check)
+    if (!institutionProvince) {
+      return false;
+    }
+
+    // Check if institution's province is in user's assigned provinces
+    return user.assigned_provinces.includes(institutionProvince);
+  }
+
+  return false;
+}
+
 export async function canReadForQCTO(
   ctx: ApiContext,
   resourceType: QCTOResourceType,
   resourceId: string
 ): Promise<boolean> {
-  // PLATFORM_ADMIN always has access (app owners see everything! 🦸)
+  // PLATFORM_ADMIN: always has access (no province filtering)
   if (ctx.role === "PLATFORM_ADMIN") {
     return true;
   }
 
-  // Only QCTO_USER should use this function (others have their own access patterns)
+  // QCTO_SUPER_ADMIN: full access (no province filtering)
+  if (ctx.role === "QCTO_SUPER_ADMIN") {
+    return true;
+  }
+
+  // QCTO_ADMIN: full access within their assigned provinces
+  if (ctx.role === "QCTO_ADMIN") {
+    // Get institution province for province filtering
+    let institutionProvince: string | null = null;
+    
+    if (resourceType === "INSTITUTION") {
+      const institution = await prisma.institution.findUnique({
+        where: { institution_id: resourceId },
+        select: { province: true },
+      });
+      institutionProvince = institution?.province || null;
+    } else {
+      // For other resource types, get institution from the resource
+      if (resourceType === "READINESS") {
+        const readiness = await prisma.readiness.findUnique({
+          where: { readiness_id: resourceId },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = readiness?.institution.province || null;
+      } else if (resourceType === "LEARNER") {
+        const learner = await prisma.learner.findUnique({
+          where: { learner_id: resourceId },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = learner?.institution.province || null;
+      } else if (resourceType === "ENROLMENT") {
+        const enrolment = await prisma.enrolment.findUnique({
+          where: { enrolment_id: resourceId },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = enrolment?.institution.province || null;
+      } else if (resourceType === "DOCUMENT") {
+        // Documents can be linked to different entities, need to find institution
+        const doc = await prisma.document.findUnique({
+          where: { document_id: resourceId },
+        });
+        if (doc?.related_entity === "INSTITUTION") {
+          const inst = await prisma.institution.findUnique({
+            where: { institution_id: doc.related_entity_id },
+            select: { province: true },
+          });
+          institutionProvince = inst?.province || null;
+        } else if (doc?.related_entity === "LEARNER") {
+          const learner = await prisma.learner.findUnique({
+            where: { learner_id: doc.related_entity_id },
+            include: { institution: { select: { province: true } } },
+          });
+          institutionProvince = learner?.institution.province || null;
+        } else if (doc?.related_entity === "ENROLMENT") {
+          const enrolment = await prisma.enrolment.findUnique({
+            where: { enrolment_id: doc.related_entity_id },
+            include: { institution: { select: { province: true } } },
+          });
+          institutionProvince = enrolment?.institution.province || null;
+        } else if (doc?.related_entity === "READINESS") {
+          const readiness = await prisma.readiness.findUnique({
+            where: { readiness_id: doc.related_entity_id },
+            include: { institution: { select: { province: true } } },
+          });
+          institutionProvince = readiness?.institution.province || null;
+        }
+      }
+    }
+
+    // Check province match
+    return await matchesProvinceFilter(ctx, institutionProvince);
+  }
+
+  // Only QCTO_USER uses submission/request-based access below (others have their own patterns)
   if (ctx.role !== "QCTO_USER") {
     return false;
   }
 
+  // QCTO_USER: submission/request-based access + province filtering
+  // First, get institution province for province filtering
+  let institutionProvince: string | null = null;
+  
+  if (resourceType === "INSTITUTION") {
+    const institution = await prisma.institution.findUnique({
+      where: { institution_id: resourceId },
+      select: { province: true },
+    });
+    institutionProvince = institution?.province || null;
+  } else {
+    // For other resource types, get institution from the resource
+    if (resourceType === "READINESS") {
+      const readiness = await prisma.readiness.findUnique({
+        where: { readiness_id: resourceId },
+        include: { institution: { select: { province: true } } },
+      });
+      institutionProvince = readiness?.institution.province || null;
+    } else if (resourceType === "LEARNER") {
+      const learner = await prisma.learner.findUnique({
+        where: { learner_id: resourceId },
+        include: { institution: { select: { province: true } } },
+      });
+      institutionProvince = learner?.institution.province || null;
+    } else if (resourceType === "ENROLMENT") {
+      const enrolment = await prisma.enrolment.findUnique({
+        where: { enrolment_id: resourceId },
+        include: { institution: { select: { province: true } } },
+      });
+      institutionProvince = enrolment?.institution.province || null;
+    } else if (resourceType === "DOCUMENT") {
+      // Documents can be linked to different entities, need to find institution
+      const doc = await prisma.document.findUnique({
+        where: { document_id: resourceId },
+      });
+      if (doc?.related_entity === "INSTITUTION") {
+        const inst = await prisma.institution.findUnique({
+          where: { institution_id: doc.related_entity_id },
+          select: { province: true },
+        });
+        institutionProvince = inst?.province || null;
+      } else if (doc?.related_entity === "LEARNER") {
+        const learner = await prisma.learner.findUnique({
+          where: { learner_id: doc.related_entity_id },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = learner?.institution.province || null;
+      } else if (doc?.related_entity === "ENROLMENT") {
+        const enrolment = await prisma.enrolment.findUnique({
+          where: { enrolment_id: doc.related_entity_id },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = enrolment?.institution.province || null;
+      } else if (doc?.related_entity === "READINESS") {
+        const readiness = await prisma.readiness.findUnique({
+          where: { readiness_id: doc.related_entity_id },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = readiness?.institution.province || null;
+      }
+    }
+  }
+
+  // Check province match first (if province doesn't match, deny access)
+  const provinceMatches = await matchesProvinceFilter(ctx, institutionProvince);
+  if (!provinceMatches) {
+    return false; // Province doesn't match - deny access
+  }
+
+  // Province matches, now check submission/request access
   // Check if resource is in an APPROVED submission
   const approvedSubmission = await prisma.submissionResource.findFirst({
     where: {
@@ -87,7 +322,6 @@ export async function canReadForQCTO(
   }
 
   // Check if resource is in an APPROVED QCTORequest
-  // Note: After migration, verify the Prisma client model name (might be qCTORequestResource or qctoRequestResource)
   const approvedRequest = await prisma.qCTORequestResource.findFirst({
     where: {
       resource_type: resourceType,
@@ -126,13 +360,26 @@ export async function assertCanReadForQCTO(
   resourceType: QCTOResourceType,
   resourceId: string
 ): Promise<void> {
-  // PLATFORM_ADMIN always has access (app owners see everything! 🦸)
+  // PLATFORM_ADMIN: always has access
   if (ctx.role === "PLATFORM_ADMIN") {
     return;
   }
 
-  // Only QCTO_USER should use this function
-  if (ctx.role !== "QCTO_USER") {
+  // QCTO_SUPER_ADMIN: full access (no province filtering)
+  if (ctx.role === "QCTO_SUPER_ADMIN") {
+    return;
+  }
+
+  // QCTO_ADMIN, QCTO_USER, QCTO_REVIEWER, QCTO_AUDITOR, QCTO_VIEWER: check access
+  const QCTO_ROLES = [
+    "QCTO_ADMIN",
+    "QCTO_USER",
+    "QCTO_REVIEWER",
+    "QCTO_AUDITOR",
+    "QCTO_VIEWER",
+  ];
+
+  if (!QCTO_ROLES.includes(ctx.role)) {
     throw new AppError(
       ERROR_CODES.FORBIDDEN,
       "This function is only for QCTO access checks. Other roles have their own access patterns.",
@@ -145,7 +392,7 @@ export async function assertCanReadForQCTO(
   if (!canRead) {
     throw new AppError(
       ERROR_CODES.FORBIDDEN,
-      `Access denied: This ${resourceType.toLowerCase()} has not been shared with QCTO via an approved submission or request.`,
+      `Access denied: This ${resourceType.toLowerCase()} is not accessible (may not be shared, approved, or may be from a different province).`,
       403
     );
   }
@@ -168,13 +415,37 @@ export async function canReadInstitutionForQCTO(
   ctx: ApiContext,
   institutionId: string
 ): Promise<boolean> {
-  // PLATFORM_ADMIN always has access (app owners see everything! 🦸)
+  // PLATFORM_ADMIN: always has access (no province filtering)
   if (ctx.role === "PLATFORM_ADMIN") {
     return true;
   }
 
+  // Get institution province for province filtering
+  const institution = await prisma.institution.findUnique({
+    where: { institution_id: institutionId },
+    select: { province: true },
+  });
+
+  const institutionProvince = institution?.province || null;
+
+  // QCTO_SUPER_ADMIN: full access (no province filtering)
+  if (ctx.role === "QCTO_SUPER_ADMIN") {
+    return true;
+  }
+
+  // QCTO_ADMIN: full access within assigned provinces
+  if (ctx.role === "QCTO_ADMIN") {
+    return await matchesProvinceFilter(ctx, institutionProvince);
+  }
+
   if (ctx.role !== "QCTO_USER") {
     return false;
+  }
+
+  // QCTO_USER: check province match first
+  const provinceMatches = await matchesProvinceFilter(ctx, institutionProvince);
+  if (!provinceMatches) {
+    return false; // Province doesn't match - deny access
   }
 
   // Check if institution has any APPROVED submissions

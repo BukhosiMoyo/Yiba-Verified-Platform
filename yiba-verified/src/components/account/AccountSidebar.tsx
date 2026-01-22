@@ -31,6 +31,11 @@ type AccountSidebarProps = {
 const roleLabels: Record<Role, string> = {
   PLATFORM_ADMIN: "Platform Admin",
   QCTO_USER: "QCTO",
+  QCTO_SUPER_ADMIN: "QCTO Super Admin",
+  QCTO_ADMIN: "QCTO Admin",
+  QCTO_REVIEWER: "QCTO Reviewer",
+  QCTO_AUDITOR: "QCTO Auditor",
+  QCTO_VIEWER: "QCTO Viewer",
   INSTITUTION_ADMIN: "Institution Admin",
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Learner",

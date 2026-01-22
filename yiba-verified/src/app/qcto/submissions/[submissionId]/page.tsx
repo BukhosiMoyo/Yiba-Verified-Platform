@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,7 @@ export default async function QCTOSubmissionDetailsPage({ params }: PageProps) {
 
   const userRole = session.user.role;
 
-  // Only QCTO_USER and PLATFORM_ADMIN can access this page
-  if (userRole !== "QCTO_USER" && userRole !== "PLATFORM_ADMIN") {
+  if (!canAccessQctoData(userRole)) {
     redirect("/unauthorized");
   }
 

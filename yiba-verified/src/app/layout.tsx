@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
+  icons: {
+    icon: "/Yiba%20Verified%20Icon.webp",
+  },
   title: {
     default: "Yiba Verified - QCTO Compliance & Oversight Platform",
     template: "%s | Yiba Verified",
@@ -35,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${plusJakarta.variable} ${plusJakarta.className}`} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

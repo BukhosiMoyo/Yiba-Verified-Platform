@@ -33,7 +33,7 @@ function toValue(d: Date): string {
  * No truncation: w-full, whitespace-nowrap, overflow-visible.
  */
 const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
-  ({ className, error, value, onChange, id, placeholder, disabled, ...rest }, ref) => {
+  ({ className, error, value, onChange, id, placeholder, disabled, ..._rest }, ref) => {
     const [open, setOpen] = React.useState(false);
     const [viewMonth, setViewMonth] = React.useState<Date>(() => new Date());
     const selected = toDate(value);
@@ -73,30 +73,29 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
             disabled={disabled}
             aria-haspopup="dialog"
             aria-expanded={open}
-            {...rest}
             className={cn(
-              "relative flex h-10 w-full items-center gap-2 rounded-lg border border-gray-200/80 bg-white pl-3 pr-10 py-2 text-left text-sm text-gray-900 transition-all duration-150",
-              "hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300",
+              "relative flex h-10 w-full items-center gap-2 rounded-lg border border-border bg-background pl-3 pr-10 py-2 text-left text-sm text-foreground transition-all duration-150",
+              "hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
               "disabled:cursor-not-allowed disabled:opacity-50",
               "whitespace-nowrap overflow-visible min-w-0",
-              error && "border-red-300 focus:ring-red-500/20 focus:border-red-400",
-              !display && "text-gray-400",
+              error && "border-destructive focus:ring-destructive/20 focus:border-destructive",
+              !display && "text-muted-foreground",
               className
             )}
           >
-            <span className={cn("flex-1 overflow-visible whitespace-nowrap", display && "text-gray-900")}>
+            <span className={cn("flex-1 overflow-visible whitespace-nowrap", display && "text-foreground")}>
               {display || placeholder || "YYYY-MM-DD"}
             </span>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-0">
               <Calendar
-                className={cn("h-4 w-4 text-gray-400", error && "text-red-400")}
+                className={cn("h-4 w-4 text-muted-foreground", error && "text-destructive")}
                 strokeWidth={1.5}
               />
             </div>
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto rounded-xl border border-gray-200/60 bg-white p-3 shadow-lg"
+          className="w-auto rounded-xl border border-border bg-card p-3 shadow-lg"
           align="start"
           sideOffset={4}
         >
@@ -111,19 +110,19 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
               root: "rdp-root",
               month: "space-y-2",
               month_caption: "flex justify-center px-1 !h-auto",
-              caption_label: "text-sm font-semibold text-gray-900",
+              caption_label: "text-sm font-semibold text-foreground",
               weekdays: "flex",
-              weekday: "w-8 text-[11px] font-medium uppercase tracking-wide text-gray-500",
+              weekday: "w-8 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
               month_grid: "w-full border-collapse",
               week: "flex",
               day: "size-8 p-0",
-              day_button: "size-8 rounded-md text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-1",
-              selected: "!bg-blue-600 !text-white hover:!bg-blue-700 focus:!ring-blue-400",
-              today: "ring-1 ring-blue-500/50 ring-offset-1",
-              outside: "text-gray-300",
+              day_button: "size-8 rounded-md text-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1",
+              selected: "!bg-primary !text-primary-foreground hover:!bg-primary/90 focus:!ring-primary",
+              today: "ring-1 ring-primary/50 ring-offset-1",
+              outside: "text-muted-foreground/50",
             }}
           />
-          <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-gray-200">
+          <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-border">
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -133,7 +132,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 aria-label="Previous month"
                 className="px-2 sm:px-2.5"
               >
-                <ChevronLeft className="size-4 shrink-0 text-gray-600" aria-hidden />
+                <ChevronLeft className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <span className="hidden sm:inline ml-0.5">Prev</span>
               </Button>
               <Button
@@ -145,7 +144,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 className="px-2 sm:px-2.5"
               >
                 <span className="hidden sm:inline mr-0.5">Next</span>
-                <ChevronRight className="size-4 shrink-0 text-gray-600" aria-hidden />
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               </Button>
             </div>
             <div className="flex items-center gap-2">

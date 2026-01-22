@@ -12,6 +12,11 @@ import type { Role } from "@/lib/rbac";
 const roleRedirects: Record<Role, string> = {
   PLATFORM_ADMIN: "/platform-admin",
   QCTO_USER: "/qcto",
+  QCTO_SUPER_ADMIN: "/qcto",
+  QCTO_ADMIN: "/qcto",
+  QCTO_REVIEWER: "/qcto",
+  QCTO_AUDITOR: "/qcto",
+  QCTO_VIEWER: "/qcto",
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",

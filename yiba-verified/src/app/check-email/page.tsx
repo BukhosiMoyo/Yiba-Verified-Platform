@@ -1,14 +1,15 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthState } from "@/components/auth/AuthState";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 
-export default function CheckEmailPage() {
+function CheckEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
 
@@ -44,5 +45,23 @@ export default function CheckEmailPage() {
         />
       </AuthCard>
     </AuthLayout>
+  );
+}
+
+export default function CheckEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout>
+          <AuthCard>
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          </AuthCard>
+        </AuthLayout>
+      }
+    >
+      <CheckEmailContent />
+    </Suspense>
   );
 }

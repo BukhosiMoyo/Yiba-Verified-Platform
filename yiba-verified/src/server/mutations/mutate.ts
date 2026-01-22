@@ -30,6 +30,9 @@ export type MutationArgs<T> = {
   
   // The actual mutation function
   mutation: (tx: Prisma.TransactionClient, ctx: ApiContext) => Promise<T>;
+  
+  // When true, skip assertNotQCTOEdit so QCTO can perform review operations (e.g. accept/flag document, review readiness)
+  allowQctoReviewOperations?: boolean;
 };
 
 /**
@@ -65,8 +68,10 @@ export async function mutateWithAudit<T>(args: MutationArgs<T>): Promise<T> {
   // 1. Get authenticated context
   const ctx = args.ctx ?? await requireApiContext();
   
-  // 2. Block QCTO edits to institution-submitted data
-  assertNotQCTOEdit(ctx, args.entityType);
+  // 2. Block QCTO edits to institution-submitted data (unless allowQctoReviewOperations for accept/flag/review)
+  if (!args.allowQctoReviewOperations) {
+    assertNotQCTOEdit(ctx, args.entityType);
+  }
   
   // 3. Enforce institution scoping (if institutionId provided)
   if (args.institutionId !== undefined) {
@@ -85,7 +90,7 @@ export async function mutateWithAudit<T>(args: MutationArgs<T>): Promise<T> {
     // If audit fails, the entire transaction rolls back
     await createAuditLog(tx, {
       entityType: args.entityType,
-      entityId: args.entityId ?? (mutationResult as any)?.change_id ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? (mutationResult as any)?.readiness_id ?? (mutationResult as any)?.document_id ?? "unknown",
+      entityId: args.entityId ?? (mutationResult as any)?.record_id ?? (mutationResult as any)?.change_id ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? (mutationResult as any)?.readiness_id ?? (mutationResult as any)?.document_id ?? "unknown",
       fieldName: args.fieldName,
       oldValue: serializeValue(args.oldValue),
       newValue: serializeValue(args.newValue ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? null),

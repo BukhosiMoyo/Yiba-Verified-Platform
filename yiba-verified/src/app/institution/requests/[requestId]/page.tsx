@@ -70,22 +70,25 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
       institution: {
         select: {
           institution_id: true,
-          name: true,
-          code: true,
-          type: true,
+          legal_name: true,
+          trading_name: true,
+          institution_type: true,
+          registration_number: true,
         },
       },
       requestedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
       reviewedByUser: {
         select: {
           user_id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
         },
       },
@@ -201,7 +204,7 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
             <div>
               <p className="text-sm font-medium text-muted-foreground">Requested By</p>
               <p className="text-base">
-                {request.requestedByUser.name || request.requestedByUser.email}
+                {[request.requestedByUser.first_name, request.requestedByUser.last_name].filter(Boolean).join(" ") || request.requestedByUser.email}
               </p>
             </div>
 
@@ -231,7 +234,7 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Reviewed By</p>
                     <p className="text-base">
-                      {request.reviewedByUser.name || request.reviewedByUser.email}
+                      {[request.reviewedByUser.first_name, request.reviewedByUser.last_name].filter(Boolean).join(" ") || request.reviewedByUser.email}
                     </p>
                   </div>
                 )}

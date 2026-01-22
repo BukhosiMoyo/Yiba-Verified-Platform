@@ -640,7 +640,7 @@ function UsersPageContent() {
 
                             if (col.id === "index") {
                               return (
-                                <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                                <TableCell key={col.id} className={`${cellClass} text-gray-800 font-bold`} style={stickyStyle}>
                                   {offset + index + 1}
                                 </TableCell>
                               );
@@ -795,7 +795,7 @@ function UsersPageContent() {
                                 </TableCell>
                               );
                             }
-                            return <TableCell key={col.id} className={cellClass} style={stickyStyle} />;
+                            return <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />;
                           })}
                         </TableRow>
                       );

@@ -20,6 +20,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { canAccessQctoData } from "@/lib/rbac";
+import { getProvinceFilterForQCTO } from "@/lib/api/qctoAccess";
 
 /**
  * GET /api/qcto/submissions
@@ -35,6 +37,7 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
  * Query parameters:
  * - institution_id (optional - filter by institution; PLATFORM_ADMIN only, otherwise ignored)
  * - status (optional - filter by status)
+ * - province (optional - filter by institution.province)
  * - q (optional - search in title, institution trading_name, institution legal_name; min 2 chars)
  * - limit (optional, default 50, max 200)
  * - offset (optional, default 0)
@@ -52,8 +55,7 @@ export async function GET(request: NextRequest) {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can access QCTO endpoints
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot access QCTO endpoints`,
@@ -65,6 +67,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const institutionIdParam = searchParams.get("institution_id");
     const statusParam = searchParams.get("status");
+    const provinceParam = searchParams.get("province")?.trim() || "";
     const qParam = searchParams.get("q")?.trim() || "";
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
@@ -87,14 +90,51 @@ export async function GET(request: NextRequest) {
       deleted_at: null, // Only non-deleted submissions
     };
 
-    // PLATFORM_ADMIN can filter by institution; QCTO_USER cannot (they only see what's shared)
-    if (ctx.role === "PLATFORM_ADMIN" && institutionIdParam) {
+    // PLATFORM_ADMIN, QCTO_SUPER_ADMIN, QCTO_ADMIN can filter by institution; QCTO_USER cannot
+    if (institutionIdParam && ctx.role !== "QCTO_USER") {
       where.institution_id = institutionIdParam;
     }
 
     // Filter by status if provided
     if (statusParam && VALID_STATUSES.includes(statusParam)) {
       where.status = statusParam;
+    }
+
+    // Get province filter based on user's assigned provinces
+    const provinceFilter = await getProvinceFilterForQCTO(ctx);
+    
+    // Apply province filtering to institution
+    if (provinceFilter !== null) {
+      // User has assigned provinces - filter institutions to those provinces
+      if (provinceFilter.length === 0) {
+        // No provinces assigned - return empty result
+        return fail(new AppError(
+          ERROR_CODES.FORBIDDEN,
+          "No provinces assigned. Please contact your administrator.",
+          403
+        ));
+      }
+      where.institution = {
+        ...where.institution,
+        province: { in: provinceFilter },
+      };
+    }
+
+    // If user explicitly requested a specific province (and they have access), apply it
+    if (provinceParam) {
+      if (provinceFilter === null || provinceFilter.includes(provinceParam)) {
+        where.institution = {
+          ...where.institution,
+          province: provinceParam, // Override with specific province
+        };
+      } else {
+        // User requested province they don't have access to - return empty
+        return fail(new AppError(
+          ERROR_CODES.FORBIDDEN,
+          "You don't have access to institutions in this province",
+          403
+        ));
+      }
     }
 
     // Search (q): title or institution name

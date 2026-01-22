@@ -13,6 +13,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
+import { recomputeEnrolmentAttendancePercentage } from "../src/lib/attendance";
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 12;
@@ -33,7 +34,7 @@ function resetRng() {
 function rand() {
   return rng();
 }
-function pick<T>(arr: T[]): T {
+function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(rand() * arr.length)];
 }
 function pickN<T>(arr: T[], n: number): T[] {
@@ -165,6 +166,8 @@ const counts = {
   submissionResources: 0,
   auditLogs: 0,
   invites: 0,
+  attendanceRecords: 0,
+  sickNotes: 0,
 };
 
 export async function runDemoSeed(): Promise<typeof counts> {
@@ -250,6 +253,13 @@ export async function runDemoSeed(): Promise<typeof counts> {
   }
   console.log(`  → ${counts.institutions} new institutions (${institutions.length} total).`);
 
+  // 2b) Ensure QCTOOrg exists (for QCTO Team)
+  let qctoOrg = await prisma.qCTOOrg.findFirst();
+  if (!qctoOrg) {
+    qctoOrg = await prisma.qCTOOrg.create({ data: { name: "QCTO" } });
+    console.log("  → Created QCTOOrg.");
+  }
+
   // 3) Platform admins (3–5) and at least one QCTO_USER for reviewed_by
   console.log("Creating platform and QCTO users…");
   const platformEmails: string[] = [];
@@ -278,18 +288,33 @@ export async function runDemoSeed(): Promise<typeof counts> {
   const qctoEmail = "qcto.demo@demo.yibaverified.local";
   const qctoUser = await prisma.user.upsert({
     where: { email: qctoEmail },
-    update: { password_hash: pw },
+    update: { password_hash: pw, qcto_id: qctoOrg.id },
     create: {
       email: qctoEmail,
       first_name: "QCTO",
       last_name: "Demo Reviewer",
       role: "QCTO_USER",
+      qcto_id: qctoOrg.id,
+      password_hash: pw,
+      status: "ACTIVE",
+    },
+  });
+  const qctoSuperAdminEmail = "qcto-superadmin@demo.yibaverified.local";
+  await prisma.user.upsert({
+    where: { email: qctoSuperAdminEmail },
+    update: { password_hash: pw, role: "QCTO_SUPER_ADMIN", qcto_id: qctoOrg.id, status: "ACTIVE" },
+    create: {
+      email: qctoSuperAdminEmail,
+      first_name: "QCTO",
+      last_name: "Super Admin",
+      role: "QCTO_SUPER_ADMIN",
+      qcto_id: qctoOrg.id,
       password_hash: pw,
       status: "ACTIVE",
     },
   });
   const allPlatformOrQctoIds = [...platformAdmins.map((u) => u.user_id), qctoUser.user_id];
-  console.log(`  → ${platformAdmins.length} PLATFORM_ADMIN, 1 QCTO_USER.`);
+  console.log(`  → ${platformAdmins.length} PLATFORM_ADMIN, 1 QCTO_USER, 1 QCTO Super Admin.`);
 
   // 4) Per-institution: 1 admin, 1–3 staff, 30–80 learners, readiness records, submissions
   const instUsers: { institution_id: string; admin: { user_id: string }; staff: { user_id: string }[] }[] = [];
@@ -346,10 +371,61 @@ export async function runDemoSeed(): Promise<typeof counts> {
       const nationalId = fakeSaId(birthDate, 10000 * institutions.indexOf(inst) + L);
       const existing = await prisma.learner.findUnique({ where: { national_id: nationalId } });
       if (existing) {
+        // Update existing learner if missing required fields
+        const updateData: any = {};
+        if (!existing.disability_status) updateData.disability_status = pick(["YES", "NO", "PREFER_NOT_TO_SAY"]);
+        if (!existing.address) {
+          const streetNum = between(1, 999);
+          const streetName = pick(["Main", "Church", "School", "Voortrekker", "Bree"]);
+          const city = pick(["Johannesburg", "Durban", "Cape Town", "Pretoria"]);
+          updateData.address = `${streetNum} ${streetName} Street, ${city}, ${between(1000, 9999)}`;
+        }
+        if (!existing.province) updateData.province = inst.province;
+        if (!existing.ethnicity) updateData.ethnicity = pick(["BLACK", "COLOURED", "INDIAN", "WHITE", "OTHER"]);
+        if (!existing.next_of_kin_name) {
+          const nextOfKinFirst = pick(isMale ? FEMALE_FIRST : MALE_FIRST);
+          const nextOfKinLast = rand() < 0.7 ? last : pick(SURNAMES);
+          updateData.next_of_kin_name = `${nextOfKinFirst} ${nextOfKinLast}`;
+          updateData.next_of_kin_relationship = pick(["PARENT", "SPOUSE", "SIBLING", "GUARDIAN", "OTHER"]);
+          updateData.next_of_kin_phone = `+27${between(60, 89)}${between(100, 999)}${between(1000, 9999)}`;
+          const streetNum = between(1, 999);
+          const streetName = pick(["Main", "Church", "School"]);
+          const city = pick(["Johannesburg", "Durban", "Cape Town"]);
+          updateData.next_of_kin_address = `${streetNum} ${streetName} Rd, ${city}, ${between(1000, 9999)}`;
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await prisma.learner.update({
+            where: { learner_id: existing.learner_id },
+            data: updateData,
+          });
+        }
+        
         learnerIds.push(existing.learner_id);
         allLearners.push({ learner_id: existing.learner_id, institution_id: inst.id, national_id: nationalId });
         continue;
       }
+      // Generate realistic address and next of kin data
+      const streetNum = between(1, 999);
+      const streetName = pick(["Main", "Church", "School", "Voortrekker", "Bree", "Long", "High", "Park"]);
+      const city = pick(["Johannesburg", "Durban", "Cape Town", "Pretoria", "Port Elizabeth", "Bloemfontein", "Polokwane", "Nelspruit"]);
+      const address = `${streetNum} ${streetName} Street, ${city}, ${between(1000, 9999)}`;
+      const province = inst.province;
+      const ethnicity = pick(["BLACK", "COLOURED", "INDIAN", "WHITE", "OTHER"]);
+      const disabilityStatus = pick(["YES", "NO", "PREFER_NOT_TO_SAY"]);
+      
+      // Next of kin - use related name
+      const nextOfKinFirst = pick(isMale ? FEMALE_FIRST : MALE_FIRST); // Opposite gender for variety
+      const nextOfKinLast = rand() < 0.7 ? last : pick(SURNAMES); // 70% same surname
+      const nextOfKinName = `${nextOfKinFirst} ${nextOfKinLast}`;
+      const nextOfKinRelationship = pick(["PARENT", "SPOUSE", "SIBLING", "GUARDIAN", "OTHER"]);
+      const nextOfKinPhone = `+27${between(60, 89)}${between(100, 999)}${between(1000, 9999)}`;
+      const nextOfKinAddress = rand() < 0.5 ? address : `${between(1, 999)} ${pick(["Main", "Church", "School"])} Rd, ${city}, ${between(1000, 9999)}`;
+
+      // Generate public profile ID for demo learners (some enabled, some not)
+      const publicProfileEnabled = rand() < 0.3; // 30% have public profiles enabled
+      const publicProfileId = publicProfileEnabled ? randomBytes(16).toString("hex") : null;
+
       const learner = await prisma.learner.create({
         data: {
           institution_id: inst.id,
@@ -359,9 +435,20 @@ export async function runDemoSeed(): Promise<typeof counts> {
           birth_date: birthDate,
           gender_code: isMale ? "M" : "F",
           nationality_code: "ZA",
-          home_language_code: pick(["EN", "ZU", "XH", "AF", "ST", "TN", "SS"]),
+          home_language_code: pick(["en", "zu", "xh", "af", "nso", "tn", "ve", "ts", "ss", "nr"]),
+          disability_status: disabilityStatus, // Now required
+          address: address,
+          province: province,
+          ethnicity: ethnicity,
+          next_of_kin_name: nextOfKinName,
+          next_of_kin_relationship: nextOfKinRelationship,
+          next_of_kin_phone: nextOfKinPhone,
+          next_of_kin_address: nextOfKinAddress,
           popia_consent: true,
           consent_date: randomDateInRange(400, 700),
+          // Public profile settings
+          public_profile_id: publicProfileId,
+          public_profile_enabled: publicProfileEnabled,
         },
       });
       learnerIds.push(learner.learner_id);
@@ -403,7 +490,7 @@ export async function runDemoSeed(): Promise<typeof counts> {
     for (let r = 0; r < numReadiness; r++) {
       const q = pick(qualIds);
       const qual = await prisma.qualification.findUnique({ where: { qualification_id: q } });
-      const rs: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "RETURNED_FOR_CORRECTION" | "REVIEWED" | "RECOMMENDED" | "REJECTED" =
+      const rs: "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "RECOMMENDED" =
         rand() < 0.3 ? "RECOMMENDED" : rand() < 0.5 ? "UNDER_REVIEW" : rand() < 0.7 ? "SUBMITTED" : "IN_PROGRESS";
       const read = await prisma.readiness.create({
         data: {
@@ -414,16 +501,60 @@ export async function runDemoSeed(): Promise<typeof counts> {
           curriculum_code: `CUR-${between(100, 999)}`,
           delivery_mode: pick(DELIVERY_MODES),
           readiness_status: rs,
-          submission_date: rs !== "NOT_STARTED" && rs !== "IN_PROGRESS" ? randomDateInRange(200, 400) : null,
-          self_assessment_completed: rs !== "NOT_STARTED",
-          learning_material_exists: rs !== "NOT_STARTED" ? rand() < 0.9 : null,
-          curriculum_alignment_confirmed: rs === "RECOMMENDED" || rs === "REVIEWED" ? true : null,
+          submission_date: rs !== "IN_PROGRESS" ? randomDateInRange(200, 400) : null,
+          self_assessment_completed: rs !== "IN_PROGRESS",
+          learning_material_exists: rs === "IN_PROGRESS" ? null : rand() < 0.9,
+          curriculum_alignment_confirmed: rs === "RECOMMENDED" ? true : null,
         },
       });
       allReadiness.push({ readiness_id: read.readiness_id, institution_id: inst.id });
       counts.readiness++;
     }
   }
+
+  // 4b) Attendance records and sick notes (sample for a few ACTIVE enrolments)
+  const instIdsForAttendance = institutions.map((i) => i.id);
+  const someEnrolments = await prisma.enrolment.findMany({
+    where: { institution_id: { in: instIdsForAttendance }, enrolment_status: "ACTIVE", deleted_at: null },
+    select: { enrolment_id: true, institution_id: true, start_date: true, expected_completion_date: true },
+    take: 8,
+  });
+  const statuses = ["PRESENT", "PRESENT", "PRESENT", "LATE", "EXCUSED", "ABSENT"] as const;
+  let sickNoteRecordId: string | null = null;
+  for (const enr of someEnrolments) {
+    const iu = instUsers.find((x) => x.institution_id === enr.institution_id);
+    const markedBy = iu
+      ? (rand() < 0.5 || !iu.staff.length ? iu.admin.user_id : pick(iu.staff).user_id)
+      : (await prisma.user.findFirst({ where: { institution_id: enr.institution_id }, select: { user_id: true } }))?.user_id;
+    if (!markedBy) continue;
+    const start = Math.max(enr.start_date.getTime(), Date.now() - 21 * 24 * 60 * 60 * 1000);
+    const end = enr.expected_completion_date ? Math.min(enr.expected_completion_date.getTime(), Date.now()) : Date.now();
+    const numDays = between(5, 12);
+    for (let i = 0; i < numDays; i++) {
+      const d = new Date(start + (i / Math.max(numDays - 1, 1)) * (end - start));
+      d.setHours(0, 0, 0, 0);
+      const st = pick(statuses);
+      try {
+        const rec = await prisma.attendanceRecord.create({
+          data: { enrolment_id: enr.enrolment_id, record_date: d, status: st, marked_by: markedBy },
+        });
+        counts.attendanceRecords++;
+        if ((st === "EXCUSED" || st === "ABSENT") && !sickNoteRecordId) {
+          await prisma.sickNote.create({ data: { record_id: rec.record_id, reason: "Medical – flu (demo)", updated_at: new Date() } });
+          sickNoteRecordId = rec.record_id;
+          counts.sickNotes++;
+        }
+      } catch {
+        // unique or other
+      }
+    }
+    try {
+      await recomputeEnrolmentAttendancePercentage(prisma, enr.enrolment_id);
+    } catch {
+      // ignore
+    }
+  }
+  if (counts.attendanceRecords > 0) console.log(`  → ${counts.attendanceRecords} attendance records, ${counts.sickNotes} sick note(s).`);
 
   counts.users = (await prisma.user.count({ where: { OR: [{ email: { contains: "@demo.yibaverified.local" } }, { institution: { registration_number: { startsWith: "DEMO-" } } }] } }));
   console.log(`  → Institution users, learners, enrolments, readiness created. Learners: ${counts.learners}, Enrolments: ${counts.enrolments}, Readiness: ${counts.readiness}.`);
@@ -446,7 +577,7 @@ export async function runDemoSeed(): Promise<typeof counts> {
     const roll = rand();
     const status: "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "RETURNED_FOR_CORRECTION" =
       roll < 0.3 ? (rand() < 0.5 ? "SUBMITTED" : "UNDER_REVIEW") : roll < 0.7 ? "APPROVED" : roll < 0.85 ? "REJECTED" : "RETURNED_FOR_CORRECTION";
-    const submittedAt = status !== "DRAFT" ? randomDateInRange(30, 450) : null;
+    const submittedAt = randomDateInRange(30, 450);
     const reviewedAt = ["APPROVED", "REJECTED", "RETURNED_FOR_CORRECTION"].includes(status) ? (submittedAt ? new Date(submittedAt.getTime() + between(2, 14) * 24 * 60 * 60 * 1000) : randomDateInRange(30, 400)) : null;
     const reviewedBy = reviewedAt ? qctoUser.user_id : null;
     const reviewNotes = reviewedAt ? pick(["All requirements met. Approved.", "Minor formatting issues; otherwise compliant.", "Insufficient evidence for Section 5. Rejected.", "Please resubmit with updated OHS certificates.", "Approved with commendation."]) : null;

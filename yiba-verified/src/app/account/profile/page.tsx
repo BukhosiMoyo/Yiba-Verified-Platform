@@ -1,10 +1,25 @@
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { AccountPage, AccountSection } from "@/components/account/AccountPage";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { ProfileForm } from "@/components/account/ProfileForm";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId, deleted_at: null },
+    select: { first_name: true, last_name: true, email: true, emailVerified: true },
+  });
+
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
     <AccountPage
       title="Profile"
@@ -14,32 +29,12 @@ export default function ProfilePage() {
         title="Personal Information"
         description="Update your name and contact details"
       >
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" placeholder="John" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" placeholder="Doe" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="flex items-center gap-2">
-              <Input id="email" type="email" placeholder="john@example.com" />
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                Verified
-              </Badge>
-            </div>
-          </div>
-          <div className="flex justify-end pt-2">
-            <Button>
-              Save Changes
-            </Button>
-          </div>
-        </div>
+        <ProfileForm
+          firstName={user.first_name}
+          lastName={user.last_name}
+          email={user.email}
+          emailVerified={user.emailVerified}
+        />
       </AccountSection>
     </AccountPage>
   );

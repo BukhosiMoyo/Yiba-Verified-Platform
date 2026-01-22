@@ -36,8 +36,8 @@ export const FormLabel = React.forwardRef<HTMLLabelElement, FormLabelProps>(
         ref={ref}
         className={cn(
           "text-sm font-medium leading-none",
-          "text-gray-900",
-          error && "text-red-700",
+          "text-foreground",
+          error && "text-destructive",
           className
         )}
         {...props}
@@ -61,16 +61,19 @@ FormLabel.displayName = "FormLabel";
 export interface FormErrorMessageProps {
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }
 
 export function FormErrorMessage({
   children,
   className,
+  id,
 }: FormErrorMessageProps) {
   if (!children) return null;
 
   return (
     <p
+      id={id}
       className={cn(
         "text-xs font-medium text-red-600 mt-1",
         className
@@ -89,15 +92,17 @@ export function FormErrorMessage({
 export interface FormHintProps {
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }
 
-export function FormHint({ children, className }: FormHintProps) {
+export function FormHint({ children, className, id }: FormHintProps) {
   if (!children) return null;
 
   return (
     <p
+      id={id}
       className={cn(
-        "text-xs text-gray-500 mt-1",
+        "text-xs text-muted-foreground mt-1",
         className
       )}
     >

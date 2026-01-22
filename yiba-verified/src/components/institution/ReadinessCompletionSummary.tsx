@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Check, AlertTriangle } from "lucide-react";
 import type { Readiness } from "@prisma/client";
 
 interface ReadinessCompletionSummaryProps {
@@ -131,8 +132,15 @@ export function ReadinessCompletionSummary({ readiness }: ReadinessCompletionSum
                     {section.required && (
                       <Badge variant="outline" className="text-xs">Required</Badge>
                     )}
-                    <Badge variant={section.completed ? "default" : "outline"}>
-                      {section.completed ? "Complete ✓" : "Incomplete"}
+                    <Badge variant={section.completed ? "default" : "outline"} className="gap-1.5">
+                      {section.completed ? (
+                        <>
+                          <Check className="h-3 w-3 shrink-0" aria-hidden />
+                          Complete
+                        </>
+                      ) : (
+                        "Incomplete"
+                      )}
                     </Badge>
                   </div>
                 </div>
@@ -144,8 +152,9 @@ export function ReadinessCompletionSummary({ readiness }: ReadinessCompletionSum
           <div className="pt-4 border-t">
             {allRequiredComplete ? (
               <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md">
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                  ✓ All required sections are complete
+                <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                  <Check className="h-4 w-4 shrink-0" aria-hidden />
+                  All required sections are complete
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-300 mt-1">
                   You can submit this readiness record for QCTO review when ready.
@@ -153,8 +162,9 @@ export function ReadinessCompletionSummary({ readiness }: ReadinessCompletionSum
               </div>
             ) : (
               <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  ⚠️ Some required sections are incomplete
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+                  Some required sections are incomplete
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                   Please complete all required sections before submitting for review.

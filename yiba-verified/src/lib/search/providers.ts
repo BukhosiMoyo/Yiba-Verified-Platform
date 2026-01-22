@@ -15,7 +15,7 @@ export type SearchProviderResult = {
   subtitle?: string;
   href: string;
   icon: LucideIcon;
-  group: "Pages" | "Institutions" | "Learners" | "Users" | "Submissions" | "Requests" | "Documents";
+  group: "Pages" | "Institutions" | "Learners" | "Users" | "Submissions" | "Requests" | "Documents" | "Readiness" | "Enrolments" | "Audit Logs";
   badge?: string;
 };
 
@@ -83,8 +83,8 @@ export async function searchLearners(
     } else if (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF") {
       // Institution roles use regular endpoint (server scopes to their institution)
       url = `/api/learners?q=${encodeURIComponent(query)}&limit=10`;
-    } else if (role === "QCTO_USER") {
-      // QCTO can search learners from approved submissions/requests
+    } else if (role === "QCTO_USER" || role === "QCTO_SUPER_ADMIN" || role === "QCTO_ADMIN") {
+      // QCTO roles can search learners (from approved submissions/requests or all for admins)
       url = `/api/learners?q=${encodeURIComponent(query)}&limit=10`;
     } else {
       // STUDENT and others - no learner search
@@ -104,8 +104,10 @@ export async function searchLearners(
       id: `learner-${learner.learner_id}`,
       title: `${learner.first_name} ${learner.last_name}`,
       subtitle: learner.national_id,
-      href: role === "PLATFORM_ADMIN" 
+      href: role === "PLATFORM_ADMIN"
         ? `/platform-admin/learners/${learner.learner_id}`
+        : (role === "QCTO_USER" || role === "QCTO_SUPER_ADMIN" || role === "QCTO_ADMIN")
+        ? `/qcto/learners/${learner.learner_id}`
         : `/institution/learners/${learner.learner_id}`,
       icon: GraduationCap,
       group: "Learners" as const,

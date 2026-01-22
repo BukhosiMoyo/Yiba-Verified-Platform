@@ -59,6 +59,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return fail(new AppError(ERROR_CODES.NOT_FOUND, "Document not found", 404));
     }
 
+    if (!document.storage_key) {
+      return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "Document has no storage key", 400));
+    }
+
     // inline=1: show in browser (e.g. PDF quick view) instead of attachment
     const inline = request.nextUrl.searchParams.get("inline") === "1";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ import {
   Upload,
   BarChart3,
   MoreVertical,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -50,13 +51,19 @@ const INVITE_STATUSES = [
 
 export default function InvitesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [invites, setInvites] = useState<any[]>([]);
   const [institutions, setInstitutions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingInstitutions, setLoadingInstitutions] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "all");
   const [total, setTotal] = useState(0);
+
+  // Sync status filter from URL when navigating via sidebar links
+  useEffect(() => {
+    setStatusFilter(searchParams.get("status") || "all");
+  }, [searchParams]);
   const [limit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
@@ -324,6 +331,7 @@ export default function InvitesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">#</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Institution</TableHead>
@@ -335,7 +343,7 @@ export default function InvitesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invites.map((invite) => {
+                    {invites.map((invite, index) => {
                       const lastActivity =
                         invite.accepted_at ||
                         invite.clicked_at ||
@@ -343,9 +351,13 @@ export default function InvitesPage() {
                         invite.sent_at ||
                         invite.last_attempt_at ||
                         invite.created_at;
+                      const rowNum = offset + index + 1;
 
                       return (
                         <TableRow key={invite.invite_id}>
+                          <TableCell className="text-muted-foreground text-sm font-medium tabular-nums w-12">
+                            {rowNum}
+                          </TableCell>
                           <TableCell className="font-medium">{invite.email}</TableCell>
                           <TableCell>
                             <Badge variant={getRoleBadgeVariant(invite.role)}>
@@ -385,11 +397,8 @@ export default function InvitesPage() {
                                 </Button>
                               )}
                               {invite.failure_reason && (
-                                <span
-                                  className="text-xs text-red-600 cursor-help"
-                                  title={invite.failure_reason}
-                                >
-                                  ⚠️
+                                <span title={invite.failure_reason} aria-label={invite.failure_reason}>
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 cursor-help" />
                                 </span>
                               )}
                             </div>

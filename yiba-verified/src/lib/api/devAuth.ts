@@ -76,6 +76,7 @@ export async function getDevUserFromRequest(
       user_id: true,
       role: true,
       institution_id: true,
+      qcto_id: true,
     },
   });
 
@@ -91,6 +92,7 @@ export async function getDevUserFromRequest(
     userId: user.user_id,
     role: user.role,
     institutionId: user.institution_id,
+    qctoId: user.qcto_id,
   };
 }
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { FileUploadDropzone, type FileUploadProgress } from "@/components/shared/FileUploadDropzone";
 import { Alert } from "@/components/ui/alert";
@@ -234,19 +234,16 @@ export function DocumentUploadForm() {
           <div className="space-y-2">
             <Label htmlFor="related_entity">Related Entity *</Label>
             <Select
+              id="related_entity"
               value={relatedEntity}
-              onValueChange={setRelatedEntity}
+              onChange={(e) => setRelatedEntity((e.target as HTMLSelectElement).value)}
               disabled={isSubmitting}
             >
-              <SelectTrigger id="related_entity">
-                <SelectValue placeholder="Select entity type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INSTITUTION">Institution</SelectItem>
-                <SelectItem value="LEARNER">Learner</SelectItem>
-                <SelectItem value="ENROLMENT">Enrolment</SelectItem>
-                <SelectItem value="READINESS">Readiness (Form 5)</SelectItem>
-              </SelectContent>
+              <option value="">Select entity type</option>
+              <option value="INSTITUTION">Institution</option>
+              <option value="LEARNER">Learner</option>
+              <option value="ENROLMENT">Enrolment</option>
+              <option value="READINESS">Readiness (Form 5)</option>
             </Select>
             {relatedEntity === "INSTITUTION" && (
               <p className="text-xs text-muted-foreground">
@@ -266,23 +263,20 @@ export function DocumentUploadForm() {
                 <p className="text-sm text-muted-foreground">Loading...</p>
               ) : (
                 <Select
+                  id="related_entity_id"
                   value={relatedEntityId}
-                  onValueChange={setRelatedEntityId}
+                  onChange={(e) => setRelatedEntityId((e.target as HTMLSelectElement).value)}
                   disabled={isSubmitting || relatedEntities.length === 0}
                 >
-                  <SelectTrigger id="related_entity_id">
-                    <SelectValue placeholder="Select entity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {relatedEntities.map((entity) => {
-                      const idField = entity.learner_id || entity.enrolment_id || entity.readiness_id;
-                      return (
-                        <SelectItem key={idField} value={idField}>
-                          {getEntityDisplayName(entity, relatedEntity)}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
+                  <option value="">Select entity</option>
+                  {relatedEntities.map((entity) => {
+                    const idField = entity.learner_id || entity.enrolment_id || entity.readiness_id;
+                    return (
+                      <option key={idField} value={idField}>
+                        {getEntityDisplayName(entity, relatedEntity)}
+                      </option>
+                    );
+                  })}
                 </Select>
               )}
               {relatedEntities.length === 0 && !loadingEntities && (

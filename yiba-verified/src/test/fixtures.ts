@@ -22,6 +22,7 @@ export const mockInstitution: Omit<Institution, "created_at" | "updated_at"> = {
 export const mockUser: Omit<User, "created_at" | "updated_at"> = {
   user_id: "user-123",
   institution_id: "inst-123",
+  qcto_id: null,
   role: "INSTITUTION_ADMIN",
   first_name: "John",
   last_name: "Doe",
@@ -34,7 +35,7 @@ export const mockUser: Omit<User, "created_at" | "updated_at"> = {
   deleted_at: null,
 };
 
-export const mockLearner: Omit<Learner, "created_at" | "updated_at" | "birth_date" | "consent_date"> = {
+export const mockLearner: Omit<Learner, "created_at" | "updated_at"> = {
   learner_id: "learner-123",
   institution_id: "inst-123",
   user_id: null,
