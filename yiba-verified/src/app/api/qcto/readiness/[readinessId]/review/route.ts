@@ -5,6 +5,8 @@ import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { Notifications } from "@/lib/notifications";
+import { canAccessQctoData } from "@/lib/rbac";
+import { isReviewerAssignedToReview } from "@/lib/reviewAssignments";
 
 interface RouteParams {
   params: Promise<{
@@ -30,9 +32,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const ctx = await requireApiContext(request);
     const { readinessId } = await params;
 
-    // Only QCTO_USER and PLATFORM_ADMIN can review readiness records
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO users can review readiness records", 403));
+    if (!canAccessQctoData(ctx.role)) {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Only QCTO and platform administrators can review readiness records", 403));
     }
 
     const body: ReviewReadinessBody = await request.json();
@@ -95,6 +96,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Check if reviewer is assigned to this review (optional check - QCTO_SUPER_ADMIN and QCTO_ADMIN can review regardless)
+    const canReviewWithoutAssignment = ["QCTO_SUPER_ADMIN", "QCTO_ADMIN"].includes(ctx.role);
+    if (!canReviewWithoutAssignment) {
+      const isAssigned = await isReviewerAssignedToReview(
+        ctx.userId,
+        "READINESS",
+        readinessId
+      );
+      if (!isAssigned) {
+        // Log warning but allow review (assignment is tracked but not strictly enforced for backward compatibility)
+        console.warn(
+          `Reviewer ${ctx.userId} (${ctx.role}) is reviewing readiness ${readinessId} without assignment`
+        );
+      }
+    }
+
     // Build update data
     const updateData: any = {};
     if (body.status) {
@@ -106,9 +123,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       action: "READINESS_REVIEW",
       entityType: "READINESS",
       entityId: readinessId,
-      fn: async () => {
+      fn: async (tx) => {
         // Update readiness status if provided
-        const updated = await prisma.readiness.update({
+        const updated = await tx.readiness.update({
           where: { readiness_id: readinessId },
           data: updateData,
         });
@@ -122,7 +139,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           };
 
           // Upsert recommendation (update if exists, create if not)
-          await prisma.readinessRecommendation.upsert({
+          await tx.readinessRecommendation.upsert({
             where: { readiness_id: readinessId },
             update: recommendationData,
             create: {

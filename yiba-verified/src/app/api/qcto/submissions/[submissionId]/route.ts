@@ -29,12 +29,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateRouteParamUUID } from "@/lib/security/validation";
+import { applyRateLimit, RATE_LIMITS, enforceRequestSizeLimit } from "@/lib/api/routeHelpers";
 import { mutateWithAudit } from "@/server/mutations/mutate";
 import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
-import type { Role } from "@/lib/rbac";
+import { canAccessQctoData, QCTO_DATA_ACCESS_ROLES, type Role } from "@/lib/rbac";
 import { Notifications } from "@/lib/notifications";
+import { isReviewerAssignedToReview } from "@/lib/reviewAssignments";
 
 type ReviewSubmissionBody = {
   status?: "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "RETURNED_FOR_CORRECTION";
@@ -66,11 +69,16 @@ export async function GET(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    // Apply rate limiting (use user ID for authenticated users)
+    let rateLimitHeaders: Record<string, string> = {};
+    
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can access QCTO endpoints
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    // Apply rate limiting with user context
+    rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
+    
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot access QCTO endpoints`,
@@ -78,8 +86,9 @@ export async function GET(
       );
     }
 
-    // Unwrap params (Next.js 16)
-    const { submissionId } = await params;
+    // Unwrap and validate params (Next.js 16)
+    const { submissionId: rawSubmissionId } = await params;
+    const submissionId = validateRouteParamUUID(rawSubmissionId, "submissionId");
 
     // Fetch submission with relations
     const submission = await prisma.submission.findUnique({
@@ -91,23 +100,26 @@ export async function GET(
         institution: {
           select: {
             institution_id: true,
-            name: true,
-            code: true,
-            type: true,
+            legal_name: true,
+            trading_name: true,
+            registration_number: true,
+            institution_type: true,
           },
         },
         submittedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         reviewedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         submissionResources: {
@@ -121,7 +133,8 @@ export async function GET(
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
@@ -138,7 +151,7 @@ export async function GET(
     }
 
     // Add debug header in development
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...rateLimitHeaders };
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
@@ -181,11 +194,16 @@ export async function PATCH(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    // Enforce request size limit
+    await enforceRequestSizeLimit(request);
+    
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
     
-    // Only QCTO_USER and PLATFORM_ADMIN can review submissions
-    if (ctx.role !== "QCTO_USER" && ctx.role !== "PLATFORM_ADMIN") {
+    // Apply rate limiting with user context
+    const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
+    
+    if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
         `Role ${ctx.role} cannot review submissions`,
@@ -193,8 +211,9 @@ export async function PATCH(
       );
     }
 
-    // Unwrap params (Next.js 16)
-    const { submissionId } = await params;
+    // Unwrap and validate params (Next.js 16)
+    const { submissionId: rawSubmissionId } = await params;
+    const submissionId = validateRouteParamUUID(rawSubmissionId, "submissionId");
 
     // Parse and validate request body
     const body: ReviewSubmissionBody = await request.json();
@@ -243,6 +262,22 @@ export async function PATCH(
       );
     }
 
+    // Check if reviewer is assigned to this review (optional check - QCTO_SUPER_ADMIN and QCTO_ADMIN can review regardless)
+    const canReviewWithoutAssignment = ["QCTO_SUPER_ADMIN", "QCTO_ADMIN"].includes(ctx.role);
+    if (!canReviewWithoutAssignment) {
+      const isAssigned = await isReviewerAssignedToReview(
+        ctx.userId,
+        "SUBMISSION",
+        submissionId
+      );
+      if (!isAssigned) {
+        // Log warning but allow review (assignment is tracked but not strictly enforced for backward compatibility)
+        console.warn(
+          `Reviewer ${ctx.userId} (${ctx.role}) is reviewing submission ${submissionId} without assignment`
+        );
+      }
+    }
+
     // Build update data
     const updateData: any = {};
     if (body.status) {
@@ -276,10 +311,8 @@ export async function PATCH(
       institutionId: submission.institution_id,
       reason: body.reason ?? `Review submission: ${submission.title || submissionId} - Status: ${body.status || "Review notes updated"}`,
       
-      // RBAC: Only QCTO_USER and PLATFORM_ADMIN can review submissions
       assertCan: async (tx, ctx) => {
-        const allowedRoles: Role[] = ["QCTO_USER", "PLATFORM_ADMIN"];
-        if (!allowedRoles.includes(ctx.role)) {
+        if (!QCTO_DATA_ACCESS_ROLES.includes(ctx.role)) {
           throw new AppError(
             ERROR_CODES.FORBIDDEN,
             `Role ${ctx.role} cannot review submissions`,
@@ -299,22 +332,25 @@ export async function PATCH(
             institution: {
               select: {
                 institution_id: true,
-                name: true,
-                code: true,
+                legal_name: true,
+                trading_name: true,
+                registration_number: true,
               },
             },
             submittedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             reviewedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             submissionResources: {
@@ -328,7 +364,8 @@ export async function PATCH(
                   select: {
                     user_id: true,
                     email: true,
-                    name: true,
+                    first_name: true,
+                    last_name: true,
                   },
                 },
               },

@@ -5,6 +5,7 @@ import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { mutateWithAudit } from "@/server/mutations/mutate";
 import type { DeliveryMode, ReadinessStatus } from "@prisma/client";
+import { autoAssignReviewToEligibleReviewers } from "@/lib/reviewAssignments";
 
 /**
  * GET /api/institutions/readiness/[readinessId]
@@ -51,8 +52,8 @@ export async function GET(
           select: {
             document_id: true,
             file_name: true,
-            file_type: true,
-            file_size: true,
+            mime_type: true,
+            file_size_bytes: true,
             uploaded_at: true,
             uploaded_by: true,
             related_entity: true,
@@ -289,6 +290,23 @@ export async function PATCH(
         });
       },
     });
+
+    // Auto-assign to eligible reviewers when readiness is submitted
+    if (body.readiness_status === "SUBMITTED" && existing.readiness_status !== "SUBMITTED") {
+      try {
+        await autoAssignReviewToEligibleReviewers(
+          "READINESS",
+          readinessId,
+          ctx.userId
+        );
+      } catch (error) {
+        // Log error but don't fail the request - assignment is a convenience feature
+        console.error(
+          `Failed to auto-assign readiness ${readinessId} to reviewers:`,
+          error
+        );
+      }
+    }
 
     return NextResponse.json(updated, { status: 200 });
   } catch (error: any) {

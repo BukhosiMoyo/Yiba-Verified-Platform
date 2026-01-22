@@ -32,6 +32,9 @@ import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import type { Role } from "@/lib/rbac";
+import { validateRouteParamUUID } from "@/lib/security/validation";
+import { applyRateLimit, RATE_LIMITS, enforceRequestSizeLimit } from "@/lib/api/routeHelpers";
+import { autoAssignReviewToEligibleReviewers } from "@/lib/reviewAssignments";
 
 type UpdateSubmissionBody = {
   title?: string;
@@ -63,6 +66,9 @@ export async function GET(
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
+    
+    // Apply rate limiting
+    const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
     
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can view submissions
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
@@ -102,23 +108,26 @@ export async function GET(
         institution: {
           select: {
             institution_id: true,
-            name: true,
-            code: true,
-            type: true,
+            legal_name: true,
+            trading_name: true,
+            registration_number: true,
+            institution_type: true,
           },
         },
         submittedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         reviewedByUser: {
           select: {
             user_id: true,
             email: true,
-            name: true,
+            first_name: true,
+            last_name: true,
           },
         },
         submissionResources: {
@@ -132,7 +141,8 @@ export async function GET(
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
@@ -152,7 +162,7 @@ export async function GET(
     }
 
     // Add debug header in development
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...rateLimitHeaders };
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
@@ -195,8 +205,14 @@ export async function PATCH(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    // Enforce request size limit
+    await enforceRequestSizeLimit(request);
+    
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
+    
+    // Apply rate limiting
+    const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
     
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can update submissions
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
@@ -207,8 +223,9 @@ export async function PATCH(
       );
     }
 
-    // Unwrap params (Next.js 16)
-    const { submissionId } = await params;
+    // Unwrap and validate params (Next.js 16)
+    const { submissionId: rawSubmissionId } = await params;
+    const submissionId = validateRouteParamUUID(rawSubmissionId, "submissionId");
 
     // Parse and validate request body
     const body: UpdateSubmissionBody = await request.json();
@@ -355,22 +372,25 @@ export async function PATCH(
             institution: {
               select: {
                 institution_id: true,
-                name: true,
-                code: true,
+                legal_name: true,
+                trading_name: true,
+                registration_number: true,
               },
             },
             submittedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             reviewedByUser: {
               select: {
                 user_id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
               },
             },
             submissionResources: {
@@ -384,7 +404,8 @@ export async function PATCH(
                   select: {
                     user_id: true,
                     email: true,
-                    name: true,
+                    first_name: true,
+                    last_name: true,
                   },
                 },
               },
@@ -396,8 +417,25 @@ export async function PATCH(
       },
     });
     
+    // Auto-assign to eligible reviewers when submission is submitted
+    if (body.status === "SUBMITTED" && submission.status !== "SUBMITTED") {
+      try {
+        await autoAssignReviewToEligibleReviewers(
+          "SUBMISSION",
+          submissionId,
+          ctx.userId
+        );
+      } catch (error) {
+        // Log error but don't fail the request - assignment is a convenience feature
+        console.error(
+          `Failed to auto-assign submission ${submissionId} to reviewers:`,
+          error
+        );
+      }
+    }
+    
     // Add debug header in development
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...rateLimitHeaders };
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
