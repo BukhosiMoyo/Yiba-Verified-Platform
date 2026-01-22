@@ -4,11 +4,24 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "@/lib/get-server-session";
 import { getDevUserFromRequest } from "./devAuth";
 import type { Role } from "@/lib/rbac";
+import type { Capability } from "@/lib/capabilities";
+import { hasCap } from "@/lib/capabilities";
+import { AppError, ERROR_CODES } from "./errors";
+import { cookies } from "next/headers";
 
 export type ApiContext = {
   userId: string;
   role: Role;
   institutionId: string | null;
+  qctoId: string | null;
+  // View As User fields (when viewing as another user)
+  viewingAsUserId?: string | null;
+  viewingAsRole?: Role | null;
+  viewingAsInstitutionId?: string | null;
+  viewingAsQctoId?: string | null;
+  // Original user context (for audit logging)
+  originalUserId?: string;
+  originalRole?: Role;
 };
 
 export type AuthResult = {
@@ -52,11 +65,34 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
     throw error;
   }
 
+  // Check for View As User state in cookies (set by /api/view-as/start)
+  const cookieStore = await cookies();
+  const viewingAsUserId = cookieStore.get("viewing_as_user_id")?.value;
+  const viewingAsRole = cookieStore.get("viewing_as_role")?.value as Role | undefined;
+  const viewingAsInstitutionId = cookieStore.get("viewing_as_institution_id")?.value;
+  const viewingAsQctoId = cookieStore.get("viewing_as_qcto_id")?.value;
+
+  const isViewingAs = !!viewingAsUserId;
+
   return {
     ctx: {
-      userId: session.user.userId,
-      role: session.user.role,
-      institutionId: session.user.institutionId,
+      // Use viewing as user's context if present, otherwise use actual user's context
+      userId: isViewingAs ? viewingAsUserId : session.user.userId,
+      role: isViewingAs ? viewingAsRole! : session.user.role,
+      institutionId: isViewingAs
+        ? viewingAsInstitutionId ?? null
+        : session.user.institutionId,
+      qctoId: isViewingAs
+        ? viewingAsQctoId ?? null
+        : session.user.qctoId ?? null,
+      // Store viewing as info
+      viewingAsUserId: viewingAsUserId ?? null,
+      viewingAsRole: viewingAsRole ?? null,
+      viewingAsInstitutionId: viewingAsInstitutionId ?? null,
+      viewingAsQctoId: viewingAsQctoId ?? null,
+      // Store original user context for audit logging
+      originalUserId: isViewingAs ? session.user.userId : undefined,
+      originalRole: isViewingAs ? session.user.role : undefined,
     },
     authMode: "nextauth",
   };
@@ -92,9 +128,57 @@ export async function requireApiContext(req?: NextRequest): Promise<ApiContext> 
     throw error;
   }
 
+  // Check for View As User state in cookies (set by /api/view-as/start)
+  const cookieStore = await cookies();
+  const viewingAsUserId = cookieStore.get("viewing_as_user_id")?.value;
+  const viewingAsRole = cookieStore.get("viewing_as_role")?.value as Role | undefined;
+  const viewingAsInstitutionId = cookieStore.get("viewing_as_institution_id")?.value;
+  const viewingAsQctoId = cookieStore.get("viewing_as_qcto_id")?.value;
+
+  const isViewingAs = !!viewingAsUserId;
+
   return {
-    userId: session.user.userId,
-    role: session.user.role,
-    institutionId: session.user.institutionId,
+    // Use viewing as user's context if present, otherwise use actual user's context
+    userId: isViewingAs ? viewingAsUserId : session.user.userId,
+    role: isViewingAs ? viewingAsRole! : session.user.role,
+    institutionId: isViewingAs
+      ? viewingAsInstitutionId ?? null
+      : session.user.institutionId,
+    qctoId: isViewingAs
+      ? viewingAsQctoId ?? null
+      : session.user.qctoId ?? null,
+    // Store viewing as info
+    viewingAsUserId: viewingAsUserId ?? null,
+    viewingAsRole: viewingAsRole ?? null,
+    viewingAsInstitutionId: viewingAsInstitutionId ?? null,
+    viewingAsQctoId: viewingAsQctoId ?? null,
+    // Store original user context for audit logging
+    originalUserId: isViewingAs ? session.user.userId : undefined,
+    originalRole: isViewingAs ? session.user.role : undefined,
   };
+}
+
+/**
+ * Requires authentication and a specific capability (e.g. QCTO_TEAM_MANAGE).
+ * Use on API routes that need capability-based access.
+ * @throws AppError 403 if the user lacks the capability
+ */
+export async function requireCapability(req: NextRequest, cap: Capability): Promise<ApiContext> {
+  const { ctx } = await requireAuth(req);
+  if (!hasCap(ctx.role, cap)) {
+    throw new AppError(ERROR_CODES.FORBIDDEN, `Capability required: ${cap}`, 403);
+  }
+  return ctx;
+}
+
+/**
+ * Requires authentication and one of the given QCTO roles.
+ * @throws AppError 403 if the user's role is not in the allowed list
+ */
+export async function requireQctoRole(req: NextRequest, allowedRoles: Role[]): Promise<ApiContext> {
+  const { ctx } = await requireAuth(req);
+  if (!allowedRoles.includes(ctx.role)) {
+    throw new AppError(ERROR_CODES.FORBIDDEN, "Insufficient QCTO role", 403);
+  }
+  return ctx;
 }
