@@ -40,11 +40,17 @@ type CreateQCTORequestBody = {
   title: string;
   description?: string;
   expires_at?: string; // ISO date string
+  response_deadline?: string; // ISO date string - institution should respond by this date
   // Optional: Add resources immediately
   resources?: Array<{
-    resource_type: "READINESS" | "LEARNER" | "ENROLMENT" | "DOCUMENT" | "INSTITUTION";
+    resource_type: "READINESS" | "LEARNER" | "ENROLMENT" | "DOCUMENT" | "INSTITUTION" | "FACILITATOR";
     resource_id_value: string;
     notes?: string;
+    // For DOCUMENT resources: optional profile linking
+    link_to_profile?: {
+      entity_type: "FACILITATOR" | "LEARNER" | "READINESS" | "INSTITUTION";
+      entity_id: string;
+    };
   }>;
 };
 
@@ -122,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // Validate resources if provided
     if (body.resources) {
-      const validResourceTypes = ["READINESS", "LEARNER", "ENROLMENT", "DOCUMENT", "INSTITUTION"];
+      const validResourceTypes = ["READINESS", "LEARNER", "ENROLMENT", "DOCUMENT", "INSTITUTION", "FACILITATOR"];
       for (const resource of body.resources) {
         if (!validResourceTypes.includes(resource.resource_type)) {
           throw new AppError(
@@ -142,6 +148,27 @@ export async function POST(request: NextRequest) {
     }
 
     const expiresAt = body.expires_at ? new Date(body.expires_at) : null;
+
+    // Optional response_deadline: institution should respond by this date (must be future if provided)
+    let responseDeadline: Date | null = null;
+    if (body.response_deadline) {
+      const parsed = new Date(body.response_deadline);
+      if (isNaN(parsed.getTime())) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_ERROR,
+          "Invalid response_deadline date format (use ISO date string)",
+          400
+        );
+      }
+      if (parsed <= new Date()) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_ERROR,
+          "response_deadline must be a future date",
+          400
+        );
+      }
+      responseDeadline = parsed;
+    }
 
     // Execute mutation with full RBAC and audit enforcement
     const qctoRequest = await mutateWithAudit({
@@ -175,13 +202,25 @@ export async function POST(request: NextRequest) {
             description: body.description || null,
             status: "PENDING", // Always starts as PENDING
             expires_at: expiresAt,
+            response_deadline: responseDeadline,
             requestResources: body.resources
               ? {
-                  create: body.resources.map((r) => ({
-                    resource_type: r.resource_type,
-                    resource_id_value: r.resource_id_value,
-                    notes: r.notes || null,
-                  })),
+                  create: body.resources.map((r) => {
+                    // Store link_to_profile in notes as JSON if provided
+                    let notesValue = r.notes || null;
+                    if (r.link_to_profile) {
+                      const linkInfo = JSON.stringify({
+                        link_to_profile: r.link_to_profile,
+                        original_notes: r.notes || null,
+                      });
+                      notesValue = linkInfo;
+                    }
+                    return {
+                      resource_type: r.resource_type,
+                      resource_id_value: r.resource_id_value,
+                      notes: notesValue,
+                    };
+                  }),
                 }
               : undefined,
           },
@@ -317,7 +356,7 @@ export async function GET(request: NextRequest) {
         {
           count: 0,
           items: [],
-          meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
+          meta: { isYourRequestsOnly: (ctx.role as string) === "QCTO_USER" },
         },
         { status: 200 }
       );
@@ -337,7 +376,7 @@ export async function GET(request: NextRequest) {
             {
               count: 0,
               items: [],
-              meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
+              meta: { isYourRequestsOnly: (ctx.role as string) === "QCTO_USER" },
             },
             { status: 200 }
           );
@@ -383,6 +422,7 @@ export async function GET(request: NextRequest) {
           request_type: true,
           status: true,
           requested_at: true,
+          response_deadline: true,
           reviewed_at: true,
           expires_at: true,
           institution: {
@@ -412,7 +452,7 @@ export async function GET(request: NextRequest) {
       {
         count: totalCount,
         items: requests,
-        meta: { isYourRequestsOnly: ctx.role === "QCTO_USER" },
+        meta: { isYourRequestsOnly: (ctx.role as string) === "QCTO_USER" },
       },
       { status: 200, headers }
     );

@@ -25,8 +25,8 @@ export default async function CreateReadinessPage() {
   return (
     <div className="min-h-[60vh] p-4 md:p-8">
       <div className="max-w-2xl mx-auto mb-10">
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Create Form 5 Readiness Record</h1>
-        <p className="text-slate-600 mt-2">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Create Form 5 Readiness Record</h1>
+        <p className="text-muted-foreground mt-2">
           Start a new programme delivery readiness record for QCTO review. You can save progress and continue later.
         </p>
       </div>

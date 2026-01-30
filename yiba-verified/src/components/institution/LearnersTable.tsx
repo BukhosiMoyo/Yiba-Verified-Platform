@@ -53,7 +53,7 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
 
   if (learners.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 py-16">
+      <div className="rounded-xl border border-dashed border-border bg-muted/30 py-16">
         <EmptyState
           title="No learners found"
           description={q ? `No learners match "${q}". Try different search terms.` : "Learners will appear here when they are added."}
@@ -67,18 +67,18 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <div className="rounded-xl border border-gray-200/60 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-border bg-card shadow-sm dark:shadow-none overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
+            <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
               <TableHeader>
-                <TableRow className="bg-gray-50/80 border-b border-gray-200 hover:bg-gray-50/80">
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 w-12 text-center py-2.5 px-4">#</TableHead>
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 min-w-[160px] py-2.5 px-4">Name</TableHead>
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 min-w-[140px] max-w-[200px] py-2.5 px-4">ID / Alternate</TableHead>
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 w-[90px] py-2.5 px-4">Status</TableHead>
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 whitespace-nowrap py-2.5 px-4 w-[110px]">Birth date</TableHead>
-                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 whitespace-nowrap py-2.5 px-4 w-[110px]">Added</TableHead>
-                  <TableHead className="sticky right-0 z-10 bg-gray-50/80 border-l border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-600 text-right py-2.5 px-4 w-28 min-w-[7rem]">Actions</TableHead>
+                <TableRow className="bg-muted/50 border-b border-border hover:bg-muted/50">
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground w-12 text-center py-2.5 px-4">#</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground min-w-[160px] py-2.5 px-4">Name</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground min-w-[140px] max-w-[200px] py-2.5 px-4">ID / Alternate</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground w-[90px] py-2.5 px-4">Status</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 px-4 w-[110px]">Birth date</TableHead>
+                  <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 px-4 w-[110px]">Added</TableHead>
+                  <TableHead className="sticky right-0 z-10 bg-muted/50 border-l border-border text-[11px] font-medium uppercase tracking-wide text-muted-foreground text-right py-2.5 px-4 w-28 min-w-[7rem]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -87,20 +87,20 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
                   const email = l.user?.email || null;
                   const idLine = [l.national_id, l.alternate_id].filter(Boolean).join(" / ") || "—";
                   return (
-                    <TableRow key={l.learner_id} className="group hover:bg-amber-50/40 transition-colors">
-                      <TableCell className="text-center tabular-nums font-semibold text-gray-700 py-2.5 px-4 w-12">
+                    <TableRow key={l.learner_id} className="group hover:bg-accent/50 transition-colors">
+                      <TableCell className="text-center tabular-nums font-semibold text-muted-foreground py-2.5 px-4 w-12">
                         {(page - 1) * limit + i + 1}
                       </TableCell>
                       <TableCell className="py-2.5 px-4">
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-semibold text-gray-900 truncate">{name}</span>
-                          {email && <span className="text-xs text-gray-500 truncate">{email}</span>}
+                          <span className="font-semibold text-foreground truncate">{name}</span>
+                          {email && <span className="text-xs text-muted-foreground truncate">{email}</span>}
                         </div>
                       </TableCell>
                       <TableCell className="py-2.5 px-4 font-mono text-sm min-w-0 max-w-[200px]">
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger asChild>
-                            <span className="block truncate text-gray-700">{idLine}</span>
+                            <span className="block truncate text-foreground/80">{idLine}</span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-xs font-mono break-all">
                             {idLine}
@@ -108,16 +108,16 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
                         </Tooltip>
                       </TableCell>
                       <TableCell className="py-2.5 px-4">
-                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Active</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">Active</Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600 py-2.5 px-4 whitespace-nowrap">{formatDate(l.birth_date)}</TableCell>
-                      <TableCell className="text-sm text-gray-600 py-2.5 px-4 whitespace-nowrap">{formatDate(l.created_at)}</TableCell>
-                      <TableCell className="sticky right-0 z-10 bg-white border-l border-gray-200 group-hover:bg-amber-50/40 py-2.5 px-4 text-right">
+                      <TableCell className="text-sm text-muted-foreground py-2.5 px-4 whitespace-nowrap">{formatDate(l.birth_date)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground py-2.5 px-4 whitespace-nowrap">{formatDate(l.created_at)}</TableCell>
+                      <TableCell className="sticky right-0 z-10 bg-card border-l border-border group-hover:bg-accent/50 py-2.5 px-4 text-right">
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger asChild>
                             <Link
                               href={`/institution/learners/${l.learner_id}`}
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-amber-50 hover:border-amber-200/80 transition-colors"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-accent transition-colors"
                             >
                               <Eye className="h-4 w-4" aria-hidden />
                             </Link>
@@ -136,7 +136,7 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
         {/* Footer: Rows per page (left), Showing X–Y of Z, Prev/Next */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Rows per page</span>
+            <span className="text-sm text-muted-foreground">Rows per page</span>
             <Select
               value={String(limit)}
               onChange={(e) => {
@@ -153,7 +153,7 @@ export function LearnersTable({ learners, total, page, limit, q, sort }: Props) 
             </Select>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               Showing {from}–{to} of {total}
             </span>
             <div className="flex gap-2">

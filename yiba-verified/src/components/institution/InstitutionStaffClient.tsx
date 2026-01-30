@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
-import { Users, Plus, UserX, UserCheck, Copy, Check, Loader2 } from "lucide-react";
+import { Users, Plus, UserX, UserCheck, Copy, Check, Loader2, GraduationCap, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { GenerateImpersonationLink } from "@/components/shared/GenerateImpersonationLink";
+import type { Role } from "@/lib/rbac";
 
 const roleLabel = (r: string) => {
   const m: Record<string, string> = {
@@ -36,15 +38,19 @@ type StaffMember = {
   role: string;
   status: string;
   created_at: Date | null;
+  can_facilitate?: boolean;
+  can_assess?: boolean;
+  can_moderate?: boolean;
 };
 
 type Props = {
   staff: StaffMember[];
   canManage: boolean;
   currentUserId: string;
+  currentUserRole: Role;
 };
 
-export function InstitutionStaffClient({ staff, canManage, currentUserId }: Props) {
+export function InstitutionStaffClient({ staff, canManage, currentUserId, currentUserRole }: Props) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [addEmail, setAddEmail] = useState("");
@@ -53,6 +59,7 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId }: Prop
   const [addResult, setAddResult] = useState<{ invite_link: string; email: string; role: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [facilitatorTogglingId, setFacilitatorTogglingId] = useState<string | null>(null);
 
   const formatDate = (d: Date | null) =>
     d ? new Date(d).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -114,7 +121,26 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId }: Prop
     }
   };
 
-  const cols = canManage ? 6 : 5;
+  const setCanFacilitate = async (userId: string, can_facilitate: boolean) => {
+    setFacilitatorTogglingId(userId);
+    try {
+      const res = await fetch(`/api/institution/staff/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_facilitate }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update");
+      toast.success(can_facilitate ? "Marked as facilitator" : "Removed as facilitator");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setFacilitatorTogglingId(null);
+    }
+  };
+
+  const cols = canManage ? 7 : 6;
 
   return (
     <>
@@ -144,6 +170,7 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId }: Prop
                   <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Name</TableHead>
                   <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Email</TableHead>
                   <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Role</TableHead>
+                  <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Facilitator</TableHead>
                   <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Status</TableHead>
                   <TableHead className="h-11 bg-slate-50/80 font-semibold text-slate-700">Joined</TableHead>
                   {canManage && (
@@ -202,6 +229,44 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId }: Prop
                           </span>
                         </TableCell>
                         <TableCell className="py-4">
+                          {canManage && !isSelf ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium border transition-colors disabled:opacity-50"
+                              style={
+                                u.can_facilitate
+                                  ? { background: "rgb(34 197 94 / 0.12)", color: "rgb(22 163 74)", borderColor: "rgb(34 197 94 / 0.4)" }
+                                  : { background: "rgb(241 245 249)", color: "rgb(100 116 139)", borderColor: "rgb(226 232 240)" }
+                              }
+                              disabled={!!facilitatorTogglingId}
+                              onClick={() => setCanFacilitate(u.user_id, !u.can_facilitate)}
+                            >
+                              {facilitatorTogglingId === u.user_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <GraduationCap className="h-3.5 w-3.5" />
+                              )}
+                              {u.can_facilitate ? "Yes" : "No"}
+                            </button>
+                          ) : u.can_facilitate ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
+                              <GraduationCap className="h-3.5 w-3.5" />
+                              Yes
+                              {isSelf && (
+                                <a
+                                  href="/institution/facilitator-profile"
+                                  className="inline-flex items-center gap-1 text-violet-600 hover:underline"
+                                >
+                                  <Link2 className="h-3 w-3" />
+                                  Complete profile
+                                </a>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-500">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-4">
                           <span
                             className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
                               u.status === "ACTIVE"
@@ -215,23 +280,35 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId }: Prop
                         <TableCell className="py-4 text-sm text-slate-500">{formatDate(u.created_at)}</TableCell>
                         {canManage && (
                           <TableCell className="py-4 text-right">
-                            {!isSelf && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-slate-600 hover:text-rose-600"
-                                disabled={!!togglingId}
-                                onClick={() => setStatus(u.user_id, u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-                              >
-                                {togglingId === u.user_id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : u.status === "ACTIVE" ? (
-                                  <span title="Disable"><UserX className="h-4 w-4" /></span>
-                                ) : (
-                                  <span title="Enable"><UserCheck className="h-4 w-4" /></span>
-                                )}
-                              </Button>
-                            )}
+                            <div className="flex items-center justify-end gap-1">
+                              {!isSelf && (
+                                <>
+                                  <GenerateImpersonationLink
+                                    targetUserId={u.user_id}
+                                    targetUserName={name}
+                                    targetUserRole={roleLabel(u.role)}
+                                    variant="ghost"
+                                    size="sm"
+                                    showLabel={false}
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-slate-600 hover:text-rose-600"
+                                    disabled={!!togglingId}
+                                    onClick={() => setStatus(u.user_id, u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
+                                  >
+                                    {togglingId === u.user_id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : u.status === "ACTIVE" ? (
+                                      <span title="Disable"><UserX className="h-4 w-4" /></span>
+                                    ) : (
+                                      <span title="Enable"><UserCheck className="h-4 w-4" /></span>
+                                    )}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>

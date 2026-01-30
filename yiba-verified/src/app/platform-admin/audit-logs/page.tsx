@@ -90,7 +90,7 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
   }
 
   // Fetch audit logs with related data
-  const [logs, totalCount] = await Promise.all([
+  const [rawLogs, totalCount] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       include: {
@@ -132,6 +132,116 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
     }),
     prisma.auditLog.count({ where }),
   ]);
+
+  // Helper function to check if a string is a valid UUID
+  const isUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
+  // Helper function to extract UUID from a value (handles JSON-stringified and plain strings)
+  const extractInstitutionId = (value: string | null): string | null => {
+    if (!value || value === "" || value === "null") return null;
+
+    let extractedId: string | null = null;
+
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === "string" && parsed.trim() !== "") {
+        extractedId = parsed.trim();
+      }
+    } catch {
+      if (value.trim() !== "" && value !== "null") {
+        extractedId = value.trim();
+      }
+    }
+
+    if (extractedId && isUUID(extractedId)) return extractedId;
+    return null;
+  };
+
+  // Batch collect institution IDs (from institution_id field) and USER entity_ids
+  const institutionIds = new Set<string>();
+  const userIds = new Set<string>();
+  for (const log of rawLogs) {
+    if (log.field_name === "institution_id") {
+      const o = extractInstitutionId(log.old_value);
+      const n = extractInstitutionId(log.new_value);
+      if (o) institutionIds.add(o);
+      if (n) institutionIds.add(n);
+    }
+    if (log.entity_type === "USER" && isUUID(log.entity_id)) {
+      userIds.add(log.entity_id);
+    }
+  }
+
+  // Batch fetch institutions and users
+  const [institutions, users] = await Promise.all([
+    institutionIds.size > 0
+      ? prisma.institution.findMany({
+          where: { institution_id: { in: [...institutionIds] } },
+          select: { institution_id: true, legal_name: true, trading_name: true },
+        })
+      : [],
+    userIds.size > 0
+      ? prisma.user.findMany({
+          where: { user_id: { in: [...userIds] } },
+          select: {
+            user_id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            phone: true,
+            role: true,
+            status: true,
+            institution: {
+              select: { institution_id: true, legal_name: true, trading_name: true },
+            },
+          },
+        })
+      : [],
+  ]);
+
+  const institutionMap = new Map(institutions.map((i) => [i.institution_id, i]));
+  const userMap = new Map(users.map((u) => [u.user_id, u]));
+
+  // Resolve additional data in memory (no per-log DB calls)
+  const logs = rawLogs.map((log) => {
+    const resolvedLog: any = { ...log };
+
+    if (log.field_name === "institution_id") {
+      const oldId = extractInstitutionId(log.old_value);
+      const newId = extractInstitutionId(log.new_value);
+      const oldInstitution = oldId ? institutionMap.get(oldId) ?? null : null;
+      const newInstitution = newId ? institutionMap.get(newId) ?? null : null;
+      resolvedLog.oldInstitution = oldInstitution
+        ? { institution_id: oldInstitution.institution_id, legal_name: oldInstitution.legal_name, trading_name: oldInstitution.trading_name }
+        : null;
+      resolvedLog.newInstitution = newInstitution
+        ? { institution_id: newInstitution.institution_id, legal_name: newInstitution.legal_name, trading_name: newInstitution.trading_name }
+        : null;
+    }
+
+    if (log.entity_type === "USER" && isUUID(log.entity_id)) {
+      const userProfile = userMap.get(log.entity_id);
+      if (userProfile) {
+        resolvedLog.entityUser = {
+          user_id: userProfile.user_id,
+          email: userProfile.email,
+          first_name: userProfile.first_name,
+          last_name: userProfile.last_name,
+          phone: userProfile.phone,
+          role: userProfile.role,
+          status: userProfile.status,
+          institution: userProfile.institution
+            ? { institution_id: userProfile.institution.institution_id, legal_name: userProfile.institution.legal_name, trading_name: userProfile.institution.trading_name }
+            : null,
+        };
+      }
+    }
+
+    return resolvedLog;
+  });
 
   return (
     <div className="space-y-6 p-4 md:p-8 min-w-0 max-w-full">

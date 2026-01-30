@@ -9,7 +9,7 @@ import { formatRoleForDisplay } from "@/lib/announcements";
  * PATCH /api/announcements/[announcementId]
  * 
  * Update an announcement.
- * - PLATFORM_ADMIN/QCTO: Can update any announcement
+ * - PLATFORM_ADMIN/QCTO_SUPER_ADMIN: Can update any announcement
  * - INSTITUTION_ADMIN: Can only update their own institution's announcements
  * - Can update status (ACTIVE/ARCHIVED), title, message, priority, expires_at, target_roles
  */
@@ -20,20 +20,12 @@ export async function PATCH(
   try {
     const ctx = await requireApiContext(request);
 
-    // Check permissions
-    const QCTO_ROLES = [
-      "QCTO_USER",
-      "QCTO_SUPER_ADMIN",
-      "QCTO_ADMIN",
-      "QCTO_REVIEWER",
-      "QCTO_AUDITOR",
-      "QCTO_VIEWER",
-    ];
-    const canUpdateAny = ctx.role === "PLATFORM_ADMIN" || QCTO_ROLES.includes(ctx.role);
+    // Check permissions - only QCTO_SUPER_ADMIN can manage announcements (not regular QCTO_ADMIN)
+    const canUpdateAny = ctx.role === "PLATFORM_ADMIN" || ctx.role === "QCTO_SUPER_ADMIN";
     const canUpdateOwn = ctx.role === "INSTITUTION_ADMIN";
     
     if (!canUpdateAny && !canUpdateOwn) {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO users, and institution admins can update announcements", 403));
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO super admins, and institution admins can update announcements", 403));
     }
 
     const { announcementId } = await params;
@@ -77,7 +69,7 @@ export async function PATCH(
       if (!Array.isArray(target_roles)) {
         return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "target_roles must be an array", 400));
       }
-      const validTargetRoles = target_roles.filter((r: string) => validRoles.includes(r));
+      const validTargetRoles = target_roles.filter((r: string) => (validRoles as readonly string[]).includes(r));
       if (validTargetRoles.length !== target_roles.length) {
         return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid role(s) in target_roles", 400));
       }
@@ -143,7 +135,7 @@ export async function PATCH(
  * DELETE /api/announcements/[announcementId]
  * 
  * Soft delete an announcement.
- * - PLATFORM_ADMIN/QCTO: Can delete any announcement
+ * - PLATFORM_ADMIN/QCTO_SUPER_ADMIN: Can delete any announcement
  * - INSTITUTION_ADMIN: Can only delete their own institution's announcements
  */
 export async function DELETE(
@@ -153,20 +145,12 @@ export async function DELETE(
   try {
     const ctx = await requireApiContext(request);
 
-    // Check permissions
-    const QCTO_ROLES = [
-      "QCTO_USER",
-      "QCTO_SUPER_ADMIN",
-      "QCTO_ADMIN",
-      "QCTO_REVIEWER",
-      "QCTO_AUDITOR",
-      "QCTO_VIEWER",
-    ];
-    const canDeleteAny = ctx.role === "PLATFORM_ADMIN" || QCTO_ROLES.includes(ctx.role);
+    // Check permissions - only QCTO_SUPER_ADMIN can manage announcements (not regular QCTO_ADMIN)
+    const canDeleteAny = ctx.role === "PLATFORM_ADMIN" || ctx.role === "QCTO_SUPER_ADMIN";
     const canDeleteOwn = ctx.role === "INSTITUTION_ADMIN";
     
     if (!canDeleteAny && !canDeleteOwn) {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO users, and institution admins can delete announcements", 403));
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO super admins, and institution admins can delete announcements", 403));
     }
 
     const { announcementId } = await params;

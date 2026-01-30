@@ -6,6 +6,7 @@ import {
   Building2,
   GraduationCap,
   Users,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,7 +16,7 @@ export type SearchProviderResult = {
   subtitle?: string;
   href: string;
   icon: LucideIcon;
-  group: "Pages" | "Institutions" | "Learners" | "Users" | "Submissions" | "Requests" | "Documents" | "Readiness" | "Enrolments" | "Audit Logs";
+  group: "Pages" | "Institutions" | "Learners" | "Users" | "Submissions" | "Requests" | "Documents" | "Readiness" | "Enrolments" | "Audit Logs" | "Facilitators";
   badge?: string;
 };
 
@@ -173,10 +174,56 @@ export async function searchUsers(
 }
 
 /**
+ * Search Facilitators (QCTO roles only)
+ */
+export async function searchFacilitators(
+  query: string,
+  role: Role,
+  signal?: AbortSignal
+): Promise<SearchProviderResult[]> {
+  // Only QCTO roles can search facilitators
+  const QCTO_ROLES = ["QCTO_USER", "QCTO_SUPER_ADMIN", "QCTO_ADMIN", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"];
+  if (!QCTO_ROLES.includes(role) && role !== "PLATFORM_ADMIN" || query.length < 2) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `/api/qcto/facilitators?search=${encodeURIComponent(query)}&limit=10`,
+      { signal }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    const facilitators = data.items || [];
+
+    return facilitators.map((facilitator: any) => ({
+      id: `facilitator-${facilitator.facilitator_id}`,
+      title: `${facilitator.first_name} ${facilitator.last_name}`,
+      subtitle: facilitator.readiness?.qualification_title || facilitator.readiness?.institution?.trading_name || "Facilitator",
+      href: `/qcto/facilitators/${facilitator.facilitator_id}`,
+      icon: UserCheck,
+      group: "Facilitators" as const,
+      badge: facilitator.readiness?.institution?.trading_name || facilitator.readiness?.institution?.legal_name || "Institution",
+    }));
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return [];
+    }
+    console.error("Failed to search facilitators:", error);
+    return [];
+  }
+}
+
+/**
  * All search providers
  */
 export const SEARCH_PROVIDERS = {
   institutions: searchInstitutions,
   learners: searchLearners,
   users: searchUsers,
+  facilitators: searchFacilitators,
 };

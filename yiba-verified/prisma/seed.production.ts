@@ -29,11 +29,11 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function randomItem<T>(arr: T[]): T {
+function randomItem<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function randomItems<T>(arr: T[], count: number): T[] {
+function randomItems<T>(arr: readonly T[], count: number): T[] {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
@@ -83,26 +83,48 @@ const PROVINCES = [
   "Western Cape",
 ];
 
-const INSTITUTION_TYPES = ["TVET", "PRIVATE_SDP", "NGO", "UNIVERSITY", "OTHER"] as const;
+const INSTITUTION_TYPES = ["TVET", "PRIVATE_SDP", "NGO", "UNIVERSITY", "EMPLOYER", "OTHER"] as const;
 const DELIVERY_MODES = ["FACE_TO_FACE", "BLENDED", "MOBILE"] as const;
 
+// Mixed names: African, Afrikaans, and English
 const MALE_FIRST_NAMES = [
+  // African names
   "Thabo", "Sipho", "Bongani", "Mandla", "Sello", "Tshepo", "Kagiso", "Lucky", "Vusi", "Bheki",
   "Mbuso", "Nkosi", "Nathi", "Zweli", "Phindi", "Themba", "Sanele", "Luyanda", "Ayanda", "Kabelo",
   "Tumelo", "Kgosi", "Refilwe", "Mpho", "Karabo", "Tshegofatso", "Lerato", "Pule", "Thapelo", "Kgotso",
+  // Afrikaans names
+  "Johan", "Pieter", "Willem", "Andries", "Hendrik", "Frik", "Dawie", "Kobus", "Stefan", "Gerhard",
+  "Christo", "Dirk", "Jaco", "Riaan", "Wynand", "Francois", "Hannes", "Jannie", "Koos", "Piet",
+  // English names
+  "John", "Michael", "David", "James", "Robert", "William", "Richard", "Thomas", "Christopher", "Daniel",
+  "Matthew", "Mark", "Andrew", "Steven", "Paul", "Kevin", "Brian", "Edward", "Anthony", "Peter",
 ];
 
 const FEMALE_FIRST_NAMES = [
+  // African names
   "Lerato", "Nomvula", "Zanele", "Thandi", "Nomsa", "Precious", "Sbongile", "Ntombi", "Nolwazi", "Busisiwe",
   "Sibongile", "Naledi", "Refilwe", "Nonhlanhla", "Mpho", "Zinhle", "Ayanda", "Lindiwe", "Zodwa", "Zanele",
   "Kgomotso", "Kelebogile", "Boitumelo", "Koketso", "Tshegofatso", "Karabo", "Palesa", "Masego", "Tumelo", "Refilwe",
+  // Afrikaans names
+  "Maria", "Anna", "Elize", "Petronella", "Susanna", "Magdalena", "Johanna", "Catharina", "Willemiena", "Elizabeth",
+  "Hester", "Aletta", "Sarie", "Marietjie", "Annelie", "Elmarie", "Marike", "Elna", "Riana", "Elsa",
+  // English names
+  "Mary", "Sarah", "Jennifer", "Lisa", "Karen", "Susan", "Michelle", "Amanda", "Jessica", "Nicole",
+  "Emily", "Emma", "Olivia", "Sophia", "Isabella", "Charlotte", "Mia", "Amelia", "Harper", "Evelyn",
 ];
 
 const SURNAMES = [
+  // African surnames
   "Khumalo", "Dlamini", "Nkosi", "Ndlovu", "Sithole", "Mkhize", "Zulu", "Molefe", "Ntuli", "Mokoena",
-  "van Wyk", "Botha", "Naidoo", "Pillay", "Govender", "Reddy", "Smith", "Johnson", "Williams", "Nkosi",
   "Mthembu", "Cele", "Mbatha", "Zungu", "Mthethwa", "Ngcobo", "Xaba", "Mbhele", "Ntombela", "Sithole",
   "Mabena", "Mahlangu", "Maseko", "Mashaba", "Mashiane", "Mashigo", "Mashile", "Masilela", "Masondo", "Mathebula",
+  // Afrikaans surnames
+  "van Wyk", "Botha", "van der Merwe", "Smit", "Meyer", "Fourie", "Coetzee", "van Niekerk", "Muller", "de Villiers",
+  "Steyn", "Pretorius", "van den Berg", "du Plessis", "Venter", "Kruger", "van Rensburg", "Nel", "Ferreira", "Swart",
+  "van Zyl", "de Klerk", "van der Walt", "Marais", "le Roux", "Theron", "van Heerden", "Botes", "Viljoen", "Jordaan",
+  // English/Common surnames
+  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+  "Naidoo", "Pillay", "Govender", "Reddy", "Patel", "Singh", "Kumar", "Peters", "Anderson", "Taylor",
 ];
 
 const INSTITUTION_NAMES = [
@@ -264,6 +286,9 @@ export async function main() {
         // Platform admins don't need provincial assignments
         default_province: null,
         assigned_provinces: [],
+        // Auto-verified with BLACK badge
+        verification_level: "BLACK",
+        verification_date: new Date(),
       },
     });
     platformAdmins.push({ user_id: user.user_id, email: user.email });
@@ -641,7 +666,21 @@ export async function main() {
           wbl_learner_support_description: status !== "NOT_STARTED" && Math.random() < 0.5 ? "Regular mentorship and progress reviews" : null,
           wbl_assessment_responsibility: status !== "NOT_STARTED" && Math.random() < 0.5 ? "SHARED" : null,
           policies_procedures_notes: status !== "NOT_STARTED" ? "All policies and procedures documented and available" : null,
-          facilitators_notes: status !== "NOT_STARTED" ? "Qualified facilitators with relevant industry experience" : null,
+          // New Form 5 fields
+          credits: status !== "NOT_STARTED" ? randomInt(120, 360) : null,
+          occupational_category: status !== "NOT_STARTED" ? randomItem(["Engineering", "Healthcare", "Education", "Business", "Technology"]) : null,
+          intended_learner_intake: status !== "NOT_STARTED" ? randomInt(20, 100) : null,
+          // LMIS fields
+          lmis_functional: status !== "NOT_STARTED" ? Math.random() < 0.9 : null,
+          lmis_popia_compliant: status !== "NOT_STARTED" ? Math.random() < 0.9 : null,
+          lmis_data_storage_description: status !== "NOT_STARTED" && Math.random() < 0.7 ? "Secure cloud storage with encrypted backups" : null,
+          lmis_access_control_description: status !== "NOT_STARTED" && Math.random() < 0.7 ? "Role-based access control with audit logging" : null,
+          // Learning Material fields (Form 5 Section 9)
+          learning_material_coverage_percentage: status !== "NOT_STARTED" ? randomInt(50, 100) : null,
+          learning_material_nqf_aligned: status !== "NOT_STARTED" ? Math.random() < 0.9 : null,
+          knowledge_components_complete: status !== "NOT_STARTED" ? Math.random() < 0.9 : null,
+          practical_components_complete: status !== "NOT_STARTED" ? Math.random() < 0.9 : null,
+          learning_material_quality_verified: status === "RECOMMENDED" ? true : status !== "NOT_STARTED" ? Math.random() < 0.8 : null,
         },
       });
       
@@ -807,6 +846,28 @@ export async function main() {
   }
   console.log(`  ✅ Created ${counts.attendanceRecords} attendance records\n`);
 
+  // Default email templates
+  console.log("Ensuring default email templates...");
+  await prisma.emailTemplate.upsert({
+    where: { type: "INSTITUTION_ADMIN_INVITE" },
+    create: {
+      type: "INSTITUTION_ADMIN_INVITE",
+      name: "Institution Admin Invite",
+      subject: "You're invited to manage {{institution_name}} on Yiba Verified",
+      header_html: null,
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "{{inviter_name}} has invited you to manage {{institution_name}} on Yiba Verified — the QCTO-recognised platform for qualification verification and accreditation." },
+        { type: "paragraph", content: "Click the button below to review your invitation and get started. This link expires in 7 days." },
+      ],
+      cta_text: "Review invitation",
+      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
+      is_active: true,
+    },
+    update: {},
+  });
+  console.log("  ✅ Default email template (Institution Admin Invite) ready.\n");
+
   // 11. Create Invites
   console.log("Creating invites...");
   for (const inst of institutions) {
@@ -816,17 +877,19 @@ export async function main() {
     for (let i = 0; i < numInvites; i++) {
       const creator = randomItem(instUsers);
       const statusRoll = Math.random();
-      const status: "QUEUED" | "SENT" | "DELIVERED" | "OPENED" | "ACCEPTED" | "FAILED" | "EXPIRED" =
+      const status: "QUEUED" | "SENT" | "DELIVERED" | "OPENED" | "ACCEPTED" | "DECLINED" | "FAILED" | "EXPIRED" =
         statusRoll < 0.2 ? "QUEUED" :
-        statusRoll < 0.35 ? "SENT" :
-        statusRoll < 0.45 ? "DELIVERED" :
-        statusRoll < 0.6 ? "OPENED" :
-        statusRoll < 0.8 ? "ACCEPTED" :
+        statusRoll < 0.32 ? "SENT" :
+        statusRoll < 0.42 ? "DELIVERED" :
+        statusRoll < 0.55 ? "OPENED" :
+        statusRoll < 0.75 ? "ACCEPTED" :
+        statusRoll < 0.82 ? "DECLINED" :
         statusRoll < 0.9 ? "FAILED" : "EXPIRED";
       
       const sentAt = status !== "QUEUED" && status !== "EXPIRED" ? randomDateInRange(14, 180) : null;
       const expiresAt = sentAt ? new Date(sentAt.getTime() + 7 * 24 * 60 * 60 * 1000) : daysAgo(randomInt(60, 200));
       
+      const declinedAt = status === "DECLINED" && sentAt ? new Date(sentAt.getTime() + 5400 * 1000) : null;
       await prisma.invite.create({
         data: {
           email: `invite${i}.${randomBytes(4).toString("hex")}@gmail.com`,
@@ -837,9 +900,11 @@ export async function main() {
           created_by_user_id: creator.user_id,
           status,
           sent_at: sentAt,
-          delivered_at: status === "DELIVERED" || status === "OPENED" || status === "ACCEPTED" ? sentAt ? new Date(sentAt.getTime() + 3600 * 1000) : null : null,
-          opened_at: status === "OPENED" || status === "ACCEPTED" ? sentAt ? new Date(sentAt.getTime() + 7200 * 1000) : null : null,
+          delivered_at: status === "DELIVERED" || status === "OPENED" || status === "ACCEPTED" || status === "DECLINED" ? sentAt ? new Date(sentAt.getTime() + 3600 * 1000) : null : null,
+          opened_at: status === "OPENED" || status === "ACCEPTED" || status === "DECLINED" ? sentAt ? new Date(sentAt.getTime() + 7200 * 1000) : null : null,
           accepted_at: status === "ACCEPTED" ? sentAt ? new Date(sentAt.getTime() + 10800 * 1000) : null : null,
+          declined_at: declinedAt,
+          decline_reason: status === "DECLINED" ? randomItem(["already_using_other_platform", "not_responsible", "not_interested", "other"]) : null,
           used_at: status === "ACCEPTED" ? sentAt ? new Date(sentAt.getTime() + 10800 * 1000) : null : null,
           attempts: status !== "QUEUED" ? 1 : 0,
         },

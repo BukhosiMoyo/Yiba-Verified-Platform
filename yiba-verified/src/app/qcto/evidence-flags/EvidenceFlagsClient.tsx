@@ -105,8 +105,8 @@ function EvidenceFlagsContent({ userRole }: { userRole: Role }) {
   const hasActiveFilters = !!searchQuery.trim() || !!statusFilter;
 
   const statusPill =
-    statusFilter === "ACTIVE" ? "bg-amber-100 text-amber-800" :
-    statusFilter === "RESOLVED" ? "bg-emerald-100 text-emerald-800" : "";
+    statusFilter === "ACTIVE" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" :
+    statusFilter === "RESOLVED" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" : "";
 
   return (
     <div className="space-y-4 md:space-y-8 p-4 md:p-8">
@@ -115,7 +115,7 @@ function EvidenceFlagsContent({ userRole }: { userRole: Role }) {
           <h1 className="text-2xl md:text-3xl font-bold flex flex-wrap items-center gap-2">
             Evidence Flags
             {statusFilter && statusPill && (
-              <span className={`inline-flex items-center rounded-full border border-gray-200/80 px-3 py-1 text-sm font-semibold shadow-sm ${statusPill}`}>
+              <span className={`inline-flex items-center rounded-full border border-gray-200/80 dark:border-gray-700 px-3 py-1 text-sm font-semibold shadow-sm ${statusPill}`}>
                 {statusFilter === "ACTIVE" ? "Active" : "Resolved"}
               </span>
             )}
@@ -151,13 +151,13 @@ function EvidenceFlagsContent({ userRole }: { userRole: Role }) {
         />
 
         {error && (
-          <div className="py-4 text-center text-sm text-red-600">{error}</div>
+          <div className="py-4 text-center text-sm text-red-600 dark:text-red-400">{error}</div>
         )}
 
         {loading ? (
           <LoadingTable columns={9} rows={6} />
         ) : flags.length === 0 ? (
-          <div className="rounded-xl border border-gray-200/60 overflow-x-auto bg-white">
+          <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/60 overflow-x-auto bg-white dark:bg-gray-900/50">
             <div className="py-12">
               <EmptyState
                 title="No evidence flags"
@@ -173,7 +173,7 @@ function EvidenceFlagsContent({ userRole }: { userRole: Role }) {
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Rows per page</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Rows per page</span>
                 <Select
                   value={String(pageSize)}
                   onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
@@ -185,7 +185,7 @@ function EvidenceFlagsContent({ userRole }: { userRole: Role }) {
                 </Select>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total}
                 </span>
                 <div className="flex gap-2">

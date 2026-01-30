@@ -25,7 +25,7 @@ export function OnboardingNavigation({
   showSkip = false,
 }: OnboardingNavigationProps) {
   return (
-    <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t">
+    <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-border">
       <div>
         {canGoBack && (
           <Button type="button" variant="outline" onClick={onBack} disabled={isLoading}>

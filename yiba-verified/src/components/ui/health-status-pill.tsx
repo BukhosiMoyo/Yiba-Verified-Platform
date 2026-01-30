@@ -18,22 +18,22 @@ const statusConfig: Record<
   healthy: {
     label: "Healthy",
     icon: CheckCircle2,
-    styles: "border-emerald-200/70 bg-emerald-50/60 text-emerald-700",
+    styles: "border-emerald-200/70 bg-emerald-50/60 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   online: {
     label: "Online",
     icon: CheckCircle2,
-    styles: "border-emerald-200/70 bg-emerald-50/60 text-emerald-700",
+    styles: "border-emerald-200/70 bg-emerald-50/60 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   degraded: {
     label: "Degraded",
     icon: AlertTriangle,
-    styles: "border-amber-200/70 bg-amber-50/60 text-amber-700",
+    styles: "border-amber-200/70 bg-amber-50/60 text-amber-700 dark:border-amber-800/70 dark:bg-amber-950/40 dark:text-amber-300",
   },
   offline: {
     label: "Offline",
     icon: XCircle,
-    styles: "border-red-200/70 bg-red-50/60 text-red-700",
+    styles: "border-red-200/70 bg-red-50/60 text-red-700 dark:border-red-800/70 dark:bg-red-950/40 dark:text-red-300",
   },
 };
 

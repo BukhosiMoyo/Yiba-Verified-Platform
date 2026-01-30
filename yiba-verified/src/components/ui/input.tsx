@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   withSearchIcon?: boolean;
+  error?: boolean; // Custom prop, should not be passed to DOM
 }
 
 const baseInput =
@@ -13,7 +14,7 @@ const baseInput =
 const invalidInput = "border-destructive/70 focus-visible:ring-destructive/25 focus-visible:border-destructive/60";
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, withSearchIcon, ...props }, ref) => {
+  ({ className, type, withSearchIcon, error, ...props }, ref) => {
     if (withSearchIcon) {
       return (
         <div className="relative">

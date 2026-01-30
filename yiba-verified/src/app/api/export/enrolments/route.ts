@@ -53,9 +53,12 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Fetch enrolments with related data
+    // Fetch enrolments (capped to avoid timeouts on large exports)
+    const EXPORT_MAX_ROWS = 50_000;
     const enrolments = await prisma.enrolment.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { created_at: "desc" },
       include: {
         learner: {
           select: {
@@ -81,7 +84,6 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { created_at: "desc" },
     });
 
     // Determine format (default: CSV)

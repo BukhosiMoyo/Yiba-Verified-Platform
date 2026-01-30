@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/rbac";
+import { AvatarBadgeOverlay, VerificationPill } from "@/components/shared/VerificationBadge";
+import type { VerificationLevel } from "@/lib/verification";
 
 type NavItem = {
   href: string;
@@ -26,6 +28,7 @@ type AccountSidebarProps = {
   userName: string;
   userRole: Role;
   userEmail?: string;
+  verificationLevel?: VerificationLevel;
 };
 
 const roleLabels: Record<Role, string> = {
@@ -55,6 +58,7 @@ export function AccountSidebar({
   userName,
   userRole,
   userEmail,
+  verificationLevel = "NONE",
 }: AccountSidebarProps) {
   const pathname = usePathname();
 
@@ -111,22 +115,28 @@ export function AccountSidebar({
   };
 
   return (
-    <div className="flex h-full flex-col bg-gray-50/50 border-r border-gray-100 rounded-r-2xl">
+    <div className="flex h-full flex-col bg-card border border-border rounded-2xl shadow-sm dark:shadow-none">
       {/* User Info Section */}
-      <div className="p-6 border-b border-gray-100/60">
+      <div className="p-6 border-b border-border/60">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-semibold text-white shadow-sm">
-            {getInitials(userName)}
+          <div className="relative">
+            <div className="h-12 w-12 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-semibold text-white shadow-sm">
+              {getInitials(userName)}
+            </div>
+            <AvatarBadgeOverlay level={verificationLevel} size="md" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {userName}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-foreground truncate flex-1 min-w-0">
+                {userName}
+              </p>
+              <VerificationPill level={verificationLevel} showIcon={false} />
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
               {roleLabels[userRole]}
             </p>
             {userEmail && (
-              <p className="text-xs text-gray-400 truncate mt-0.5">
+              <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
                 {userEmail}
               </p>
             )}
@@ -136,33 +146,44 @@ export function AccountSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {allNavItems.map((item) => {
-          const active = isActive(item.href);
-          const Icon = item.icon;
+        {allNavItems
+          .filter((item) => item && item.href) // Safety: filter out items without href
+          .map((item) => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
+            return (
+              <Link
+                key={item.href}
+                href={item.href || "#"} // Fallback to prevent undefined
               className={cn(
                 "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out",
                 active
-                  ? "bg-blue-50/60 border border-blue-100/60 text-blue-700 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
-                  : "text-gray-700 hover:bg-gray-100/60 hover:text-gray-900"
+                  ? "bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/25 dark:border-blue-500/30 text-blue-900 dark:text-white shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none"
+                  : "text-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {/* Active indicator bar */}
               {active && (
-                <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 transition-all duration-200 ease-out" />
+                <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 dark:bg-blue-400 transition-all duration-200 ease-out" />
               )}
 
-              <Icon
+              <div
                 className={cn(
-                  "h-5 w-5 transition-colors duration-200 ease-out flex-shrink-0",
-                  active ? "text-blue-700" : "text-gray-500 group-hover:text-gray-700"
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out flex-shrink-0",
+                  active
+                    ? "bg-blue-500/20 dark:bg-blue-500/25"
+                    : "bg-muted group-hover:bg-muted/80"
                 )}
-                strokeWidth={1.5}
-              />
+              >
+                <Icon
+                  className={cn(
+                    "h-4 w-4 transition-colors duration-200 ease-out",
+                    active ? "text-blue-900 dark:text-white" : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                  strokeWidth={1.5}
+                />
+              </div>
               <span className="truncate">{item.label}</span>
             </Link>
           );

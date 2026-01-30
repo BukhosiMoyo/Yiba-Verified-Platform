@@ -5,7 +5,7 @@
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/api/context";
+import { requireRole } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 
@@ -25,17 +25,8 @@ export async function GET(
   { params }: { params: Promise<{ institutionId: string }> }
 ) {
   try {
-    const { ctx } = await requireAuth(request);
+    await requireRole(request, "PLATFORM_ADMIN");
     const { institutionId } = await params;
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
 
     // Query institution with all related data
     const institution = await prisma.institution.findUnique({
@@ -162,17 +153,8 @@ export async function PATCH(
   { params }: { params: Promise<{ institutionId: string }> }
 ) {
   try {
-    const { ctx } = await requireAuth(request);
+    await requireRole(request, "PLATFORM_ADMIN");
     const { institutionId } = await params;
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
 
     const body = await request.json();
     const { ...updateData } = body;

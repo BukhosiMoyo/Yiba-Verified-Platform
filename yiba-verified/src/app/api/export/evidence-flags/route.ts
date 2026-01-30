@@ -31,8 +31,11 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     if (status && ["ACTIVE", "RESOLVED"].includes(status)) where.status = status;
 
+    const EXPORT_MAX_ROWS = 50_000;
     const flags = await prisma.evidenceFlag.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { created_at: "desc" },
       include: {
         flaggedByUser: { select: { first_name: true, last_name: true, email: true } },
         resolvedByUser: { select: { first_name: true, last_name: true, email: true } },
@@ -51,7 +54,6 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { created_at: "desc" },
     });
 
     const format = searchParams.get("format") || "csv";

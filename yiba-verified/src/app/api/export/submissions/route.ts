@@ -48,9 +48,12 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    // Fetch submissions with institution info
+    // Fetch submissions (capped to avoid timeouts on large exports)
+    const EXPORT_MAX_ROWS = 50_000;
     const submissions = await prisma.submission.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { created_at: "desc" },
       include: {
         institution: {
           select: {
@@ -65,7 +68,6 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { created_at: "desc" },
     });
 
     // Determine format (default: CSV)

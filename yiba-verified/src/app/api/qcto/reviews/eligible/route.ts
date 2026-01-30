@@ -1,7 +1,8 @@
 /**
- * GET /api/qcto/reviews/eligible?reviewType=READINESS&reviewId=xxx
- * 
+ * GET /api/qcto/reviews/eligible?reviewType=READINESS&reviewId=xxx&assignmentRole=REVIEWER|AUDITOR
+ *
  * Get eligible reviewers for a review (based on province matching).
+ * assignmentRole is optional; same eligible set applies for REVIEWER or AUDITOR.
  * Useful for UI dropdowns when assigning reviews.
  */
 
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const reviewType = searchParams.get("reviewType") as ReviewType | null;
     const reviewId = searchParams.get("reviewId");
+    const assignmentRole = searchParams.get("assignmentRole") as "REVIEWER" | "AUDITOR" | null;
 
     if (!reviewType || !reviewId) {
       return fail(
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       reviewType,
       reviewId,
+      assignmentRole: assignmentRole ?? undefined,
       eligibleReviewers,
       count: eligibleReviewers.length,
     });

@@ -2,68 +2,267 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/date-picker/date-picker";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { HelpTooltip } from "@/components/shared/HelpTooltip";
 import { FileText, Lightbulb, Info } from "lucide-react";
 import type { DeliveryMode } from "@prisma/client";
+
+import { cn } from "@/lib/utils";
+import { SectionDocumentUpload } from "./SectionDocumentUpload";
+import { QualificationPicker, type QualificationRegistryItem } from "./QualificationPicker";
+import { FacilitatorManager } from "./FacilitatorManager";
+import { getAllDocumentsForSection, sectionRequiresDocuments } from "@/lib/readinessDocumentTypes";
 
 interface ReadinessFormStepContentProps {
   step: number;
   formData: Record<string, unknown>;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  qualificationFieldsLocked?: boolean; // If true, qualification fields are immutable
+  readinessId?: string;
+  institutionId?: string;
+  canEdit?: boolean;
 }
 
 const textareaClass = "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 const selectClass = "flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-const docsClass = "text-sm border-blue-200/60 bg-blue-50/50 text-blue-900 p-3 rounded-md";
+const docsClass = "text-sm border border-blue-400/30 bg-blue-500/10 text-foreground p-4 rounded-lg";
 
-export function ReadinessFormStepContent({ step, formData, setFormData }: ReadinessFormStepContentProps) {
+export function ReadinessFormStepContent({ 
+  step, 
+  formData, 
+  setFormData, 
+  qualificationFieldsLocked = false,
+  readinessId,
+  institutionId,
+  canEdit = true,
+}: ReadinessFormStepContentProps) {
   const fd = formData as any;
   const set = setFormData as React.Dispatch<React.SetStateAction<any>>;
+  
+  // Get section name and document requirements
+  const STEP_NAMES: Record<number, string> = {
+    1: "Qualification Information",
+    2: "Self-Assessment",
+    3: "Registration & Legal Compliance",
+    4: "Infrastructure & Physical Resources",
+    5: "Learning Material Alignment",
+    6: "Occupational Health & Safety",
+    7: "LMS & Online Delivery Capability",
+    8: "Workplace-Based Learning",
+    9: "Policies & Procedures",
+    10: "Human Resources (Facilitators)",
+  };
+  
+  const sectionName = STEP_NAMES[step] || `Section ${step}`;
+  const requiredDocumentTypes = getAllDocumentsForSection(step);
+  const showDocumentUpload = sectionRequiresDocuments(step) && readinessId && institutionId;
+  
+  // Helper to render document upload section
+  const renderDocumentUpload = () => {
+    if (!showDocumentUpload) return null;
+    return (
+      <SectionDocumentUpload
+        sectionName={sectionName}
+        sectionNumber={step}
+        requiredDocumentTypes={requiredDocumentTypes}
+        readinessId={readinessId!}
+        institutionId={institutionId!}
+        qualificationTitle={fd.qualification_title}
+        saqaId={fd.saqa_id}
+        curriculumCode={fd.curriculum_code}
+        onDocumentUploaded={() => {}}
+        onDocumentRemoved={() => {}}
+        canEdit={canEdit}
+      />
+    );
+  };
+
+  const selectedRegistryForPicker: QualificationRegistryItem | null = fd.qualification_registry_id && fd.qualification_title
+    ? {
+        id: fd.qualification_registry_id,
+        name: fd.qualification_title,
+        saqa_id: fd.saqa_id ?? null,
+        curriculum_code: fd.curriculum_code ?? null,
+        nqf_level: fd.nqf_level != null && fd.nqf_level !== "" ? parseInt(String(fd.nqf_level), 10) : null,
+        credits: fd.credits != null && fd.credits !== "" ? parseInt(String(fd.credits), 10) : null,
+        occupational_category: fd.occupational_category ?? null,
+      }
+    : null;
+
+  const handlePickerSelect = (item: QualificationRegistryItem | null) => {
+    if (item) {
+      set((p: any) => ({
+        ...p,
+        qualification_registry_id: item.id,
+        qualification_title: item.name,
+        saqa_id: item.saqa_id ?? "",
+        curriculum_code: item.curriculum_code ?? "",
+        nqf_level: item.nqf_level != null ? String(item.nqf_level) : "",
+        credits: item.credits != null ? String(item.credits) : "",
+        occupational_category: item.occupational_category ?? "",
+      }));
+    } else {
+      set((p: any) => ({ ...p, qualification_registry_id: null }));
+    }
+  };
 
   switch (step) {
     case 1:
       return (
         <div className="space-y-6">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/30 p-3 mb-4">
+            <p className="text-sm text-blue-900 dark:text-blue-200">
+              <strong>Form 5 Section 2: Qualification Information</strong> - This information becomes immutable once submitted to QCTO.
+            </p>
+          </div>
+          {!qualificationFieldsLocked && (
+            <div className="space-y-2">
+              <QualificationPicker
+                apiPath="/api/institutions/qualifications"
+                label="Search qualification (registry)"
+                value={selectedRegistryForPicker}
+                onSelect={handlePickerSelect}
+                placeholder="Search by name, SAQA ID, or curriculum code…"
+              />
+              {fd.qualification_registry_id && (
+                <p className="text-xs text-muted-foreground">Linked to registry. Fields below are auto-filled; you can edit if needed.</p>
+              )}
+              {!fd.qualification_registry_id && (fd.qualification_title || fd.saqa_id) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Manual entry — unregistered qualification.</p>
+              )}
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="qualification_title">Qualification Title *</Label>
-              <Input id="qualification_title" type="text" value={fd.qualification_title || ""} onChange={(e) => set((p: any) => ({ ...p, qualification_title: e.target.value }))} required className="h-10 rounded-lg" />
+              <Input 
+                id="qualification_title" 
+                type="text" 
+                value={fd.qualification_title || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, qualification_title: e.target.value }))} 
+                required 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="saqa_id">SAQA ID *</Label>
                 <HelpTooltip content="The South African Qualifications Authority (SAQA) ID is a unique identifier for the qualification registered on the NQF." />
               </div>
-              <Input id="saqa_id" type="text" value={fd.saqa_id || ""} onChange={(e) => set((p: any) => ({ ...p, saqa_id: e.target.value }))} required className="h-10 rounded-lg" />
+              <Input 
+                id="saqa_id" 
+                type="text" 
+                value={fd.saqa_id || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, saqa_id: e.target.value }))} 
+                required 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="nqf_level">NQF Level</Label>
                 <HelpTooltip content="The National Qualifications Framework (NQF) level indicates the complexity and depth of the qualification. Levels range from 1 (entry level) to 10 (doctorate level)." />
               </div>
-              <Input id="nqf_level" type="number" min={1} max={10} value={fd.nqf_level || ""} onChange={(e) => set((p: any) => ({ ...p, nqf_level: e.target.value }))} className="h-10 rounded-lg" />
+              <Input 
+                id="nqf_level" 
+                type="number" 
+                min={1} 
+                max={10} 
+                value={fd.nqf_level || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, nqf_level: e.target.value }))} 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="curriculum_code">Curriculum Code *</Label>
-              <Input id="curriculum_code" type="text" value={fd.curriculum_code || ""} onChange={(e) => set((p: any) => ({ ...p, curriculum_code: e.target.value }))} required className="h-10 rounded-lg" />
+              <Input 
+                id="curriculum_code" 
+                type="text" 
+                value={fd.curriculum_code || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, curriculum_code: e.target.value }))} 
+                required 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="credits">Credits *</Label>
+              <Input 
+                id="credits" 
+                type="number" 
+                min={0} 
+                value={fd.credits || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, credits: e.target.value }))} 
+                required 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+                placeholder="Number of credits"
+              />
+              <p className="text-xs text-muted-foreground">Required per Form 5 Section 2</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="occupational_category">Occupational Category</Label>
+              <Input 
+                id="occupational_category" 
+                type="text" 
+                value={fd.occupational_category || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, occupational_category: e.target.value }))} 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+                placeholder="e.g., Engineering, Healthcare, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="intended_learner_intake">Intended Learner Intake</Label>
+              <Input 
+                id="intended_learner_intake" 
+                type="number" 
+                min={1} 
+                value={fd.intended_learner_intake || ""} 
+                onChange={(e) => set((p: any) => ({ ...p, intended_learner_intake: e.target.value }))} 
+                className="h-10 rounded-lg" 
+                disabled={qualificationFieldsLocked}
+                placeholder="Target number of learners"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="delivery_mode">Delivery Mode *</Label>
-              <select id="delivery_mode" value={fd.delivery_mode || "FACE_TO_FACE"} onChange={(e) => set((p: any) => ({ ...p, delivery_mode: e.target.value as DeliveryMode }))} className={selectClass} required>
+              <select 
+                id="delivery_mode" 
+                value={fd.delivery_mode || "FACE_TO_FACE"} 
+                onChange={(e) => set((p: any) => ({ ...p, delivery_mode: e.target.value as DeliveryMode }))} 
+                className={selectClass} 
+                required
+                disabled={qualificationFieldsLocked}
+              >
                 <option value="FACE_TO_FACE">Face to Face</option>
                 <option value="BLENDED">Blended</option>
                 <option value="MOBILE">Mobile</option>
               </select>
+              {qualificationFieldsLocked && (
+                <p className="text-xs text-amber-600">Delivery mode cannot be changed after submission</p>
+              )}
             </div>
           </div>
+          {qualificationFieldsLocked && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30 p-3">
+              <p className="text-sm text-amber-900 dark:text-amber-200">
+                <strong>Note:</strong> Qualification information is locked after submission. Contact QCTO if changes are needed.
+              </p>
+            </div>
+          )}
         </div>
       );
 
     case 2:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Self-Assessment</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Self-Assessment</h3>
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="self_assessment_completed">Self-Assessment Completed *</Label>
               <select id="self_assessment_completed" value={fd.self_assessment_completed == null ? "" : fd.self_assessment_completed ? "true" : "false"} onChange={(e) => set((p: any) => ({ ...p, self_assessment_completed: e.target.value === "" ? null : e.target.value === "true" }))} className={selectClass} required>
@@ -74,22 +273,19 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
             </div>
             <div className="space-y-2">
               <Label htmlFor="self_assessment_remarks">Remarks / Narrative</Label>
-              <textarea id="self_assessment_remarks" value={fd.self_assessment_remarks || ""} onChange={(e) => set((p: any) => ({ ...p, self_assessment_remarks: e.target.value }))} rows={5} className={textareaClass} placeholder="Enter self-assessment remarks or narrative..." />
+              <textarea id="self_assessment_remarks" value={fd.self_assessment_remarks || ""} onChange={(e) => set((p: any) => ({ ...p, self_assessment_remarks: e.target.value }))} rows={5} className={cn(textareaClass, "resize-y min-h-[7.5rem]")} placeholder="Enter self-assessment remarks or narrative..." />
               <p className="text-xs text-muted-foreground">Optional: Provide additional context or details about the self-assessment.</p>
             </div>
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-              <strong>Note:</strong> Supporting evidence documents can be uploaded separately via the Documents section.
-            </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 3:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Registration & Legal Compliance</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Registration & Legal Compliance</h3>
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="registration_type">Registration Type</Label>
               <Input id="registration_type" type="text" value={fd.registration_type || ""} onChange={(e) => set((p: any) => ({ ...p, registration_type: e.target.value }))} placeholder="e.g., Company Registration, Non-Profit Registration, etc." className="h-10 rounded-lg" />
@@ -104,26 +300,33 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               </select>
             </div>
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Registration Proof (Company/Entity Registration Certificate)</li>
                 <li>Tax Compliance PIN / Exemption Proof</li>
                 <li>Professional Body Registration Certificate (if applicable)</li>
               </ul>
-              <p className="mt-2 text-blue-800">These documents should be uploaded via the Documents section above. The system supports document versioning.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 4:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Infrastructure & Physical Resources</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Infrastructure & Physical Resources</h3>
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="training_site_address">Training Site Address *</Label>
-              <textarea id="training_site_address" value={fd.training_site_address || ""} onChange={(e) => set((p: any) => ({ ...p, training_site_address: e.target.value }))} rows={3} className={textareaClass} placeholder="Enter full physical address of the training site..." required />
+              <AddressAutocomplete
+                id="training_site_address"
+                value={(fd.training_site_address as string) || ""}
+                onChange={(v) => set((p: any) => ({ ...p, training_site_address: v }))}
+                onSelect={() => {}}
+                placeholder="Enter full physical address of the training site..."
+                countryRestrictions={["za"]}
+              />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -151,23 +354,23 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               </div>
             </div>
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Proof of Ownership / Lease Agreement</li>
                 <li>Furniture & Equipment Checklist</li>
                 <li>Inventory Upload</li>
               </ul>
-              <p className="mt-2 text-blue-800">Upload these documents via the Documents section above.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 5:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Learning Material Alignment</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Learning Material Alignment</h3>
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="learning_material_exists">Learning Material Exists *</Label>
               <select id="learning_material_exists" value={fd.learning_material_exists == null ? "" : fd.learning_material_exists ? "true" : "false"} onChange={(e) => set((p: any) => ({ ...p, learning_material_exists: e.target.value === "" ? null : e.target.value === "true" }))} className={selectClass} required>
@@ -201,21 +404,21 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               </>
             )}
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Sample Learning Material Upload (≥50% coverage required)</li>
               </ul>
-              <p className="mt-2 text-blue-800">Upload sample learning materials via the Documents section above.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 6:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Occupational Health & Safety (OHS)</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Occupational Health & Safety (OHS)</h3>
+          <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="fire_extinguisher_available">Fire Extinguisher Available</Label>
@@ -228,7 +431,12 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               {fd.fire_extinguisher_available === true && (
                 <div className="space-y-2">
                   <Label htmlFor="fire_extinguisher_service_date">Fire Extinguisher Service Date</Label>
-                  <Input id="fire_extinguisher_service_date" type="date" value={fd.fire_extinguisher_service_date || ""} onChange={(e) => set((p: any) => ({ ...p, fire_extinguisher_service_date: e.target.value }))} className="h-10 rounded-lg" />
+                  <DatePicker 
+                    id="fire_extinguisher_service_date" 
+                    value={fd.fire_extinguisher_service_date || ""} 
+                    onChange={(e) => set((p: any) => ({ ...p, fire_extinguisher_service_date: e.target.value }))} 
+                    placeholder="Select date"
+                  />
                 </div>
               )}
               <div className="space-y-2">
@@ -261,26 +469,26 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               </div>
             </div>
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Evacuation Plan Upload</li>
                 <li>OHS Audit Report Upload</li>
                 <li>OHS Appointment Letter Upload</li>
               </ul>
-              <p className="mt-2 text-blue-800">Upload these documents via the Documents section above.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 7:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">LMS & Online Delivery Capability</h3>
-          <div className="space-y-4">
-            <div className="text-sm border-blue-200/60 bg-blue-50/50 text-blue-900 p-3 rounded-md flex items-start gap-2">
-              <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" aria-hidden />
-              <p><strong>Note:</strong> This section is required for Blended or Mobile delivery modes. Optional for Face to Face.</p>
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">LMS & Online Delivery Capability</h3>
+          <div className="space-y-6">
+            <div className="text-sm border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/30 p-3 rounded-md flex items-start gap-2">
+              <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" aria-hidden />
+              <p className="text-blue-900 dark:text-blue-200"><strong>Note:</strong> This section is required for Blended or Mobile delivery modes. Optional for Face to Face.</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -313,21 +521,21 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               <textarea id="security_measures_description" value={fd.security_measures_description || ""} onChange={(e) => set((p: any) => ({ ...p, security_measures_description: e.target.value }))} rows={3} className={textareaClass} placeholder="Describe security measures in place (encryption, access controls, etc.)..." />
             </div>
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>LMS Licence Proof Upload</li>
               </ul>
-              <p className="mt-2 text-blue-800">Upload LMS licence documentation via the Documents section above.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 8:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Workplace-Based Learning (WBL)</h3>
-          <div className="space-y-4">
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Workplace-Based Learning (WBL)</h3>
+          <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="wbl_workplace_partner_name">Workplace Partner Name</Label>
@@ -355,28 +563,27 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               <textarea id="wbl_learner_support_description" value={fd.wbl_learner_support_description || ""} onChange={(e) => set((p: any) => ({ ...p, wbl_learner_support_description: e.target.value }))} rows={3} className={textareaClass} placeholder="Describe the support provided to learners during workplace-based learning..." />
             </div>
             <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents:</strong></p>
+              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-500" aria-hidden /><strong className="text-blue-600 dark:text-blue-400">Required Documents:</strong></p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>WBL Agreement Upload</li>
                 <li>Logbook Template Upload</li>
                 <li>Monitoring Schedule Upload</li>
               </ul>
-              <p className="mt-2 text-blue-800">Upload these documents via the Documents section above.</p>
             </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 9:
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Policies & Procedures</h3>
-          <div className="space-y-4">
-            <div className="text-sm border-blue-200/60 bg-blue-50/50 text-blue-900 p-3 rounded-md flex items-start gap-2">
-              <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" aria-hidden />
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Policies & Procedures</h3>
+          <div className="space-y-6">
+            <div className="text-sm border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/30 p-3 rounded-md flex items-start gap-2">
+              <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" aria-hidden />
               <div>
-                <p><strong>Note:</strong> Full policy management will be available in a future update.</p>
-                <p className="mt-2 text-blue-800">For now, upload policy documents via the Documents section and provide any additional notes below.</p>
+                <p className="text-blue-900 dark:text-blue-200"><strong>Note:</strong> Full policy management will be available in a future update.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -384,50 +591,67 @@ export function ReadinessFormStepContent({ step, formData, setFormData }: Readin
               <textarea id="policies_procedures_notes" value={fd.policies_procedures_notes || ""} onChange={(e) => set((p: any) => ({ ...p, policies_procedures_notes: e.target.value }))} rows={5} className={textareaClass} placeholder="List policies and their status, or provide any additional information..." />
               <p className="text-xs text-muted-foreground">Required policies: Finance, HR, Teaching & Learning, Assessment, Appeals, OHS, Refunds</p>
             </div>
-            <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Policy Documents:</strong></p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Finance Policy</li>
-                <li>HR Policy</li>
-                <li>Teaching & Learning Policy</li>
-                <li>Assessment Policy</li>
-                <li>Appeals Policy</li>
-                <li>OHS Policy</li>
-                <li>Refunds Policy</li>
-              </ul>
-              <p className="mt-2 text-blue-800">Upload all policy documents via the Documents section above.</p>
-            </div>
           </div>
+          {renderDocumentUpload()}
         </div>
       );
 
     case 10:
+      // Parse facilitators from JSON string or use empty array
+      const facilitators = (() => {
+        try {
+          if (typeof fd.facilitators === "string") {
+            return JSON.parse(fd.facilitators) || [];
+          }
+          return Array.isArray(fd.facilitators) ? fd.facilitators : [];
+        } catch {
+          return [];
+        }
+      })();
+
       return (
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Human Resources (Facilitators)</h3>
-          <div className="space-y-4">
-            <div className="text-sm border-blue-200/60 bg-blue-50/50 text-blue-900 p-3 rounded-md flex items-start gap-2">
-              <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" aria-hidden />
-              <div>
-                <p><strong>Note:</strong> Full facilitator management will be available in a future update.</p>
-                <p className="mt-2 text-blue-800">For now, upload facilitator CVs and contracts via the Documents section and provide facilitator information below.</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="facilitators_notes">Facilitators Information</Label>
-              <textarea id="facilitators_notes" value={fd.facilitators_notes || ""} onChange={(e) => set((p: any) => ({ ...p, facilitators_notes: e.target.value }))} rows={5} className={textareaClass} placeholder="List facilitators, their roles (Facilitator/Assessor/Moderator), qualifications, and industry experience..." />
-              <p className="text-xs text-muted-foreground">At least one facilitator is required. Include: Full Name, ID/Passport, Role, Qualifications, Industry Experience</p>
-            </div>
-            <div className={docsClass}>
-              <p className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-blue-600" aria-hidden /><strong>Required Documents per Facilitator:</strong></p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>CV Upload</li>
-                <li>Contract / SLA Upload</li>
-                <li>SAQA Evaluation (if applicable)</li>
-                <li>Work Permit (if applicable)</li>
-              </ul>
-              <p className="mt-2 text-blue-800">Upload facilitator documents via the Documents section above.</p>
-            </div>
+        <div className="space-y-8">
+          <h3 className="text-lg font-semibold text-foreground">Human Resources (Facilitators)</h3>
+          
+          {/* Info Box */}
+          <div className={docsClass}>
+            <p className="flex items-center gap-2">
+              <Info className="h-4 w-4 shrink-0 text-blue-500" aria-hidden />
+              <span className="text-foreground">
+                Add facilitators who will deliver training, assess learners, or moderate assessments for this qualification.
+              </span>
+            </p>
+          </div>
+
+          {/* Facilitator Manager */}
+          <FacilitatorManager
+            facilitators={facilitators}
+            onChange={(newFacilitators) => {
+              set((p: any) => ({ 
+                ...p, 
+                facilitators: JSON.stringify(newFacilitators),
+                // Also update legacy field for backwards compatibility
+                facilitators_notes: newFacilitators.length > 0 
+                  ? newFacilitators.map((f: any) => `${f.fullName} (${f.roles.join(", ")})`).join("\n")
+                  : ""
+              }));
+            }}
+            canEdit={canEdit}
+            readinessId={readinessId}
+            institutionId={institutionId}
+          />
+
+          {/* Additional Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="facilitators_notes">Additional Notes (Optional)</Label>
+            <textarea 
+              id="facilitators_notes" 
+              value={fd.facilitators_notes || ""} 
+              onChange={(e) => set((p: any) => ({ ...p, facilitators_notes: e.target.value }))} 
+              rows={3} 
+              className={textareaClass} 
+              placeholder="Any additional information about facilitators or training capacity..." 
+            />
           </div>
         </div>
       );

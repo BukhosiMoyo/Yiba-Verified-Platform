@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { OnboardingProgressBar } from "./OnboardingProgressBar";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { PersonalInfoStep } from "./steps/PersonalInfoStep";
@@ -16,6 +18,8 @@ import { ReviewStep } from "./steps/ReviewStep";
 
 const TOTAL_STEPS = 9;
 
+const getDraftKey = (userId: string) => `yv_student_onboarding_draft_${userId}`;
+
 interface OnboardingData {
   personalInfo?: any;
   addressInfo?: any;
@@ -26,28 +30,49 @@ interface OnboardingData {
   priorLearning?: any[];
 }
 
+function mergeStepIntoData(prev: OnboardingData, step: number, stepData: any): OnboardingData {
+  switch (step) {
+    case 2: return { ...prev, personalInfo: stepData };
+    case 3: return { ...prev, addressInfo: stepData };
+    case 4: return { ...prev, nextOfKinInfo: stepData };
+    case 5: return { ...prev, additionalInfo: stepData };
+    case 6: return { ...prev, popiaConsent: stepData?.consent };
+    case 7: return { ...prev, pastQualifications: stepData?.qualifications ?? prev.pastQualifications };
+    case 8: return { ...prev, priorLearning: stepData?.learning ?? prev.priorLearning };
+    default: return prev;
+  }
+}
+
 export function StudentOnboardingWizard() {
   const router = useRouter();
+  const { data: session, update: updateSession } = useSession();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [data, setData] = useState<OnboardingData>({});
   const [lastSavedStep, setLastSavedStep] = useState<number>(0);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const userIdRef = useRef<string | undefined>(undefined);
+  const dataRef = useRef<OnboardingData>(data);
+  const currentStepRef = useRef(currentStep);
 
-  // Load existing progress on mount
+  userIdRef.current = session?.user?.userId;
+  dataRef.current = data;
+  currentStepRef.current = currentStep;
+
+  // Load existing progress on mount; merge server resume + localStorage draft
   useEffect(() => {
+    let cancelled = false;
     const loadProgress = async () => {
       try {
         const response = await fetch("/api/student/onboarding/resume");
         const result = await response.json();
+        if (cancelled) return;
 
-        if (response.ok && result.data) {
-          const savedStep = result.data.currentStep || 1;
-          setCurrentStep(savedStep);
-          setLastSavedStep(savedStep);
-          if (result.data.progress) {
-            setData({
+        let step = result.data?.currentStep ?? 1;
+        let mergedData: OnboardingData = result.data?.progress
+          ? {
               personalInfo: result.data.progress.personalInfo,
               addressInfo: result.data.progress.addressInfo,
               nextOfKinInfo: result.data.progress.nextOfKinInfo,
@@ -55,19 +80,46 @@ export function StudentOnboardingWizard() {
               popiaConsent: result.data.progress.popiaConsent,
               pastQualifications: result.data.progress.pastQualifications,
               priorLearning: result.data.progress.priorLearning,
-            });
+            }
+          : {};
+
+        const userId = session?.user?.userId;
+        if (userId) {
+          try {
+            const raw = localStorage.getItem(getDraftKey(userId));
+            if (raw) {
+              const draft = JSON.parse(raw) as { currentStep?: number; data?: OnboardingData };
+              if (draft.data && typeof draft.data === "object") {
+                mergedData = { ...mergedData, ...draft.data };
+              }
+              if (typeof draft.currentStep === "number") {
+                step = Math.max(step, draft.currentStep);
+              }
+              toast.info("Draft restored");
+            }
+          } catch (_) {
+            // ignore invalid draft
           }
         }
+
+        setCurrentStep(step);
+        setLastSavedStep(step);
+        setData(mergedData);
       } catch (error) {
-        console.error("Failed to load progress:", error);
-        toast.error("Failed to load your progress");
+        if (!cancelled) {
+          console.error("Failed to load progress:", error);
+          toast.error("Failed to load your progress");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadProgress();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.userId]);
 
   const saveStep = async (step: number, stepData: any, silent = false, updateCurrentStep = false) => {
     try {
@@ -113,6 +165,7 @@ export function StudentOnboardingWizard() {
 
       // Update saved step to current step for progress tracking
       setLastSavedStep(step);
+      setLastSavedAt(Date.now());
 
       return true;
     } catch (error) {
@@ -128,31 +181,79 @@ export function StudentOnboardingWizard() {
     }
   };
 
-  // Auto-save with debouncing
+  // Auto-save with debouncing (600ms so progress is saved quickly)
   const autoSaveTimeouts = useRef<Record<number, NodeJS.Timeout>>({});
+  const lastPendingSaveRef = useRef<{ step: number; stepData: any } | null>(null);
+
+  const flushPendingAutoSave = () => {
+    Object.keys(autoSaveTimeouts.current).forEach((key) => {
+      clearTimeout(autoSaveTimeouts.current[Number(key)]);
+    });
+    autoSaveTimeouts.current = {};
+    const pending = lastPendingSaveRef.current;
+    if (pending && pending.step >= 2 && pending.step <= 8) {
+      saveStep(pending.step, pending.stepData, true).catch(() => {});
+      lastPendingSaveRef.current = null;
+    }
+  };
 
   const autoSave = (step: number, stepData: any) => {
-    // Clear existing timeout for this step
+    lastPendingSaveRef.current = { step, stepData };
     if (autoSaveTimeouts.current[step]) {
       clearTimeout(autoSaveTimeouts.current[step]);
     }
-
-    // Set new timeout to save after 1 second of inactivity
     autoSaveTimeouts.current[step] = setTimeout(() => {
-      saveStep(step, stepData, true); // Silent save (no loading indicator, no toast)
-    }, 1000);
+      const merged = mergeStepIntoData(dataRef.current, step, stepData);
+      const userId = userIdRef.current;
+      if (userId) {
+        try {
+          localStorage.setItem(
+            getDraftKey(userId),
+            JSON.stringify({ currentStep: currentStepRef.current, data: merged })
+          );
+        } catch (_) {
+          // ignore quota or other errors
+        }
+      }
+      saveStep(step, stepData, true);
+      lastPendingSaveRef.current = null;
+    }, 600);
   };
 
-  // Cleanup timeouts on unmount
+  // Clear "Saved" indicator after a few seconds
   useEffect(() => {
+    if (lastSavedAt == null) return;
+    const t = setTimeout(() => setLastSavedAt(null), 4000);
+    return () => clearTimeout(t);
+  }, [lastSavedAt]);
+
+  // Flush pending autosave when user leaves tab (refresh, close, switch) so data isn't lost
+  useEffect(() => {
+    const onLeave = () => {
+      if (document.visibilityState !== "hidden") return;
+      flushPendingAutoSave();
+    };
+    document.addEventListener("visibilitychange", onLeave);
+    window.addEventListener("pagehide", onLeave);
     return () => {
-      Object.values(autoSaveTimeouts.current).forEach((timeout) => {
-        clearTimeout(timeout);
-      });
+      document.removeEventListener("visibilitychange", onLeave);
+      window.removeEventListener("pagehide", onLeave);
+      Object.values(autoSaveTimeouts.current).forEach((t) => clearTimeout(t));
     };
   }, []);
 
+  const writeDraft = (step: number, draftData: OnboardingData) => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      localStorage.setItem(getDraftKey(userId), JSON.stringify({ currentStep: step, data: draftData }));
+    } catch (_) {}
+  };
+
   const handleStepNext = async (step: number, stepData?: any) => {
+    // Flush any pending auto-save for this step so we don't lose the latest input
+    flushPendingAutoSave();
+
     // Save step data if provided (steps 2-8)
     if (stepData !== undefined && step >= 2 && step <= 8) {
       const saved = await saveStep(step, stepData);
@@ -162,35 +263,41 @@ export function StudentOnboardingWizard() {
     // Move to next step and save the new current step
     if (step < TOTAL_STEPS) {
       const nextStep = step + 1;
+      const mergedData = stepData !== undefined && step >= 2 && step <= 8
+        ? mergeStepIntoData(data, step, stepData)
+        : data;
       setCurrentStep(nextStep);
-      // Also update the current_step in the backend when moving forward
+      writeDraft(nextStep, mergedData);
+      // Update current_step in the backend only (don't overwrite next step's content)
       if (nextStep > 1) {
-        saveStep(nextStep, {}, true, true).catch(() => {
-          // Silent fail for auto-save on navigation
-        });
+        saveStep(nextStep, {}, true, true).catch(() => {});
       }
     }
   };
 
   const handleStepBack = () => {
     if (currentStep > 1) {
+      // Flush pending auto-save for current step before going back
+      flushPendingAutoSave();
+
       const prevStep = currentStep - 1;
       setCurrentStep(prevStep);
-      // Update current_step when going back (so we can resume from here on refresh)
-      saveStep(prevStep, {}, true, true).catch(() => {
-        // Silent fail for auto-save on navigation
-      });
+      writeDraft(prevStep, data);
+      saveStep(prevStep, {}, true, true).catch(() => {});
     }
   };
 
   const handleSkip = async (step: number) => {
-    // For optional steps, save empty data and move to next
+    const nextStep = step + 1;
+    const mergedData =
+      step === 7 ? { ...data, pastQualifications: [] as any[] } : { ...data, priorLearning: [] as any[] };
     if (step === 7) {
       await saveStep(step, { qualifications: [] });
     } else if (step === 8) {
       await saveStep(step, { learning: [] });
     }
-    setCurrentStep(step + 1);
+    setCurrentStep(nextStep);
+    writeDraft(nextStep, mergedData);
   };
 
   const handleEditStep = (step: number) => {
@@ -211,6 +318,13 @@ export function StudentOnboardingWizard() {
         throw new Error(result.error || "Failed to complete onboarding");
       }
 
+      await updateSession({ onboarding_completed: true });
+      const userId = session?.user?.userId;
+      if (userId) {
+        try {
+          localStorage.removeItem(getDraftKey(userId));
+        } catch (_) {}
+      }
       toast.success("Onboarding completed successfully!");
       router.push("/student");
       router.refresh();
@@ -224,7 +338,10 @@ export function StudentOnboardingWizard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center relative bg-background">
+        <div className="absolute right-4 top-4 z-20 lg:right-6 lg:top-6">
+          <ThemeToggle variant="icon-sm" aria-label="Toggle light or dark mode" />
+        </div>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading your progress...</p>
@@ -235,11 +352,16 @@ export function StudentOnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-background relative">
-      {/* Dot grid background pattern for the main area */}
+      {/* Theme toggle — top-right on onboarding */}
+      <div className="absolute right-4 top-4 z-20 lg:right-6 lg:top-6">
+        <ThemeToggle variant="icon-sm" aria-label="Toggle light or dark mode" />
+      </div>
+
+      {/* Dot grid background pattern (theme-aware via --pattern-dot in globals.css) */}
       <div
-        className="absolute inset-0 opacity-10 pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-[var(--pattern-opacity)]"
         style={{
-          backgroundImage: `radial-gradient(circle, #3b82f6 1.5px, transparent 1.5px)`,
+          backgroundImage: "radial-gradient(circle, var(--pattern-dot) 1.5px, transparent 1.5px)",
           backgroundSize: "24px 24px",
           backgroundPosition: "0 0",
         }}
@@ -254,6 +376,14 @@ export function StudentOnboardingWizard() {
 
         {/* Step Content */}
         <div className="flex-1 min-w-0 py-6 sm:py-8 px-4 lg:px-8 relative z-10">
+          {/* Autosave status indicator */}
+          {currentStep >= 2 && currentStep <= 8 && (
+            <div className="max-w-3xl mx-auto w-full mb-2 flex justify-end">
+              <span className="text-xs text-muted-foreground">
+                {isSaving ? "Saving…" : lastSavedAt != null ? "Saved" : ""}
+              </span>
+            </div>
+          )}
           <div className="max-w-3xl mx-auto w-full">
           {currentStep === 1 && <WelcomeStep onNext={() => handleStepNext(1)} />}
           {currentStep === 2 && (

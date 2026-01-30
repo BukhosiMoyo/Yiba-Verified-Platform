@@ -49,7 +49,7 @@ export async function generateCvPdf(
   document.body.appendChild(clone);
 
   // Allow one paint so layout is computed before capture
-  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
   const html2pdf = (await import("html2pdf.js")).default;
   const base = sanitizeForFilename(options.filename);

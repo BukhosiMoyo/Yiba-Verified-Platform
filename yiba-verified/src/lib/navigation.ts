@@ -7,19 +7,37 @@ import { PROVINCES } from "@/lib/provinces";
 import { QCTO_ROLES } from "@/lib/rbac";
 import type { Role } from "@/lib/rbac";
 
-/** Resolve main sidebar nav for a role (platform-admin, institution, qcto, student). */
-export function getNavigationItemsForRole(role: Role): NavItem[] {
+/** Resolve main sidebar nav for a role (platform-admin, advisor, institution, qcto, student). */
+export function getNavigationItemsForRole(
+  role: Role,
+  assignedProvinces?: string[] | null
+): NavItem[] {
   if (role === "PLATFORM_ADMIN") return getPlatformAdminNavItems();
+  if (role === "ADVISOR") return getAdvisorNavItems();
   if (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF") return getInstitutionNavItems();
-  if (QCTO_ROLES.includes(role)) return getQctoNavItems();
+  if (QCTO_ROLES.includes(role)) return getQctoNavItems(role, assignedProvinces);
   if (role === "STUDENT") return getStudentNavItems();
   return [];
+}
+
+/** Advisor sidebar nav: Service requests and Account. */
+export function getAdvisorNavItems(): NavItem[] {
+  return [
+    { label: "Service requests", href: "/advisor", iconKey: "inbox", capability: "SERVICE_REQUESTS_VIEW" },
+    { label: "Account", href: "/account/profile", iconKey: "user", children: [
+      { label: "Profile", href: "/account/profile" },
+      { label: "Security", href: "/account/security" },
+      { label: "Logs", href: "/account/logs" },
+      { label: "Notifications", href: "/account/notifications" },
+    ]},
+  ];
 }
 
 /** Platform-admin sidebar nav (used by /platform-admin and /account when role is PLATFORM_ADMIN). Includes Account. Badge for Invites is applied by the layout. */
 export function getPlatformAdminNavItems(): NavItem[] {
   return [
     { label: "Dashboard", href: "/platform-admin", iconKey: "layout-dashboard" },
+    { label: "Service requests", href: "/platform-admin/service-requests", iconKey: "inbox", capability: "SERVICE_REQUESTS_VIEW" },
     { label: "Institutions", href: "/platform-admin/institutions", iconKey: "building-2" },
     { label: "Learners", href: "/platform-admin/learners", iconKey: "users" },
     { label: "Qualifications", href: "/platform-admin/qualifications", iconKey: "graduation-cap" },
@@ -48,9 +66,36 @@ export function getPlatformAdminNavItems(): NavItem[] {
       ],
     },
     { label: "Announcements", href: "/platform-admin/announcements", iconKey: "bell" },
+    { label: "Email Templates", href: "/platform-admin/email-templates", iconKey: "mail" },
+    { label: "Email Settings", href: "/platform-admin/email-settings", iconKey: "settings" },
+    {
+      label: "Bug Reports",
+      href: "/platform-admin/issues",
+      iconKey: "bug",
+      childParam: "status",
+      children: [
+        { label: "All", href: "/platform-admin/issues" },
+        { label: "Open", href: "/platform-admin/issues?status=OPEN" },
+        { label: "In Progress", href: "/platform-admin/issues?status=IN_PROGRESS" },
+        { label: "Resolved", href: "/platform-admin/issues?status=RESOLVED" },
+      ],
+    },
     { label: "Audit Logs", href: "/platform-admin/audit-logs", iconKey: "file-text", capability: "AUDIT_VIEW" },
     { label: "Reports", href: "/platform-admin/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
     { label: "System Health", href: "/platform-admin/system-health", iconKey: "activity" },
+    { label: "Errors", href: "/platform-admin/errors", iconKey: "flag" },
+    {
+      label: "Blog Admin",
+      href: "/admin/blog",
+      iconKey: "pen-line",
+      childParam: "status",
+      children: [
+        { label: "All Posts", href: "/admin/blog" },
+        { label: "New Post", href: "/admin/blog/new" },
+        { label: "Categories", href: "/admin/blog/categories" },
+        { label: "Tags", href: "/admin/blog/tags" },
+      ],
+    },
     {
       label: "Account",
       href: "/account/profile",
@@ -72,9 +117,11 @@ export function getInstitutionNavItems(): NavItem[] {
   return [
     { label: "Dashboard", href: "/institution", iconKey: "layout-dashboard" },
     { label: "Institution Profile", href: "/institution/profile", iconKey: "building-2", capability: "INSTITUTION_PROFILE_EDIT" },
+    { label: "Public Profile", href: "/institution/public-profile", iconKey: "globe" },
+    { label: "Locations", href: "/institution/locations", iconKey: "folder-open" },
     { label: "Staff", href: "/institution/staff", iconKey: "users", capability: "STAFF_INVITE" },
     { label: "Invites", href: "/institution/invites", iconKey: "mail", capability: "STAFF_INVITE" },
-    { label: "Announcements", href: "/institution/announcements", iconKey: "megaphone", capability: "INSTITUTION_PROFILE_EDIT" },
+    { label: "Announcements", href: "/announcements", iconKey: "bell" },
     { label: "Learners", href: "/institution/learners", iconKey: "graduation-cap", capability: "LEARNER_VIEW" },
     { label: "Enrolments", href: "/institution/enrolments", iconKey: "clipboard-list", capability: "LEARNER_VIEW" },
     { label: "Attendance Register", href: "/institution/attendance", iconKey: "clipboard-check", capability: "ATTENDANCE_VIEW" },
@@ -119,6 +166,7 @@ export function getInstitutionNavItems(): NavItem[] {
         { label: "Rejected", href: "/institution/readiness?status=REJECTED" },
       ],
     },
+    { label: "Qualifications", href: "/institution/qualifications", iconKey: "book-open" },
     {
       label: "Evidence Vault",
       href: "/institution/documents",
@@ -131,7 +179,6 @@ export function getInstitutionNavItems(): NavItem[] {
       ],
     },
     { label: "Reports", href: "/institution/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },
-    { label: "Announcements", href: "/announcements", iconKey: "bell" },
     {
       label: "Account",
       href: "/account/profile",
@@ -174,10 +221,43 @@ export function getStudentNavItems(): NavItem[] {
 }
 
 /** Full QCTO sidebar nav (used by /qcto and /account when role is QCTO_USER or PLATFORM_ADMIN on QCTO). Includes Account. */
-export function getQctoNavItems(): NavItem[] {
+export function getQctoNavItems(
+  role?: Role,
+  assignedProvinces?: string[] | null
+): NavItem[] {
+  // Determine which provinces to show in the filter
+  // QCTO_SUPER_ADMIN and PLATFORM_ADMIN see all provinces
+  // Other QCTO roles see only their assigned provinces
+  let provincesToShow: readonly string[] = PROVINCES;
+  
+  if (role && role !== "QCTO_SUPER_ADMIN" && role !== "PLATFORM_ADMIN") {
+    // For province-filtered QCTO roles, only show assigned provinces
+    if (assignedProvinces && assignedProvinces.length > 0) {
+      // Filter PROVINCES to only include assigned provinces
+      provincesToShow = PROVINCES.filter((p) => assignedProvinces.includes(p));
+    } else {
+      // No provinces assigned - show empty list (user shouldn't see any province filters)
+      provincesToShow = [];
+    }
+  }
+
   return [
     { label: "Dashboard", href: "/qcto", iconKey: "layout-dashboard" },
     { label: "QCTO Team", href: "/qcto/team", iconKey: "users", capability: "QCTO_TEAM_MANAGE" },
+    {
+      label: "Invites",
+      href: "/qcto/team-invites",
+      iconKey: "mail",
+      capability: "QCTO_TEAM_MANAGE",
+      childParam: "status",
+      children: [
+        { label: "All", href: "/qcto/team-invites" },
+        { label: "Pending", href: "/qcto/team-invites?status=PENDING" },
+        { label: "Accepted", href: "/qcto/team-invites?status=ACCEPTED" },
+        { label: "Expired", href: "/qcto/team-invites?status=EXPIRED" },
+        { label: "Revoked", href: "/qcto/team-invites?status=REVOKED" },
+      ],
+    },
     {
       label: "Submissions",
       href: "/qcto/submissions",
@@ -208,7 +288,7 @@ export function getQctoNavItems(): NavItem[] {
       childParam: "province",
       children: [
         { label: "All", href: "/qcto/institutions" },
-        ...PROVINCES.map((p) => ({ label: p, href: `/qcto/institutions?province=${encodeURIComponent(p)}` })),
+        ...provincesToShow.map((p) => ({ label: p, href: `/qcto/institutions?province=${encodeURIComponent(p)}` })),
       ],
     },
     {
@@ -224,6 +304,16 @@ export function getQctoNavItems(): NavItem[] {
         { label: "Rejected", href: "/qcto/readiness?status=REJECTED" },
       ],
     },
+    { label: "Qualifications", href: "/qcto/qualifications", iconKey: "graduation-cap" },
+    {
+      label: "Facilitators",
+      href: "/qcto/facilitators",
+      iconKey: "users",
+      children: [
+        { label: "All", href: "/qcto/facilitators" },
+      ],
+    },
+    { label: "Public profiles", href: "/qcto/public-profiles", iconKey: "globe" },
     { label: "Evidence Flags", href: "/qcto/evidence-flags", iconKey: "flag", capability: "EVIDENCE_VIEW" },
     { label: "Audit Logs", href: "/qcto/audit-logs", iconKey: "file-text", capability: "AUDIT_VIEW" },
     { label: "Reports", href: "/qcto/reports", iconKey: "chart-column", capability: "REPORTS_VIEW" },

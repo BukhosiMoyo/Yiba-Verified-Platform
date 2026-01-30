@@ -30,11 +30,14 @@ import {
   type ReviewType,
 } from "@/lib/reviewAssignments";
 import { canAccessQctoData } from "@/lib/rbac";
+import { hasCap } from "@/lib/capabilities";
+import { Notifications } from "@/lib/notifications";
 
 interface AssignReviewBody {
   reviewType: ReviewType;
   reviewId: string;
   assignedToUserId?: string;
+  assignmentRole?: "REVIEWER" | "AUDITOR";
   autoAssign?: boolean;
   notes?: string;
 }
@@ -52,6 +55,17 @@ export async function POST(request: NextRequest) {
         new AppError(
           ERROR_CODES.FORBIDDEN,
           "Only QCTO and platform administrators can assign reviews",
+          403
+        )
+      );
+    }
+
+    // Only Admin and Super Admin can assign (QCTO_ASSIGN); PLATFORM_ADMIN can assign for app oversight
+    if (ctx.role !== "PLATFORM_ADMIN" && !hasCap(ctx.role, "QCTO_ASSIGN")) {
+      return fail(
+        new AppError(
+          ERROR_CODES.FORBIDDEN,
+          "Only QCTO Admin and Super Admin can assign reviews",
           403
         )
       );
@@ -100,11 +114,17 @@ export async function POST(request: NextRequest) {
         reviewType: body.reviewType,
         reviewId: body.reviewId,
         assignedToUserId: body.assignedToUserId,
+        assignmentRole: body.assignmentRole ?? "REVIEWER",
         notes: body.notes,
       });
       if (!assignedUserIds.includes(body.assignedToUserId)) {
         assignedUserIds.push(body.assignedToUserId);
       }
+    }
+
+    // Notify each assigned user (one row per recipient)
+    for (const userId of assignedUserIds) {
+      await Notifications.reviewAssigned(userId, body.reviewType, body.reviewId);
     }
 
     // Get updated assignments

@@ -90,7 +90,7 @@ export async function mutateWithAudit<T>(args: MutationArgs<T>): Promise<T> {
     // If audit fails, the entire transaction rolls back
     await createAuditLog(tx, {
       entityType: args.entityType,
-      entityId: args.entityId ?? (mutationResult as any)?.record_id ?? (mutationResult as any)?.change_id ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? (mutationResult as any)?.readiness_id ?? (mutationResult as any)?.document_id ?? "unknown",
+      entityId: args.entityId ?? (mutationResult as any)?.user_id ?? (mutationResult as any)?.record_id ?? (mutationResult as any)?.change_id ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? (mutationResult as any)?.readiness_id ?? (mutationResult as any)?.document_id ?? "unknown",
       fieldName: args.fieldName,
       oldValue: serializeValue(args.oldValue),
       newValue: serializeValue(args.newValue ?? (mutationResult as any)?.learner_id ?? (mutationResult as any)?.id ?? null),

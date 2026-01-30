@@ -43,6 +43,8 @@ export async function GET(
         postal_address: true,
         province: true,
         delivery_modes: true,
+        offers_workplace_based_learning: true,
+        offers_web_based_learning: true,
         status: true,
         contact_person_name: true,
         contact_email: true,

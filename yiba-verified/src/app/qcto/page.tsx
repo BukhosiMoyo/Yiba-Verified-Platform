@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessQctoData } from "@/lib/rbac";
+import { hasCap } from "@/lib/capabilities";
 import { QctoDashboardClient } from "./QctoDashboardClient";
 import type { ApiContext } from "@/lib/api/context";
 
@@ -58,6 +59,8 @@ export default async function QCTODashboard() {
     };
   } else if (provinceFilter !== null && provinceFilter.length === 0) {
     // No provinces assigned - return empty dashboard
+    const canManageQueuesEmpty =
+      userRole === "PLATFORM_ADMIN" || hasCap(userRole, "QCTO_ASSIGN");
     return (
       <QctoDashboardClient
         userRole={userRole as "QCTO_USER" | "QCTO_SUPER_ADMIN" | "QCTO_ADMIN" | "PLATFORM_ADMIN"}
@@ -73,6 +76,13 @@ export default async function QCTODashboard() {
         pendingSubmissions={[]}
         recentReviews={[]}
         pendingReadiness={[]}
+        canManageQueues={canManageQueuesEmpty}
+        myAssignedReviewsCount={0}
+        myAssignedReviews={[]}
+        myAssignedAuditsCount={0}
+        myAssignedAudits={[]}
+        unassignedCount={0}
+        unassignedReadiness={[]}
       />
     );
   }
@@ -101,21 +111,11 @@ export default async function QCTODashboard() {
     };
   }
 
-  // Fetch stats in parallel
-  const [
-    submissionsTotal,
-    submissionsSubmitted,
-    submissionsUnderReview,
-    submissionsApproved,
-    submissionsRejected,
-    requestsTotal,
-    requestsPending,
-    readinessSubmitted,
-    readinessUnderReview,
-    pendingSubmissions,
-    recentReviews,
-    pendingReadiness,
-  ] = await Promise.all([
+  const canManageQueues =
+    userRole === "PLATFORM_ADMIN" || hasCap(userRole, "QCTO_ASSIGN");
+
+  // Fetch stats and assignment-based data in parallel
+  const parallelResult = await Promise.all([
     // Submission counts
     prisma.submission.count({ where: submissionsWhere }),
     prisma.submission.count({
@@ -223,7 +223,141 @@ export default async function QCTODashboard() {
         },
       },
     }),
+    // My Assigned Reviews (readiness assigned to me as REVIEWER)
+    prisma.reviewAssignment.findMany({
+      where: {
+        review_type: "READINESS",
+        assigned_to: userId,
+        assignment_role: "REVIEWER",
+        status: { not: "CANCELLED" },
+      },
+      select: { review_id: true },
+      distinct: ["review_id"],
+      orderBy: { assigned_at: "desc" },
+    }),
+    // My Assigned Audits (readiness assigned to me as AUDITOR)
+    prisma.reviewAssignment.findMany({
+      where: {
+        review_type: "READINESS",
+        assigned_to: userId,
+        assignment_role: "AUDITOR",
+        status: { not: "CANCELLED" },
+      },
+      select: { review_id: true },
+      distinct: ["review_id"],
+      orderBy: { assigned_at: "desc" },
+    }),
+    // Unassigned: readiness IDs that have a REVIEWER assigned (to exclude from unassigned list)
+    canManageQueues
+      ? prisma.reviewAssignment.findMany({
+          where: {
+            review_type: "READINESS",
+            assignment_role: "REVIEWER",
+            status: { not: "CANCELLED" },
+          },
+          select: { review_id: true },
+          distinct: ["review_id"],
+        })
+      : Promise.resolve([]),
   ]);
+
+  const submissionsTotal = parallelResult[0] as number;
+  const submissionsSubmitted = parallelResult[1] as number;
+  const submissionsUnderReview = parallelResult[2] as number;
+  const submissionsApproved = parallelResult[3] as number;
+  const submissionsRejected = parallelResult[4] as number;
+  const requestsTotal = parallelResult[5] as number;
+  const requestsPending = parallelResult[6] as number;
+  const readinessSubmitted = parallelResult[7] as number;
+  const readinessUnderReview = parallelResult[8] as number;
+  const pendingSubmissions = parallelResult[9] as any[];
+  const recentReviews = parallelResult[10] as any[];
+  const pendingReadiness = parallelResult[11] as any[];
+  const myAssignedReviewIds = (parallelResult[12] as { review_id: string }[]).map((a) => a.review_id);
+  const myAssignedAuditIds = (parallelResult[13] as { review_id: string }[]).map((a) => a.review_id);
+  const assignedReadinessIds = (parallelResult[14] as { review_id: string }[]).map((a) => a.review_id);
+
+  const myAssignedReviews =
+    myAssignedReviewIds.length > 0
+      ? await prisma.readiness.findMany({
+          where: {
+            readiness_id: { in: myAssignedReviewIds.slice(0, 10) },
+            deleted_at: null,
+            ...(provinceFilter !== null &&
+            provinceFilter.length > 0 && { institution: { province: { in: provinceFilter } } }),
+          },
+          take: 5,
+          orderBy: { submission_date: "desc" },
+          include: {
+            institution: {
+              select: {
+                institution_id: true,
+                legal_name: true,
+                trading_name: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const myAssignedAudits =
+    myAssignedAuditIds.length > 0
+      ? await prisma.readiness.findMany({
+          where: {
+            readiness_id: { in: myAssignedAuditIds.slice(0, 10) },
+            deleted_at: null,
+            ...(provinceFilter !== null &&
+            provinceFilter.length > 0 && { institution: { province: { in: provinceFilter } } }),
+          },
+          take: 5,
+          orderBy: { submission_date: "desc" },
+          include: {
+            institution: {
+              select: {
+                institution_id: true,
+                legal_name: true,
+                trading_name: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const unassignedReadiness =
+    canManageQueues && assignedReadinessIds.length >= 0
+      ? await prisma.readiness.findMany({
+          where: {
+            ...readinessWhere,
+            readiness_status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+            ...(assignedReadinessIds.length > 0
+              ? { readiness_id: { notIn: assignedReadinessIds } }
+              : {}),
+          },
+          take: 5,
+          orderBy: { submission_date: "desc" },
+          include: {
+            institution: {
+              select: {
+                institution_id: true,
+                legal_name: true,
+                trading_name: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const unassignedCount = canManageQueues
+    ? await prisma.readiness.count({
+        where: {
+          ...readinessWhere,
+          readiness_status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
+          ...(assignedReadinessIds.length > 0
+            ? { readiness_id: { notIn: assignedReadinessIds } }
+            : {}),
+        },
+      })
+    : 0;
 
   return (
     <QctoDashboardClient
@@ -240,6 +374,13 @@ export default async function QCTODashboard() {
       pendingSubmissions={pendingSubmissions}
       recentReviews={recentReviews}
       pendingReadiness={pendingReadiness}
+      canManageQueues={canManageQueues}
+      myAssignedReviewsCount={myAssignedReviewIds.length}
+      myAssignedReviews={myAssignedReviews}
+      myAssignedAuditsCount={myAssignedAuditIds.length}
+      myAssignedAudits={myAssignedAudits}
+      unassignedCount={unassignedCount}
+      unassignedReadiness={unassignedReadiness}
     />
   );
 }

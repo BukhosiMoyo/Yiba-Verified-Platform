@@ -44,10 +44,10 @@ interface Announcement {
 }
 
 const priorityConfig = {
-  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700" },
-  MEDIUM: { label: "Medium", icon: Bell, className: "bg-gray-100 text-gray-700" },
-  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700" },
-  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700" },
+  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
+  MEDIUM: { label: "Medium", icon: Bell, className: "bg-muted text-muted-foreground" },
+  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" },
+  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" },
 };
 
 export default function AnnouncementsPage() {
@@ -224,8 +224,8 @@ export default function AnnouncementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Announcements</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-semibold text-foreground">Announcements</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Create and manage system-wide announcements visible to all users
           </p>
         </div>
@@ -237,7 +237,7 @@ export default function AnnouncementsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <>
@@ -263,25 +263,25 @@ export default function AnnouncementsPage() {
                     return (
                       <div
                         key={announcement.announcement_id}
-                        className="border border-gray-200 rounded-lg p-4 space-y-3"
+                        className="border border-border rounded-lg p-4 space-y-3"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 flex-1">
-                            <Icon className="h-5 w-5 text-gray-400 mt-0.5" />
+                            <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                                <h3 className="font-semibold text-foreground">{announcement.title}</h3>
                                 <Badge className={config.className}>{config.label}</Badge>
                               </div>
                               <SanitizedHtml
                                 html={announcement.message}
-                                className="text-sm text-gray-600 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                                className="text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
                               />
-                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                 <span>
                                   Created by {announcement.created_by.role || announcement.created_by.name}
                                   {announcement.created_by.role && announcement.created_by.name && (
-                                    <span className="text-gray-400"> ({announcement.created_by.name})</span>
+                                    <span className="opacity-70"> ({announcement.created_by.name})</span>
                                   )}
                                 </span>
                                 <span>•</span>
@@ -289,7 +289,7 @@ export default function AnnouncementsPage() {
                                 {announcement.target_roles && announcement.target_roles.length > 0 && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-blue-600">
+                                    <span className="text-blue-600 dark:text-blue-400">
                                       Target: {announcement.target_roles.join(", ")}
                                     </span>
                                   </>
@@ -297,19 +297,19 @@ export default function AnnouncementsPage() {
                                 {(!announcement.target_roles || announcement.target_roles.length === 0) && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-gray-400">Visible to all users</span>
+                                    <span className="opacity-70">Visible to all users</span>
                                   </>
                                 )}
                                 {announcement.institution_id && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-purple-600">Institution-scoped</span>
+                                    <span className="text-purple-600 dark:text-purple-400">Institution-scoped</span>
                                   </>
                                 )}
                                 {!announcement.institution_id && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-blue-600">Platform-wide</span>
+                                    <span className="text-blue-600 dark:text-blue-400">Platform-wide</span>
                                   </>
                                 )}
                                 {announcement.expires_at && (
@@ -372,19 +372,19 @@ export default function AnnouncementsPage() {
                     return (
                       <div
                         key={announcement.announcement_id}
-                        className="border border-gray-200 rounded-lg p-4 space-y-3 opacity-60"
+                        className="border border-border rounded-lg p-4 space-y-3 opacity-60"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 flex-1">
-                            <Icon className="h-5 w-5 text-gray-400 mt-0.5" />
+                            <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                                <h3 className="font-semibold text-foreground">{announcement.title}</h3>
                                 <Badge variant="outline">Archived</Badge>
                               </div>
                               <SanitizedHtml
                                 html={announcement.message}
-                                className="text-sm text-gray-600 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
+                                className="text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
                               />
                             </div>
                           </div>
@@ -410,7 +410,7 @@ export default function AnnouncementsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[680px] bg-white max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[680px] bg-card max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
@@ -443,7 +443,7 @@ export default function AnnouncementsPage() {
                   minHeight="200px"
                   className="[&_.ProseMirror]:min-h-[200px]"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Use the toolbar for formatting, links, and inserting images by URL.
                 </p>
               </div>
@@ -470,13 +470,13 @@ export default function AnnouncementsPage() {
                   onChange={(e) => setExpiresAt(e.target.value)}
                   disabled={isSubmitting}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Leave empty for announcements that don't expire
                 </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="target_roles">Target Audience (Optional)</Label>
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-muted-foreground mb-2">
                   Select which user types can see this announcement. Leave all unchecked to show to everyone.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
@@ -493,14 +493,14 @@ export default function AnnouncementsPage() {
                           }
                         }}
                         disabled={isSubmitting}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
-                      <span className="text-sm text-gray-700">{role.label}</span>
+                      <span className="text-sm text-foreground">{role.label}</span>
                     </label>
                   ))}
                 </div>
                 {targetRoles.length === 0 && (
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     All users will see this announcement
                   </p>
                 )}

@@ -56,11 +56,11 @@ export async function validateRequestSize(
  * Wrapper for API route handlers that enforces request size limits
  * Use this for routes that accept request bodies
  */
-export function withRequestSizeLimit<T extends any[]>(
-  handler: (...args: T) => Promise<Response>,
+export function withRequestSizeLimit<R extends any[]>(
+  handler: (request: NextRequest, ...args: R) => Promise<Response>,
   maxSize: number = MAX_REQUEST_SIZE
 ) {
-  return async (request: NextRequest, ...args: T): Promise<Response> => {
+  return async (request: NextRequest, ...args: R): Promise<Response> => {
     try {
       await validateRequestSize(request, maxSize);
       return handler(request, ...args);

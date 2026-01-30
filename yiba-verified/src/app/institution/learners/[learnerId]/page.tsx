@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GenerateImpersonationLink } from "@/components/shared/GenerateImpersonationLink";
 
 interface PageProps {
   params: Promise<{ learnerId: string }>;
@@ -48,12 +49,25 @@ export default async function LearnerDetailsPage({ params }: PageProps) {
       consent_date: true,
       created_at: true,
       deleted_at: true, // Include to check soft-delete
+      user_id: true, // Include to check if learner has student account
     },
   });
 
   // Check if learner exists and is not soft-deleted
   if (!learner || learner.deleted_at !== null) {
     notFound();
+  }
+
+  // Get student user if learner has a linked user account
+  let studentUser = null;
+  if (learner.user_id) {
+    studentUser = await prisma.user.findUnique({
+      where: { user_id: learner.user_id },
+      select: {
+        user_id: true,
+        role: true,
+      },
+    });
   }
 
   // Enforce institution scoping rules
@@ -100,11 +114,22 @@ export default async function LearnerDetailsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Learner Details</h1>
-        <p className="text-muted-foreground mt-2">
-          View learner information and details
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Learner Details</h1>
+          <p className="text-muted-foreground mt-2">
+            View learner information and details
+          </p>
+        </div>
+        {studentUser && 
+         (userRole === "INSTITUTION_ADMIN" || userRole === "PLATFORM_ADMIN") && 
+         session.user.userId !== studentUser.user_id && (
+          <GenerateImpersonationLink
+            targetUserId={studentUser.user_id}
+            targetUserName={`${learner.first_name} ${learner.last_name}`}
+            targetUserRole={studentUser.role}
+          />
+        )}
       </div>
 
       <Card>

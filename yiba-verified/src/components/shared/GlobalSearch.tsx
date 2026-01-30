@@ -310,11 +310,11 @@ export function GlobalSearch({ open, onOpenChange, role }: GlobalSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
-      <DialogContent className="max-w-[720px] p-0 gap-0 rounded-xl border border-border bg-card shadow-xl">
+      <DialogOverlay className="bg-black/50" />
+      <DialogContent className="max-w-[720px] p-0 gap-0 rounded-xl border border-border/80 bg-card shadow-2xl ring-1 ring-black/5">
         <DialogTitle className="sr-only">Global Search</DialogTitle>
         {/* Search Input */}
-        <div className="px-6 pt-6 pb-4 border-b border-border/60">
+        <div className="pl-6 pr-12 pt-6 pb-4 border-b border-border/60">
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
             <Input

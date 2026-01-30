@@ -38,8 +38,11 @@ export default async function InstitutionStaffPage() {
 
   const staff = await prisma.user.findMany({
     where: {
-      institution_id: userInstitutionId,
       deleted_at: null,
+      OR: [
+        { institution_id: userInstitutionId },
+        { userInstitutions: { some: { institution_id: userInstitutionId } } },
+      ],
     },
     select: {
       user_id: true,
@@ -49,12 +52,27 @@ export default async function InstitutionStaffPage() {
       role: true,
       status: true,
       created_at: true,
+      userInstitutions: {
+        where: { institution_id: userInstitutionId },
+        select: { can_facilitate: true, can_assess: true, can_moderate: true },
+      },
     },
     orderBy: [{ role: "asc" }, { last_name: "asc" }, { first_name: "asc" }],
   });
 
+  const staffWithUi = staff.map((u) => {
+    const { userInstitutions, ...rest } = u;
+    return {
+      ...rest,
+      can_facilitate: userInstitutions[0]?.can_facilitate ?? false,
+      can_assess: userInstitutions[0]?.can_assess ?? false,
+      can_moderate: userInstitutions[0]?.can_moderate ?? false,
+    };
+  });
+
   const canManage = session.user.role === "INSTITUTION_ADMIN";
   const currentUserId = session.user.userId;
+  const currentUserRole = session.user.role;
 
   return (
     <div className="space-y-6 md:space-y-10 p-4 md:p-8">
@@ -73,7 +91,7 @@ export default async function InstitutionStaffPage() {
         </div>
       </div>
 
-      <InstitutionStaffClient staff={staff} canManage={canManage} currentUserId={currentUserId} />
+      <InstitutionStaffClient staff={staffWithUi} canManage={canManage} currentUserId={currentUserId} currentUserRole={currentUserRole} />
     </div>
   );
 }

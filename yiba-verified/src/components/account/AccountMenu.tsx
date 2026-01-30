@@ -40,6 +40,16 @@ export function AccountMenu({
   }, []);
 
   const handleLogout = async () => {
+    // Check if this is an impersonation session and complete it
+    try {
+      const response = await fetch("/api/view-as/logout", {
+        method: "POST",
+      });
+      // Continue with logout even if impersonation logout fails
+    } catch (error) {
+      console.error("Failed to complete impersonation session:", error);
+    }
+
     await signOut({ redirect: false });
     router.push("/login");
   };
@@ -52,7 +62,7 @@ export function AccountMenu({
 
   const triggerClassName = cn(
     "cursor-pointer transition-colors duration-150",
-    isAccountPageActive && "[&_span]:text-blue-700 [&_p]:text-blue-700 [&_svg]:text-blue-700"
+    isAccountPageActive && "[&_span:not([data-role-pill])]:text-blue-700 [&_p]:text-blue-700 [&_svg]:text-blue-700"
   );
 
   // Defer Radix DropdownMenu until after mount to avoid hydration mismatch from
@@ -75,20 +85,22 @@ export function AccountMenu({
         className="w-56 rounded-xl border-gray-200/60 bg-white shadow-lg"
         sideOffset={8}
       >
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isItemActive(item.href);
+        {navItems
+          .filter((item) => item && item.href) // Safety: filter out items without href
+          .map((item) => {
+            const Icon = item.icon;
+            const active = isItemActive(item.href);
 
-          return (
-            <DropdownMenuItem
-              key={item.href}
-              asChild
-              className={cn(
-                "cursor-pointer transition-colors duration-150",
-                active && "bg-blue-50/60 text-blue-700"
-              )}
-            >
-              <Link href={item.href} className="flex items-center gap-2">
+            return (
+              <DropdownMenuItem
+                key={item.href}
+                asChild
+                className={cn(
+                  "cursor-pointer transition-colors duration-150",
+                  active && "bg-blue-50/60 text-blue-700"
+                )}
+              >
+                <Link href={item.href || "#"} className="flex items-center gap-2">
                 <Icon
                   className={cn(
                     "h-4 w-4 transition-colors duration-150",

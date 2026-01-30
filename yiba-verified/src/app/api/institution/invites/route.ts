@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
         institution_id: true,
         expires_at: true,
         used_at: true,
+        accepted_at: true,
+        status: true,
         created_at: true,
         createdBy: {
           select: {

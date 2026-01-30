@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { randomBytes, createHash } from "crypto";
+import { Notifications } from "@/lib/notifications";
 
 interface BulkInviteItem {
   email: string;
@@ -115,18 +116,15 @@ export async function POST(request: NextRequest) {
           }
           finalInstitutionId = ctx.institutionId;
         } else if (ctx.role === "PLATFORM_ADMIN") {
-          // PLATFORM_ADMIN can invite anyone
-          // If role requires institution, institution_id must be provided
-          if (
-            (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "STUDENT") &&
-            !finalInstitutionId
-          ) {
+          // PLATFORM_ADMIN bulk invites are only for INSTITUTION_ADMIN
+          if (role !== "INSTITUTION_ADMIN") {
             errors.push({
               email,
-              error: "Institution ID is required for institution-scoped roles",
+              error: "Bulk invites are only available for INSTITUTION_ADMIN role",
             });
             continue;
           }
+          // Institution is optional for INSTITUTION_ADMIN — they add institution(s) during onboarding
         }
 
         // Validate institution exists if provided
@@ -188,6 +186,14 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+
+    // Notify caller of bulk invite result
+    await Notifications.bulkInviteCompleted(
+      ctx.userId,
+      processedInvites.length,
+      errors.length,
+      finalBatchId
+    );
 
     return ok({
       batch_id: finalBatchId,

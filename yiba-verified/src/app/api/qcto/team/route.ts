@@ -61,20 +61,27 @@ export async function GET(request: NextRequest) {
       prisma.user.count({ where }),
     ]);
 
-    return Response.json({
-      items: items.map((u) => ({
-        user_id: u.user_id,
-        first_name: u.first_name,
-        last_name: u.last_name,
-        email: u.email,
-        role: u.role,
-        status: u.status,
-        created_at: u.created_at,
-        image: u.image,
-        last_login: null as string | null,
-      })),
-      total,
-    });
+    return Response.json(
+      {
+        items: items.map((u) => ({
+          user_id: u.user_id,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          email: u.email,
+          role: u.role,
+          status: u.status,
+          created_at: u.created_at,
+          image: u.image,
+          last_login: null as string | null,
+        })),
+        total,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     return fail(error);
   }

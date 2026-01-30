@@ -23,15 +23,49 @@ export default async function AccountLayoutWrapper({
   const userName = session.user.name || "User";
   const userEmail = session.user.email;
 
-  // Fetch badge counts for platform-admin role (invites, learners, active announcements)
+  // Fetch user's verification level
+  type VerificationLevel = "NONE" | "BLUE" | "GREEN" | "GOLD" | "BLACK";
+  let verificationLevel: VerificationLevel = "NONE";
+  try {
+    const user = await prisma.user.findUnique({
+      where: { user_id: session.user.userId },
+      select: { verification_level: true },
+    });
+    verificationLevel = (user?.verification_level as VerificationLevel) || "NONE";
+  } catch (error) {
+    console.error("Error fetching verification level:", error);
+  }
+
+  // Fetch badge counts for platform-admin role (invites, active announcements)
   const now = new Date();
   let pendingInvitesCount = 0;
-  let learnersCount = 0;
   let activeAnnouncementsCount = 0;
+  let assignedProvinces: string[] | null = null;
+
+  // Fetch assigned provinces for QCTO users (except QCTO_SUPER_ADMIN and PLATFORM_ADMIN)
+  if (
+    role !== "PLATFORM_ADMIN" &&
+    role !== "QCTO_SUPER_ADMIN" &&
+    (role === "QCTO_USER" ||
+      role === "QCTO_ADMIN" ||
+      role === "QCTO_REVIEWER" ||
+      role === "QCTO_AUDITOR" ||
+      role === "QCTO_VIEWER")
+  ) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { user_id: session.user.userId },
+        select: { assigned_provinces: true },
+      });
+      assignedProvinces = user?.assigned_provinces || null;
+    } catch (error) {
+      console.error("Error fetching assigned provinces:", error);
+    }
+  }
 
   if (role === "PLATFORM_ADMIN") {
     try {
-      [pendingInvitesCount, learnersCount, activeAnnouncementsCount] = await Promise.all([
+      [pendingInvitesCount, activeAnnouncementsCount] = await Promise.all([
         prisma.invite.count({
           where: {
             deleted_at: null,
@@ -39,7 +73,6 @@ export default async function AccountLayoutWrapper({
             expires_at: { gt: now },
           },
         }),
-        prisma.learner.count({ where: { deleted_at: null } }),
         prisma.announcement.count({
           where: {
             status: "ACTIVE",
@@ -53,7 +86,7 @@ export default async function AccountLayoutWrapper({
     }
   }
 
-  const allNavigationItems = getNavigationItemsForRole(role);
+  const allNavigationItems = getNavigationItemsForRole(role, assignedProvinces);
   const filtered = filterNavItems(role, allNavigationItems);
 
   // Apply badge counts for platform-admin
@@ -61,7 +94,6 @@ export default async function AccountLayoutWrapper({
     const next = { ...item };
     if (role === "PLATFORM_ADMIN") {
       if (item.href === "/platform-admin/invites") next.badge = pendingInvitesCount;
-      else if (item.href === "/platform-admin/learners") next.badge = learnersCount;
       else if (item.href === "/platform-admin/announcements") next.badge = activeAnnouncementsCount;
     }
     return next;
@@ -72,11 +104,13 @@ export default async function AccountLayoutWrapper({
       navigationItems={navigationItems}
       currentUserRole={role}
       userName={userName}
+      userId={session.user.userId}
     >
       <AccountLayout
         currentUserRole={role}
         userName={userName}
         userEmail={userEmail}
+        verificationLevel={verificationLevel}
       >
         {children}
       </AccountLayout>

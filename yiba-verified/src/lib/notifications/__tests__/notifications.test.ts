@@ -84,5 +84,22 @@ describe("Notifications helpers", () => {
         include: expect.any(Object),
       });
     });
+
+    it("should create returned for correction notification", async () => {
+      mockCreate.mockResolvedValue({});
+      await Notifications.readinessReviewed("user-123", "ready-123", "RETURNED_FOR_CORRECTION");
+
+      expect(mockCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          user_id: "user-123",
+          notification_type: "READINESS_REVIEWED",
+          title: "Readiness Record Returned for Correction",
+          message: expect.stringContaining("returned for correction"),
+          entity_type: "READINESS",
+          entity_id: "ready-123",
+        }),
+        include: expect.any(Object),
+      });
+    });
   });
 });

@@ -32,6 +32,8 @@ import type { Role } from "@/lib/rbac";
 type UpdateRequestBody = {
   status: "APPROVED" | "REJECTED";
   response_notes?: string;
+  /** When approving: optional access expiry (ISO date). QCTO loses access after this date. */
+  expires_at?: string | null;
   reason?: string; // For audit log
 };
 
@@ -153,6 +155,31 @@ export async function PATCH(
     }
     // PLATFORM_ADMIN can approve/reject any request (app owners see everything! 🦸)
 
+    // When approving, optional expires_at: validate if provided
+    let expiresAt: Date | null | undefined;
+    if (body.status === "APPROVED" && body.expires_at !== undefined) {
+      if (body.expires_at === null || body.expires_at === "") {
+        expiresAt = null;
+      } else {
+        const parsed = new Date(body.expires_at);
+        if (isNaN(parsed.getTime())) {
+          throw new AppError(
+            ERROR_CODES.VALIDATION_ERROR,
+            "Invalid expires_at date format (use ISO date string)",
+            400
+          );
+        }
+        if (parsed <= new Date()) {
+          throw new AppError(
+            ERROR_CODES.VALIDATION_ERROR,
+            "expires_at must be a future date",
+            400
+          );
+        }
+        expiresAt = parsed;
+      }
+    }
+
     // Execute mutation with full RBAC and audit enforcement
     const updatedRequest = await mutateWithAudit({
       entityType: "QCTO_REQUEST",
@@ -186,18 +213,41 @@ export async function PATCH(
         }
       },
       
-      // Mutation: Update request status and review fields
+      // Mutation: Update request status and review fields, and link documents if approved
       mutation: async (tx, ctx) => {
+        // First, get the request with resources to check for document linking
+        const requestWithResources = await tx.qCTORequest.findUnique({
+          where: { request_id: requestId },
+          include: {
+            requestResources: true,
+          },
+        });
+
+        if (!requestWithResources) {
+          throw new AppError(ERROR_CODES.NOT_FOUND, "Request not found", 404);
+        }
+
+        // Update request status (and optional access expiry when approving)
+        const updateData: {
+          status: "APPROVED" | "REJECTED";
+          reviewed_at: Date;
+          reviewed_by: string;
+          response_notes: string | null;
+          expires_at?: Date | null;
+        } = {
+          status: body.status,
+          reviewed_at: new Date(),
+          reviewed_by: ctx.userId,
+          response_notes: body.response_notes || null,
+        };
+        if (body.status === "APPROVED" && expiresAt !== undefined) {
+          updateData.expires_at = expiresAt;
+        }
         const updated = await tx.qCTORequest.update({
           where: {
             request_id: requestId,
           },
-          data: {
-            status: body.status,
-            reviewed_at: new Date(),
-            reviewed_by: ctx.userId,
-            response_notes: body.response_notes || null,
-          },
+          data: updateData,
           include: {
             institution: {
               select: {
@@ -234,6 +284,50 @@ export async function PATCH(
             },
           },
         });
+
+        // If approved, handle document profile linking
+        if (body.status === "APPROVED") {
+          for (const resource of requestWithResources.requestResources) {
+            if (resource.resource_type === "DOCUMENT" && resource.notes) {
+              try {
+                // Parse link_to_profile from notes
+                const notesData = JSON.parse(resource.notes);
+                if (notesData.link_to_profile) {
+                  const { entity_type, entity_id } = notesData.link_to_profile;
+
+                  // Get the original document to copy its metadata
+                  const originalDoc = await tx.document.findUnique({
+                    where: { document_id: resource.resource_id_value },
+                  });
+
+                  if (originalDoc) {
+                    // Create a new Document record linked to the specified profile
+                    // This allows the same file to be linked to multiple entities
+                    await tx.document.create({
+                      data: {
+                        related_entity: entity_type,
+                        related_entity_id: entity_id,
+                        document_type: originalDoc.document_type,
+                        file_name: originalDoc.file_name,
+                        version: 1, // New version for the new link
+                        status: originalDoc.status,
+                        uploaded_by: originalDoc.uploaded_by,
+                        uploaded_at: new Date(),
+                        storage_key: originalDoc.storage_key,
+                        mime_type: originalDoc.mime_type,
+                        file_size_bytes: originalDoc.file_size_bytes,
+                      },
+                    });
+                  }
+                }
+              } catch (e) {
+                // If notes is not JSON or doesn't contain link_to_profile, skip
+                // This is fine - not all document requests need profile linking
+                console.warn(`Could not parse link_to_profile for resource ${resource.resource_id}:`, e);
+              }
+            }
+          }
+        }
         
         return updated;
       },

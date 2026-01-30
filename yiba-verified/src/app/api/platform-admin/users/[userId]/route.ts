@@ -3,10 +3,11 @@
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/api/context";
+import { requireRole } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { validateProvinceAssignment } from "@/lib/security/validation";
+import { createAuditLogs, serializeValue } from "@/services/audit.service";
 
 /**
  * GET /api/platform-admin/users/[userId]
@@ -17,17 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { ctx } = await requireAuth(request);
     const { userId } = await params;
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
+    
+    // RBAC: Only PLATFORM_ADMIN (uses original role when viewing as another user)
+    const ctx = await requireRole(request, "PLATFORM_ADMIN");
 
     // Query user with all related data based on role
     const user = await prisma.user.findUnique({
@@ -175,17 +169,10 @@ export async function PATCH(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { ctx } = await requireAuth(request);
     const { userId } = await params;
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
+    
+    // RBAC: Only PLATFORM_ADMIN (uses original role when viewing as another user)
+    const ctx = await requireRole(request, "PLATFORM_ADMIN");
 
     const body = await request.json();
     const { status, role, default_province, assigned_provinces } = body;
@@ -230,9 +217,44 @@ export async function PATCH(
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Provide at least one field to update", 400);
     }
 
-    const updated = await prisma.user.update({
+    // Get user's institution_id for audit log
+    const userForAudit = await prisma.user.findUnique({
       where: { user_id: userId },
-      data: updateData,
+      select: { institution_id: true },
+    });
+
+    // Update user with audit logging
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { user_id: userId },
+        data: updateData,
+      });
+
+      // Create audit logs for each changed field
+      // Always create entries for all fields being updated - this ensures we capture everything
+      const auditEntries = [];
+      for (const [field, newValue] of Object.entries(updateData)) {
+        const oldValue = currentUser[field as keyof typeof currentUser];
+        
+        auditEntries.push({
+          entityType: "USER" as const,
+          entityId: userId,
+          fieldName: field,
+          oldValue: serializeValue(oldValue ?? null),
+          newValue: serializeValue(newValue ?? null),
+          changedBy: ctx.userId,
+          roleAtTime: ctx.role,
+          changeType: field === "status" ? ("STATUS_CHANGE" as const) : ("UPDATE" as const),
+          reason: null,
+          institutionId: userForAudit?.institution_id || null,
+        });
+      }
+
+      if (auditEntries.length > 0) {
+        await createAuditLogs(tx, auditEntries);
+      }
+
+      return updatedUser;
     });
 
     return ok({

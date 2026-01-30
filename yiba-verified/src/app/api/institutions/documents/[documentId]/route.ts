@@ -41,6 +41,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { related_entity: "LEARNER", learner: { institution_id: ctx.institutionId } },
         { related_entity: "ENROLMENT", enrolment: { institution_id: ctx.institutionId } },
         { related_entity: "READINESS", readiness: { institution_id: ctx.institutionId } },
+        { related_entity: "USER_FACILITATOR_PROFILE", related_entity_id: ctx.userId },
       ];
     }
 
@@ -201,6 +202,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           { related_entity: "LEARNER", learner: { institution_id: ctx.institutionId } },
           { related_entity: "ENROLMENT", enrolment: { institution_id: ctx.institutionId } },
           { related_entity: "READINESS", readiness: { institution_id: ctx.institutionId } },
+          { related_entity: "USER_FACILITATOR_PROFILE", related_entity_id: ctx.userId },
         ],
       },
     });

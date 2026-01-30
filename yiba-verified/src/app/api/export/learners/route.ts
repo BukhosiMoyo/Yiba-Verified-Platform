@@ -53,9 +53,12 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Fetch learners with institution and user info
+    // Fetch learners (capped to avoid timeouts on large exports)
+    const EXPORT_MAX_ROWS = 50_000;
     const learners = await prisma.learner.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { created_at: "desc" },
       include: {
         institution: {
           select: {
@@ -66,7 +69,6 @@ export async function GET(request: NextRequest) {
         },
         user: { select: { email: true, phone: true } },
       },
-      orderBy: { created_at: "desc" },
     });
 
     // Determine format (default: CSV)

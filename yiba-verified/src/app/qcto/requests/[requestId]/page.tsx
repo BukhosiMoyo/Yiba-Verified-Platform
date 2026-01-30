@@ -7,9 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 
 interface PageProps {
-  params: {
-    requestId: string;
-  };
+  params: Promise<{ requestId: string }>;
 }
 
 /**
@@ -22,7 +20,7 @@ interface PageProps {
  * - Ignores soft-deleted requests
  */
 export default async function QCTORequestDetailsPage({ params }: PageProps) {
-  const { requestId } = params;
+  const { requestId } = await params;
 
   // Get session (layout already ensures auth, but we need role/userId for access check)
   const session = await getServerSession(authOptions);
@@ -61,6 +59,7 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
       request_type: true,
       status: true,
       requested_at: true,
+      response_deadline: true,
       reviewed_at: true,
       response_notes: true,
       expires_at: true,
@@ -149,6 +148,7 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
       ENROLMENT: "Enrolment",
       DOCUMENT: "Document",
       INSTITUTION: "Institution",
+      FACILITATOR: "Facilitator",
     };
     return typeMap[type] || type;
   };
@@ -186,7 +186,12 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Institution</p>
               <p className="text-base">
-                {request.institution.trading_name || request.institution.legal_name}
+                <Link
+                  href={`/qcto/institutions/${request.institution.institution_id}`}
+                  className="text-primary hover:underline"
+                >
+                  {request.institution.trading_name || request.institution.legal_name}
+                </Link>
                 {request.institution.registration_number && (
                   <span className="text-sm text-muted-foreground ml-1">
                     ({request.institution.registration_number})
@@ -216,6 +221,13 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
               <p className="text-sm font-medium text-muted-foreground">Requested At</p>
               <p className="text-base">{formatDateTime(request.requested_at)}</p>
             </div>
+
+            {request.response_deadline && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Response By</p>
+                <p className="text-base">{formatDate(request.response_deadline)}</p>
+              </div>
+            )}
 
             <div>
               <p className="text-sm font-medium text-muted-foreground">Requested By</p>
@@ -285,25 +297,52 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
             <p className="text-muted-foreground text-center py-4">No resources requested</p>
           ) : (
             <div className="space-y-3">
-              {request.requestResources.map((resource) => (
-                <div
-                  key={resource.resource_id}
-                  className="flex items-start justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{formatResourceType(resource.resource_type)}</span>
-                      <span className="text-sm text-muted-foreground">
-                        ({resource.resource_id_value})
-                      </span>
+              {request.requestResources.map((resource) => {
+                // Parse profile linking information from notes (if it's JSON)
+                let profileLinkInfo: { link_to_profile?: { entity_type: string; entity_id: string }; original_notes?: string } | null = null;
+                if (resource.notes) {
+                  try {
+                    const parsed = JSON.parse(resource.notes);
+                    if (parsed.link_to_profile) {
+                      profileLinkInfo = parsed;
+                    }
+                  } catch {
+                    // Not JSON, treat as regular notes
+                  }
+                }
+
+                const displayNotes = profileLinkInfo?.original_notes || resource.notes;
+                const linkToProfile = profileLinkInfo?.link_to_profile;
+
+                return (
+                  <div
+                    key={resource.resource_id}
+                    className="flex items-start justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{formatResourceType(resource.resource_type)}</span>
+                        <span className="text-sm text-muted-foreground font-mono">
+                          {resource.resource_id_value === "*" ? "(All)" : `(${resource.resource_id_value})`}
+                        </span>
+                        {linkToProfile && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Link to {linkToProfile.entity_type}
+                          </span>
+                        )}
+                      </div>
+                      {displayNotes && (
+                        <p className="text-sm text-muted-foreground mt-1">{displayNotes}</p>
+                      )}
+                      {linkToProfile && (
+                        <p className="text-xs text-blue-700 mt-1">
+                          Will be linked to {linkToProfile.entity_type} profile: {linkToProfile.entity_id}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Added: {formatDateTime(resource.added_at)}
+                      </p>
                     </div>
-                    {resource.notes && (
-                      <p className="text-sm text-muted-foreground mt-1">{resource.notes}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Added: {formatDateTime(resource.added_at)}
-                    </p>
-                  </div>
                   <div>
                     {/* Link to resource based on type (only if request is APPROVED) */}
                     {request.status === "APPROVED" && (
@@ -324,6 +363,30 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
                             View
                           </Link>
                         )}
+                        {resource.resource_type === "FACILITATOR" && (
+                          <Link
+                            href={`/qcto/facilitators/${resource.resource_id_value}`}
+                            className="text-primary hover:underline text-sm"
+                          >
+                            View
+                          </Link>
+                        )}
+                        {resource.resource_type === "READINESS" && (
+                          <Link
+                            href={`/qcto/readiness/${resource.resource_id_value}`}
+                            className="text-primary hover:underline text-sm"
+                          >
+                            View
+                          </Link>
+                        )}
+                        {resource.resource_type === "INSTITUTION" && (
+                          <Link
+                            href={`/qcto/institutions/${resource.resource_id_value}`}
+                            className="text-primary hover:underline text-sm"
+                          >
+                            View
+                          </Link>
+                        )}
                       </>
                     )}
                     {request.status !== "APPROVED" && (
@@ -331,7 +394,8 @@ export default async function QCTORequestDetailsPage({ params }: PageProps) {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </CardContent>

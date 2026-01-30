@@ -50,6 +50,23 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
     }
   }, [error]);
 
+  // Report error to platform admin dashboard (fire-and-forget, one attempt)
+  useEffect(() => {
+    const path =
+      typeof window !== "undefined" ? window.location?.pathname : undefined;
+    fetch("/api/errors/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: error?.message ?? "Unknown error",
+        digest: error?.digest,
+        path,
+      }),
+    }).catch(() => {
+      // Ignore; do not block or retry
+    });
+  }, [error]);
+
   // For authenticated users
   if (isAuthenticated) {
     return (
@@ -76,7 +93,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
                       Try Again
                     </Button>
                     <Button asChild variant="outline" className="w-full h-10">
-                      <Link href={dashboardHref}>
+                      <Link href={dashboardHref ?? "/"}>
                         <LayoutDashboard className="h-4 w-4 mr-2" strokeWidth={1.5} aria-hidden />
                         Go to Dashboard
                       </Link>

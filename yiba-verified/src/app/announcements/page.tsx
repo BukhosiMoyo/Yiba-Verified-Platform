@@ -20,10 +20,10 @@ interface Announcement {
 }
 
 const priorityConfig = {
-  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700" },
-  MEDIUM: { label: "Medium", icon: Bell, className: "bg-gray-100 text-gray-700" },
-  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700" },
-  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700" },
+  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
+  MEDIUM: { label: "Medium", icon: Bell, className: "bg-muted text-muted-foreground" },
+  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" },
+  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" },
 };
 
 type Role = "PLATFORM_ADMIN" | "INSTITUTION_ADMIN" | "INSTITUTION_STAFF" | "QCTO_USER" | "QCTO_SUPER_ADMIN" | "QCTO_ADMIN" | "QCTO_REVIEWER" | "QCTO_AUDITOR" | "QCTO_VIEWER" | "STUDENT";
@@ -58,6 +58,8 @@ export default function AnnouncementsViewPage() {
   }, []);
 
   const isPlatformAdmin = role === "PLATFORM_ADMIN";
+  const isInstitutionAdmin = role === "INSTITUTION_ADMIN";
+  const isQctoSuperAdmin = role === "QCTO_SUPER_ADMIN";
 
   if (isLoading) {
     return (
@@ -71,14 +73,32 @@ export default function AnnouncementsViewPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Announcements</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Announcements</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            System-wide announcements from the platform team
+            {isInstitutionAdmin 
+              ? "Announcements for your institution"
+              : "System-wide announcements from the platform team"}
           </p>
         </div>
         {isPlatformAdmin && (
           <Button asChild>
             <Link href="/platform-admin/announcements" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Manage Announcements
+            </Link>
+          </Button>
+        )}
+        {isQctoSuperAdmin && (
+          <Button asChild>
+            <Link href="/qcto/announcements" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Manage Announcements
+            </Link>
+          </Button>
+        )}
+        {isInstitutionAdmin && (
+          <Button asChild>
+            <Link href="/institution/announcements" className="gap-2">
               <Settings className="h-4 w-4" />
               Manage Announcements
             </Link>

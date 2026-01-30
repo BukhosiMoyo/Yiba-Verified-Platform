@@ -6,6 +6,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/rbac";
+import { unstable_cache } from "next/cache";
 
 export interface ViewAsUserInfo {
   viewingAsUserId: string | null;
@@ -15,6 +16,24 @@ export interface ViewAsUserInfo {
   originalRole: Role;
   originalUserName: string;
 }
+
+// Cache user name lookup (5 second cache)
+const getCachedUserName = unstable_cache(
+  async (userId: string) => {
+    const user = await prisma.user.findUnique({
+      where: { user_id: userId },
+      select: {
+        first_name: true,
+        last_name: true,
+      },
+    });
+    return user
+      ? `${user.first_name} ${user.last_name}`
+      : "Unknown User";
+  },
+  ["view-as-user-name"],
+  { revalidate: 5 }
+);
 
 /**
  * Get View As User information from cookies and session
@@ -33,18 +52,8 @@ export async function getViewAsUserInfo(
     return null; // Not viewing as another user
   }
 
-  // Get viewing as user's name
-  const viewingAsUser = await prisma.user.findUnique({
-    where: { user_id: viewingAsUserId },
-    select: {
-      first_name: true,
-      last_name: true,
-    },
-  });
-
-  const viewingAsUserName = viewingAsUser
-    ? `${viewingAsUser.first_name} ${viewingAsUser.last_name}`
-    : "Unknown User";
+  // Get viewing as user's name (cached to avoid repeated queries)
+  const viewingAsUserName = await getCachedUserName(viewingAsUserId);
 
   return {
     viewingAsUserId,

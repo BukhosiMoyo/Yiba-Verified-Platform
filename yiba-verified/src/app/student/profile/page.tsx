@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { StudentProfileClient } from "@/components/student/StudentProfileClient";
+import { ProfileViewClient } from "@/components/student/profile/ProfileViewClient";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { User } from "lucide-react";
 import type { MockStudentEditable, MockStudentSystem } from "@/components/student/StudentProfileClient";
@@ -204,7 +204,7 @@ export default async function StudentProfilePage() {
   const profileId = learner.public_profile_id || learner.learner_id;
 
   return (
-    <StudentProfileClient
+    <ProfileViewClient
       initialEditable={editableData}
       system={systemData}
       cvVersions={cvVersions}

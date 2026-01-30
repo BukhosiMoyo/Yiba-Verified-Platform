@@ -93,30 +93,30 @@ export function EvidenceFlagsDisplay({ view, flags, userRole, offset = 0 }: Evid
   const quickViewUrl =
     quickViewId ? `/api/institutions/documents/${quickViewId}/download?inline=1` : "";
 
-  const btnClass = "h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-400";
+  const btnClass = "h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-100 hover:border-gray-400 dark:hover:border-gray-500";
 
   return (
     <>
       {view === "list" ? (
         <ResponsiveTable>
-          <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
+          <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 dark:[&_th]:border-gray-700 [&_td]:border [&_td]:border-gray-200 dark:[&_td]:border-gray-700">
             <TableHeader>
-              <TableRow className="bg-gray-50/40 hover:bg-gray-50/40">
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap w-12">#</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Document</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Institution</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Reason</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Status</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Flagged by</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Created</TableHead>
-                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Resolved</TableHead>
-                <TableHead className="sticky right-0 z-10 bg-gray-50 border-l border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Actions</TableHead>
+              <TableRow className="bg-gray-50/40 dark:bg-gray-800/40 hover:bg-gray-50/40 dark:hover:bg-gray-800/40">
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap w-12">#</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Document</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Institution</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Reason</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Flagged by</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Created</TableHead>
+                <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Resolved</TableHead>
+                <TableHead className="sticky right-0 z-10 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {flags.map((f, index) => (
-                <TableRow key={f.flag_id} className="group hover:bg-sky-50/50 transition-colors duration-200">
-                  <TableCell className="py-3 whitespace-nowrap text-gray-800 w-12 font-bold">{offset + index + 1}</TableCell>
+                <TableRow key={f.flag_id} className="group hover:bg-sky-50/50 dark:hover:bg-sky-900/20 transition-colors duration-200">
+                  <TableCell className="py-3 whitespace-nowrap text-gray-800 dark:text-gray-200 w-12 font-bold">{offset + index + 1}</TableCell>
                   <TableCell className="font-medium py-3">
                     {f.document.file_name}
                     <span className="text-muted-foreground ml-1 text-xs">({f.document.document_type})</span>
@@ -126,7 +126,7 @@ export function EvidenceFlagsDisplay({ view, flags, userRole, offset = 0 }: Evid
                   <TableCell className="py-3 whitespace-nowrap">
                     <span
                       className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        f.status === "ACTIVE" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                        f.status === "ACTIVE" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                       }`}
                     >
                       {f.status}
@@ -138,7 +138,7 @@ export function EvidenceFlagsDisplay({ view, flags, userRole, offset = 0 }: Evid
                     {f.resolved_at ? formatDate(f.resolved_at) : "—"}
                     {f.resolvedByUser && <span className="block text-xs">by {resolvedBy(f)}</span>}
                   </TableCell>
-                  <TableCell className="sticky right-0 z-10 bg-white group-hover:bg-sky-50/50 border-l border-gray-200 py-3 whitespace-nowrap">
+                  <TableCell className="sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-sky-50/50 dark:group-hover:bg-sky-900/20 border-l border-gray-200 dark:border-gray-700 py-3 whitespace-nowrap">
                     <div className="flex flex-wrap items-center gap-1">
                       {isPdf(f.document) && (
                         <Button
@@ -170,23 +170,23 @@ export function EvidenceFlagsDisplay({ view, flags, userRole, offset = 0 }: Evid
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {flags.map((f) => (
-            <Card key={f.flag_id} className="overflow-hidden border border-gray-200/70">
+            <Card key={f.flag_id} className="overflow-hidden border border-gray-200/70 dark:border-gray-700/70">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-lg bg-amber-50/80 p-2 text-amber-700">
+                  <div className="rounded-lg bg-amber-50/80 dark:bg-amber-900/30 p-2 text-amber-700 dark:text-amber-400">
                     <FileText className="h-5 w-5" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-gray-900">{f.document.file_name}</p>
+                    <p className="truncate font-medium text-gray-900 dark:text-gray-100">{f.document.file_name}</p>
                     <p className="text-muted-foreground text-xs">{f.document.document_type}</p>
                     <p className="mt-1 text-muted-foreground text-sm">{getInstitutionName(f)}</p>
-                    <p className="mt-1 line-clamp-2 text-sm text-gray-700" title={f.reason}>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-700 dark:text-gray-300" title={f.reason}>
                       {f.reason}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          f.status === "ACTIVE" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                          f.status === "ACTIVE" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                         }`}
                       >
                         {f.status}
@@ -227,7 +227,7 @@ export function EvidenceFlagsDisplay({ view, flags, userRole, offset = 0 }: Evid
           <DialogHeader>
             <DialogTitle>Document preview</DialogTitle>
           </DialogHeader>
-          <div className="min-h-[60vh] w-full overflow-hidden rounded-lg border border-gray-200/80 bg-gray-50/50">
+          <div className="min-h-[60vh] w-full overflow-hidden rounded-lg border border-gray-200/80 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             {quickViewUrl ? (
               <iframe
                 src={quickViewUrl}

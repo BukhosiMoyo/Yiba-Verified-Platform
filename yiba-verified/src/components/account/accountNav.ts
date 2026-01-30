@@ -8,6 +8,7 @@ import {
   Building2,
   GraduationCap,
   Briefcase,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +39,12 @@ export function getAccountNavItems(role: Role): AccountNavItem[] {
       roles: ["PLATFORM_ADMIN"],
     },
     {
+      label: "Template settings",
+      href: "/account/template-settings",
+      icon: Mail,
+      roles: ["PLATFORM_ADMIN", "INSTITUTION_ADMIN", "QCTO_SUPER_ADMIN"],
+    },
+    {
       label: "Organisation",
       href: "/account/organisation",
       icon: Building2,
@@ -59,6 +66,8 @@ export function getAccountNavItems(role: Role): AccountNavItem[] {
 
   // Filter items based on role
   return allItems.filter((item) => {
+    // Safety check: ensure item has href
+    if (!item || !item.href) return false;
     if (!item.roles) {
       return true; // Show for all roles
     }

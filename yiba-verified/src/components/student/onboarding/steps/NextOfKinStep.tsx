@@ -5,8 +5,8 @@ import { OnboardingStepWrapper } from "../OnboardingStepWrapper";
 import { OnboardingNavigation } from "../OnboardingNavigation";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { NEXT_OF_KIN_RELATIONSHIP_OPTIONS } from "@/lib/onboarding-constants";
 
 interface NextOfKinStepProps {
@@ -99,10 +99,10 @@ export function NextOfKinStep({ initialData, onNext, onBack, onAutoSave }: NextO
             id="relationship"
             value={relationship}
             onChange={(e) => setRelationship(e.target.value)}
-            placeholder="Select relationship"
             className={errors.relationship ? "border-red-500" : ""}
             aria-invalid={!!errors.relationship}
           >
+            <option value="">Select relationship</option>
             {NEXT_OF_KIN_RELATIONSHIP_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -131,12 +131,13 @@ export function NextOfKinStep({ initialData, onNext, onBack, onAutoSave }: NextO
         {/* Address (Optional) */}
         <div>
           <Label htmlFor="address">Address (Optional)</Label>
-          <Textarea
+          <AddressAutocomplete
             id="address"
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={setAddress}
+            onSelect={() => {}}
             placeholder="Enter next of kin address (optional)"
-            rows={3}
+            countryRestrictions={["za"]}
           />
         </div>
       </div>

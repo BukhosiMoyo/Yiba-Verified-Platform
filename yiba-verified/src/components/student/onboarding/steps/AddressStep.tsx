@@ -4,56 +4,16 @@ import { useState, useEffect } from "react";
 import { OnboardingStepWrapper } from "../OnboardingStepWrapper";
 import { OnboardingNavigation } from "../OnboardingNavigation";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { PROVINCES } from "@/lib/provinces";
-import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
+import type { ParsedAddress } from "@/lib/address/parseGooglePlace";
 
 interface AddressStepProps {
   initialData?: any;
   onNext: (data: any) => void;
   onBack: () => void;
-}
-
-// Map Google address components to South African provinces
-function extractProvinceFromAddress(
-  addressComponents: google.maps.places.PlaceResult["address_components"]
-): string {
-  if (!addressComponents) return "";
-
-  // Look for administrative_area_level_1 (province) or locality
-  for (const component of addressComponents) {
-    if (component.types.includes("administrative_area_level_1")) {
-      const provinceName = component.long_name;
-      // Map Google's province names to our PROVINCES list
-      const provinceMap: Record<string, string> = {
-        "Eastern Cape": "Eastern Cape",
-        "Free State": "Free State",
-        "Gauteng": "Gauteng",
-        "KwaZulu-Natal": "KwaZulu-Natal",
-        "Limpopo": "Limpopo",
-        "Mpumalanga": "Mpumalanga",
-        "Northern Cape": "Northern Cape",
-        "North West": "North West",
-        "Western Cape": "Western Cape",
-      };
-
-      // Try exact match first
-      if (provinceMap[provinceName]) {
-        return provinceMap[provinceName];
-      }
-
-      // Try case-insensitive match
-      const found = Object.keys(provinceMap).find(
-        (p) => p.toLowerCase() === provinceName.toLowerCase()
-      );
-      if (found) {
-        return provinceMap[found];
-      }
-    }
-  }
-
-  return "";
+  onAutoSave?: (data: any) => void;
 }
 
 export function AddressStep({ initialData, onNext, onBack, onAutoSave }: AddressStepProps) {
@@ -77,15 +37,9 @@ export function AddressStep({ initialData, onNext, onBack, onAutoSave }: Address
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
-    // Auto-populate province if available
-    if (place.address_components) {
-      const extractedProvince = extractProvinceFromAddress(
-        place.address_components
-      );
-      if (extractedProvince) {
-        setProvince(extractedProvince);
-      }
+  const handleSelect = (parsed: ParsedAddress) => {
+    if (parsed.province) {
+      setProvince(parsed.province);
     }
   };
 
@@ -119,20 +73,17 @@ export function AddressStep({ initialData, onNext, onBack, onAutoSave }: Address
           <Label htmlFor="address">
             Physical Address <span className="text-red-500">*</span>
           </Label>
-          <GooglePlacesAutocomplete
+          <AddressAutocomplete
             id="address"
             value={address}
             onChange={setAddress}
-            onPlaceSelect={handlePlaceSelect}
+            onSelect={handleSelect}
             placeholder="Start typing your address..."
             className={errors.address ? "border-red-500" : ""}
             error={!!errors.address}
-            countryRestriction="za"
+            countryRestrictions={["za"]}
           />
           {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
-          <p className="text-xs text-muted-foreground mt-1">
-            Start typing and select from suggestions. Province will be auto-filled if detected.
-          </p>
         </div>
 
         {/* Province */}
@@ -144,10 +95,10 @@ export function AddressStep({ initialData, onNext, onBack, onAutoSave }: Address
             id="province"
             value={province}
             onChange={(e) => setProvince(e.target.value)}
-            placeholder="Select your province"
             className={errors.province ? "border-red-500" : ""}
             aria-invalid={!!errors.province}
           >
+            <option value="">Select your province</option>
             {PROVINCES.map((prov) => (
               <option key={prov} value={prov}>
                 {prov}

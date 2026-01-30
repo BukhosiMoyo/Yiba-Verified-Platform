@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import Link from "next/link";
-import { FileCheck, Eye } from "lucide-react";
+import { FileCheck, Pencil } from "lucide-react";
 
 interface PageProps {
   searchParams: Promise<{
@@ -212,9 +212,11 @@ export default async function InstitutionReadinessPage({ searchParams }: PagePro
                     <TableCell className="py-2.5 px-4 text-right">
                       <Link
                         href={`/institution/readiness/${r.readiness_id}`}
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 dark:border-border bg-white dark:bg-background text-gray-700 dark:text-foreground hover:bg-emerald-50 hover:border-emerald-200/80 dark:hover:border-emerald-800/50 transition-colors"
+                        className="inline-flex items-center gap-1.5 shrink-0 rounded-md border border-gray-200 dark:border-border bg-white dark:bg-background text-gray-700 dark:text-foreground hover:bg-emerald-50 hover:border-emerald-200/80 dark:hover:border-emerald-800/50 transition-colors py-2 px-3 text-sm font-medium"
+                        aria-label="Edit"
                       >
-                        <Eye className="h-4 w-4" aria-hidden />
+                        <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                        <span>Edit</span>
                       </Link>
                     </TableCell>
                   </TableRow>

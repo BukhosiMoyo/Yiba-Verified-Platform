@@ -61,6 +61,7 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
       request_type: true,
       status: true,
       requested_at: true,
+      response_deadline: true,
       reviewed_at: true,
       response_notes: true,
       expires_at: true,
@@ -155,6 +156,7 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
 
   const statusInfo = formatStatus(request.status);
   const isExpired = request.expires_at && new Date(request.expires_at) < new Date();
+  const isOverdue = request.status === "PENDING" && request.response_deadline && new Date(request.response_deadline) < new Date();
   const canApprove = request.status === "PENDING";
 
   return (
@@ -179,6 +181,9 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
             </span>
             {isExpired && (
               <span className="ml-2 text-xs text-red-600">(Expired)</span>
+            )}
+            {isOverdue && (
+              <span className="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400">(Response overdue)</span>
             )}
           </CardDescription>
         </CardHeader>
@@ -212,6 +217,16 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
               <p className="text-sm font-medium text-muted-foreground">Requested At</p>
               <p className="text-base">{formatDateTime(request.requested_at)}</p>
             </div>
+
+            {request.response_deadline && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Response By</p>
+                <p className={`text-base ${isOverdue ? "text-amber-600 dark:text-amber-400 font-medium" : ""}`}>
+                  {formatDate(request.response_deadline)}
+                  {isOverdue && " (Overdue)"}
+                </p>
+              </div>
+            )}
 
             {request.expires_at && (
               <div>

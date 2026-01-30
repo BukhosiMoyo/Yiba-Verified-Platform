@@ -125,7 +125,6 @@ export function PersonalInfoStep({ initialData, onNext, onBack, onAutoSave }: Pe
             id="birthDate"
             value={birthDate}
             onChange={handleDateChange}
-            placeholder="Select your date of birth"
             error={!!errors.birthDate}
             maxDate={new Date()} // Can't be in the future
             minDate={new Date(new Date().setFullYear(new Date().getFullYear() - 100))} // Max 100 years ago
@@ -158,10 +157,10 @@ export function PersonalInfoStep({ initialData, onNext, onBack, onAutoSave }: Pe
             id="gender"
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            placeholder="Select gender"
             className={errors.gender ? "border-red-500" : ""}
             aria-invalid={!!errors.gender}
           >
+            <option value="">Select gender</option>
             {GENDER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -180,10 +179,10 @@ export function PersonalInfoStep({ initialData, onNext, onBack, onAutoSave }: Pe
             id="nationality"
             value={nationality}
             onChange={(e) => setNationality(e.target.value)}
-            placeholder="Select nationality"
             className={errors.nationality ? "border-red-500" : ""}
             aria-invalid={!!errors.nationality}
           >
+            <option value="">Select nationality</option>
             {NATIONALITY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -200,7 +199,6 @@ export function PersonalInfoStep({ initialData, onNext, onBack, onAutoSave }: Pe
             id="homeLanguage"
             value={homeLanguage}
             onChange={(e) => setHomeLanguage(e.target.value)}
-            placeholder="Select home language"
           >
             <option value="">Not specified</option>
             {HOME_LANGUAGE_OPTIONS.map((option) => (

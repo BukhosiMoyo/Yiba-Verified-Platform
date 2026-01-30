@@ -35,7 +35,16 @@ export type Capability =
   | "QCTO_ASSIGN"
   | "QCTO_AUDIT_READ"
   | "QCTO_EXPORT"
-  | "QCTO_SETTINGS";
+  | "QCTO_SETTINGS"
+  // Institution staff sub-roles (capability-based)
+  | "CAN_FACILITATE"
+  | "CAN_ASSESS"
+  | "CAN_MODERATE"
+  | "CAN_VIEW_LEADS"
+  | "CAN_MANAGE_PUBLIC_PROFILE"
+  // Service requests (advisor / platform admin)
+  | "SERVICE_REQUESTS_VIEW"
+  | "SERVICE_REQUESTS_EDIT";
 
 const CAPS: Record<Role, Set<Capability>> = {
   PLATFORM_ADMIN: new Set([
@@ -63,6 +72,14 @@ const CAPS: Record<Role, Set<Capability>> = {
     "REPORTS_EXPORT",
     "FEATURE_APPROVE",
     "FEATURE_ALERTS",
+    "QCTO_TEAM_MANAGE",
+    "CAN_FACILITATE",
+    "CAN_ASSESS",
+    "CAN_MODERATE",
+    "CAN_VIEW_LEADS",
+    "CAN_MANAGE_PUBLIC_PROFILE",
+    "SERVICE_REQUESTS_VIEW",
+    "SERVICE_REQUESTS_EDIT",
   ]),
   QCTO_USER: new Set([
     "FORM5_VIEW",
@@ -163,6 +180,8 @@ const CAPS: Record<Role, Set<Capability>> = {
     "AUDIT_VIEW",
     "REPORTS_VIEW",
     "REPORTS_EXPORT",
+    "CAN_VIEW_LEADS",
+    "CAN_MANAGE_PUBLIC_PROFILE",
   ]),
   INSTITUTION_STAFF: new Set([
     "FORM5_VIEW",
@@ -178,11 +197,17 @@ const CAPS: Record<Role, Set<Capability>> = {
     "ATTENDANCE_VIEW",
     "AUDIT_VIEW",        // own actions only (enforced in backend)
     "REPORTS_VIEW",
+    "CAN_VIEW_LEADS",
+    // CAN_FACILITATE, CAN_ASSESS, CAN_MODERATE: optional per-institution (not in default set)
   ]),
   STUDENT: new Set([
     // self-only views are enforced in backend/routes
     "LEARNER_VIEW",
     "ATTENDANCE_VIEW",
+  ]),
+  ADVISOR: new Set([
+    "SERVICE_REQUESTS_VIEW",
+    "SERVICE_REQUESTS_EDIT",
   ]),
 };
 

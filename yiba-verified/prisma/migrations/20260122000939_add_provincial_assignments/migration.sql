@@ -1,2 +1,2 @@
--- AlterTable
-ALTER TABLE "QCTOOrg" ALTER COLUMN "updated_at" DROP DEFAULT;
+-- This migration was empty/invalid - the updated_at column is added in a later migration
+-- No changes needed here

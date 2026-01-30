@@ -21,7 +21,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
+      "fixed inset-0 z-50 bg-black/40 transition-opacity duration-500 ease-out data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
       className
     )}
     {...props}
@@ -31,7 +31,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  "fixed z-50 bg-background shadow-lg transform-gpu transition-transform duration-300 ease-out",
+  "fixed z-50 bg-background shadow-2xl transform-gpu transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
   {
     variants: {
       side: {
@@ -40,7 +40,7 @@ const sheetVariants = cva(
           "inset-x-0 bottom-0 w-full border-t data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=open]:translate-x-0 data-[state=closed]:-translate-x-full",
         right:
-          "inset-y-[10px] right-[10px] h-[calc(100vh-20px)] w-3/4 border border-border rounded-2xl bg-card data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full sm:max-w-none sm:w-[512px]",
+          "inset-y-[10px] right-[10px] h-[calc(100vh-20px)] w-3/4 border border-border rounded-2xl bg-card data-[state=open]:translate-x-0 data-[state=open]:opacity-100 data-[state=closed]:translate-x-[calc(100%+20px)] data-[state=closed]:opacity-0 sm:max-w-none sm:w-[512px]",
       },
     },
     defaultVariants: {

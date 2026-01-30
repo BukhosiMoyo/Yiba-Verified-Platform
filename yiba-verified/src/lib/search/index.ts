@@ -22,7 +22,7 @@ export type SearchResult = {
   title: string;
   subtitle?: string;
   href: string;
-  category: "institutions" | "learners" | "users" | "audit-logs" | "documents" | "pages" | "submissions" | "requests" | "readiness" | "enrolments";
+  category: "institutions" | "learners" | "users" | "audit-logs" | "documents" | "pages" | "submissions" | "requests" | "readiness" | "enrolments" | "facilitators";
   icon: LucideIcon;
 };
 
@@ -39,6 +39,7 @@ const ICONS: Record<string, LucideIcon> = {
   readiness: FolderOpen,
   enrolments: Award,
   qualifications: Award,
+  facilitators: Users,
 };
 
 // Base searchable items by category
@@ -67,6 +68,7 @@ const SEARCH_ITEMS: Omit<SearchResult, "id">[] = [
   { title: "Submissions", href: "/qcto/submissions", category: "submissions", icon: ICONS.submissions },
   { title: "Requests", href: "/qcto/requests", category: "requests", icon: ICONS.requests },
   { title: "Readiness", href: "/qcto/readiness", category: "readiness", icon: ICONS.readiness },
+  { title: "Facilitators", href: "/qcto/facilitators", category: "facilitators", icon: ICONS.facilitators },
   
   // Student
   { title: "Dashboard", href: "/student", category: "pages", icon: ICONS.dashboard, subtitle: "Student" },
@@ -159,4 +161,5 @@ export const CATEGORY_LABELS: Record<string, string> = {
   requests: "Requests",
   readiness: "Readiness",
   enrolments: "Enrolments",
+  facilitators: "Facilitators",
 };

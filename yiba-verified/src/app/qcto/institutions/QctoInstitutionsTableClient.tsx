@@ -582,7 +582,7 @@ export function QctoInstitutionsTableClient({
                         }
                         return (
                           <TableCell
-                            key={col.id}
+                            key={(col as { id: string }).id}
                             className={cellClass}
                             style={stickyStyle}
                           />

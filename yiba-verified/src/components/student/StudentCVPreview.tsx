@@ -60,7 +60,7 @@ export function StudentCVPreview({
     <article
       className={cn(
         "rounded-lg border shadow-sm overflow-hidden",
-        "bg-[#fefdfb] dark:bg-stone-900/95",
+        "bg-[#fefdfb] dark:bg-stone-900",
         "border-stone-200/80 dark:border-stone-700/60",
         "text-stone-800 dark:text-stone-200",
         variant === "compact" ? "p-4 text-sm" : "p-5 md:p-6",

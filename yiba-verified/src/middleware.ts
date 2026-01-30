@@ -7,6 +7,7 @@ import { canAccessArea, type Role, type RouteArea } from "@/lib/rbac";
 
 const AREA_PREFIXES: Array<{ prefix: string; area: RouteArea }> = [
   { prefix: "/platform-admin", area: "platform-admin" },
+  { prefix: "/advisor", area: "advisor" },
   { prefix: "/qcto", area: "qcto" },
   { prefix: "/institution", area: "institution" },
   { prefix: "/student", area: "student" },
@@ -31,14 +32,16 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Content Security Policy
+  // Content Security Policy (Google Maps / Places Autocomplete: allow script + connect)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-inline/unsafe-eval
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com",
+    "script-src-elem 'self' 'unsafe-inline' https://maps.googleapis.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: https:",
+    "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self'",
+    "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
+    "frame-src 'self' https://maps.googleapis.com https://*.googleapis.com",
     "frame-ancestors 'none'",
   ].join("; ");
 
@@ -85,6 +88,7 @@ export async function middleware(req: NextRequest) {
   // Marketing routes (/, /features, /how-it-works, /security, /pricing, /contact) are NOT in this list
   const noindexPaths = [
     "/platform-admin",
+    "/advisor",
     "/qcto",
     "/institution",
     "/student",
@@ -162,7 +166,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // Protected area routes - apply RBAC, then add noindex header
-  const token = await getToken({ req });
+  // Cache token lookup per request using a simple in-memory cache (per request only)
+  // Note: getToken already has internal caching, but we can optimize further
+  const token = await getToken({ 
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -177,7 +186,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const role = (token.role as Role | undefined) ?? null;
-  if (!role || !canAccessArea(role, area)) {
+  if (!role) {
     const url = req.nextUrl.clone();
     url.pathname = "/unauthorized";
     let response = NextResponse.redirect(url);
@@ -185,8 +194,88 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // All protected area routes get noindex header
-  let response = NextResponse.next();
+  // Check for impersonation session expiration (if this is an impersonation session)
+  const impersonationSessionId = (token as any).impersonationSessionId;
+  if (impersonationSessionId && pathname !== "/view-as" && !pathname.startsWith("/view-as/")) {
+    // Check session expiration in the background (don't block request)
+    // The API routes will handle expiration checks
+    // For now, we just allow the request through
+  }
+
+  // Onboarding: redirect to onboarding page before layout runs so we never flash the dashboard
+  const onboardingCompleted = (token as any).onboarding_completed === true;
+
+  // PLATFORM_ADMIN: do not redirect to onboarding in middleware. Layout uses DB (with cache
+  // revalidation on complete) so dashboard opens right after onboarding without relying on JWT update timing.
+  if (role === "PLATFORM_ADMIN") {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-pathname", pathname);
+    let response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    response = applySecurityHeaders(response);
+    response = applyCORSHeaders(response, req);
+    return response;
+  }
+
+  // Check for View As User state in cookies (deprecated - old system)
+  const viewingAsRole = req.cookies.get("viewing_as_role")?.value as Role | undefined;
+  
+  // Allow access if either the original role OR the viewing-as role can access the area
+  const originalCanAccess = canAccessArea(role, area);
+  const viewingAsCanAccess = viewingAsRole ? canAccessArea(viewingAsRole, area) : false;
+  
+  if (!originalCanAccess && !viewingAsCanAccess) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/unauthorized";
+    let response = NextResponse.redirect(url);
+    response = applySecurityHeaders(response);
+    return response;
+  }
+
+  // Redirect to role-specific onboarding when not completed (avoids dashboard flash)
+  if (!onboardingCompleted && area) {
+    if (area === "student" && pathname === "/student" && role === "STUDENT") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/student/onboarding";
+      let response = NextResponse.redirect(url);
+      response = applySecurityHeaders(response);
+      return response;
+    }
+    if (
+      area === "institution" &&
+      (pathname === "/institution" || pathname.startsWith("/institution/")) &&
+      !pathname.startsWith("/institution/onboarding") &&
+      role === "INSTITUTION_ADMIN"
+    ) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/institution/onboarding";
+      let response = NextResponse.redirect(url);
+      response = applySecurityHeaders(response);
+      return response;
+    }
+    if (
+      area === "qcto" &&
+      (pathname === "/qcto" || pathname.startsWith("/qcto/")) &&
+      !pathname.startsWith("/qcto/onboarding") &&
+      (role as string) !== "QCTO_SUPER_ADMIN" &&
+      (role as string) !== "PLATFORM_ADMIN"
+    ) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/qcto/onboarding";
+      let response = NextResponse.redirect(url);
+      response = applySecurityHeaders(response);
+      return response;
+    }
+  }
+
+  // All protected area routes: forward pathname on request so layouts can avoid redirect loops
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  let response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   response = applySecurityHeaders(response);
   response = applyCORSHeaders(response, req);

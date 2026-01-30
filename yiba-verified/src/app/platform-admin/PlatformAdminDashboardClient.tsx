@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Building2, Users, ClipboardList, GraduationCap, Activity, Mail, Clock, FileText, CheckCircle2, ArrowUpRight, Hand, ArrowRight } from "lucide-react";
+import { Building2, Users, ClipboardList, GraduationCap, Activity, Mail, Clock, FileText, CheckCircle2, ArrowUpRight, Hand, ArrowRight, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
 import { useDashboardMode } from "@/hooks/useDashboardMode";
@@ -49,6 +49,14 @@ interface PlatformAdminDashboardClientProps {
   databaseStatus: "healthy" | "degraded" | "down";
   recentErrors: number;
   lastChecked: string;
+  recentClientErrors: Array<{
+    id: string;
+    message: string;
+    path: string | null;
+    digest: string | null;
+    created_at: Date;
+    user?: { email: string; first_name: string; last_name: string } | null;
+  }>;
 }
 
 export function PlatformAdminDashboardClient({
@@ -85,6 +93,7 @@ export function PlatformAdminDashboardClient({
   databaseStatus,
   recentErrors,
   lastChecked,
+  recentClientErrors,
 }: PlatformAdminDashboardClientProps) {
   const { mode, setMode } = useDashboardMode();
 
@@ -150,20 +159,20 @@ export function PlatformAdminDashboardClient({
   return (
     <div className="space-y-6">
           {/* Dashboard Header Hero */}
-          <div className="rounded-2xl border border-gray-200/60 bg-white px-6 py-5">
+          <div className="rounded-2xl border border-border bg-card px-6 py-5">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               {/* Left: Greeting Section */}
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">
+                    <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
                       {greeting}, {userName}{" "}
-                      <Hand className="inline-block h-5 w-5 text-gray-500 ml-1 align-middle" aria-hidden />
+                      <Hand className="inline-block h-5 w-5 text-muted-foreground ml-1 align-middle" aria-hidden />
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {todayDate}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Here's what's happening today.
                     </p>
                   </div>
@@ -179,13 +188,13 @@ export function PlatformAdminDashboardClient({
                 <div className="md:hidden w-full flex justify-end mb-1">
                   <DashboardModeToggle mode={mode} onChange={setMode} />
                 </div>
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200/60">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
                   Today
                 </span>
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200/60">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
                   Platform Overview
                 </span>
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200/60">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
                   Updated: {lastUpdated}
                 </span>
               </div>
@@ -256,7 +265,7 @@ export function PlatformAdminDashboardClient({
 
               {/* Right: System Snapshot (1/3 width) */}
               <div className="lg:col-span-1">
-                <SystemSnapshotCard className="h-full" />
+                <SystemSnapshotCard className="h-full" avgReviewTimeDays={avgReviewTimeDays} />
               </div>
             </div>
           )}
@@ -266,7 +275,7 @@ export function PlatformAdminDashboardClient({
             <div className="space-y-6">
               {/* SECTION A: Growth & Adoption KPIs */}
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Growth & Adoption KPIs</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Growth & Adoption KPIs</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   <MetricCard
                     title="Invites Sent (7 days)"
@@ -308,7 +317,7 @@ export function PlatformAdminDashboardClient({
 
               {/* SECTION B: Engagement Analytics */}
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Engagement Analytics</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Engagement Analytics</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <ChartPlaceholder
                     title="Daily Active Users"
@@ -331,7 +340,7 @@ export function PlatformAdminDashboardClient({
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Workflow Efficiency KPIs */}
                 <div className="lg:col-span-3 space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Workflow Efficiency</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Workflow Efficiency</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <MetricCard
                       title="Avg Review Time"
@@ -381,19 +390,87 @@ export function PlatformAdminDashboardClient({
             </div>
           )}
 
-          {/* Recent Activity Table - Always visible in both modes */}
-          <Card className="bg-white rounded-xl border border-gray-200/60">
-            <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-100/60">
+          {/* Recent Client Errors - from error boundary reports */}
+          <Card className="bg-card rounded-xl border border-border">
+            <CardHeader className="px-6 pt-6 pb-4 border-b border-border/60">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
-                  <CardDescription className="mt-1 text-sm text-gray-500">
+                  <CardTitle className="text-lg font-semibold text-foreground">Recent Errors</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    Client-side errors reported by users (last 24h)
+                  </CardDescription>
+                </div>
+                <Link
+                  href="/platform-admin/errors"
+                  className="text-sm font-medium text-primary hover:text-primary/80 hover:underline transition-colors duration-150"
+                >
+                  View all errors
+                  <ArrowRight className="ml-1.5 h-4 w-4 inline-block" aria-hidden />
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6 pt-0">
+              {recentClientErrors.length === 0 ? (
+                <EmptyState
+                  title="No recent errors"
+                  description="Client errors reported by the error boundary will appear here."
+                  icon={<AlertCircle className="h-6 w-6" strokeWidth={1.5} />}
+                  variant="no-results"
+                  className="border-0 bg-transparent py-8"
+                />
+              ) : (
+                <ResponsiveTable>
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Time</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Message</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Path</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentClientErrors.map((err) => (
+                        <TableRow
+                          key={err.id}
+                          className="border-b border-border/60 hover:bg-muted/50 transition-colors duration-150"
+                        >
+                          <TableCell className="font-mono text-xs text-muted-foreground py-3 whitespace-nowrap">
+                            {formatDate(err.created_at)}
+                          </TableCell>
+                          <TableCell className="py-3 text-sm text-foreground max-w-[280px] truncate" title={err.message}>
+                            {err.message}
+                          </TableCell>
+                          <TableCell className="py-3 text-xs text-muted-foreground font-mono truncate max-w-[160px]" title={err.path ?? ""}>
+                            {err.path ?? "—"}
+                          </TableCell>
+                          <TableCell className="py-3 text-sm text-muted-foreground">
+                            {err.user
+                              ? `${err.user.first_name} ${err.user.last_name}`.trim() || err.user.email
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTable>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity Table - Always visible in both modes */}
+          <Card className="bg-card rounded-xl border border-border">
+            <CardHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Recent Activity</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
                     Latest system events and changes from audit logs
                   </CardDescription>
                 </div>
                 <Link
                   href="/platform-admin/audit-logs"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors duration-150"
+                  className="text-sm font-medium text-primary hover:text-primary/80 hover:underline transition-colors duration-150"
                 >
                   View all audit logs
                   <ArrowRight className="ml-1.5 h-4 w-4 inline-block" aria-hidden />
@@ -412,33 +489,33 @@ export function PlatformAdminDashboardClient({
               ) : (
                 <ResponsiveTable>
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200/60">
+                    <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Timestamp</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">User</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Field</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Institution</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Timestamp</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Action</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Entity</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Field</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Institution</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {recentActivity.map((log) => (
                         <TableRow 
                           key={log.audit_id}
-                          className="border-b border-gray-100/60 hover:bg-gray-50/50 transition-colors duration-150"
+                          className="border-b border-border/60 hover:bg-muted/50 transition-colors duration-150"
                         >
-                          <TableCell className="font-mono text-xs text-gray-600 py-3">
+                          <TableCell className="font-mono text-xs text-muted-foreground py-3">
                             {formatDate(log.changed_at)}
                           </TableCell>
                           <TableCell className="py-3">
                             <div className="flex flex-col min-w-0">
-                              <span className="font-medium text-sm text-gray-900 truncate">
+                              <span className="font-medium text-sm text-foreground truncate">
                                 {log.changedBy?.first_name && log.changedBy?.last_name
                                   ? `${log.changedBy.first_name} ${log.changedBy.last_name}`
                                   : log.changedBy?.email || log.changed_by}
                               </span>
-                              <span className="text-xs text-gray-500 truncate mt-0.5">
+                              <span className="text-xs text-muted-foreground truncate mt-0.5">
                                 {log.changedBy?.email || log.changed_by}
                               </span>
                             </div>
@@ -457,25 +534,25 @@ export function PlatformAdminDashboardClient({
                           </TableCell>
                           <TableCell className="py-3">
                             <div className="flex flex-col min-w-0">
-                              <span className="font-medium text-sm text-gray-900 truncate">
+                              <span className="font-medium text-sm text-foreground truncate">
                                 {formatEntityType(log.entity_type)}
                               </span>
-                              <span className="text-xs text-gray-500 font-mono truncate mt-0.5">
+                              <span className="text-xs text-muted-foreground font-mono truncate mt-0.5">
                                 {log.entity_id.slice(0, 8)}...
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-sm text-gray-900 py-3 truncate">{formatFieldLabel(log.field_name)}</TableCell>
+                          <TableCell className="font-medium text-sm text-foreground py-3 truncate">{formatFieldLabel(log.field_name)}</TableCell>
                           <TableCell className="py-3">
                             {log.institution ? (
                               <Link
                                 href={`/platform-admin/institutions/${log.institution.institution_id}`}
-                                className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors duration-150 truncate block"
+                                className="text-xs font-medium text-primary hover:text-primary/80 hover:underline transition-colors duration-150 truncate block"
                               >
                                 {log.institution.trading_name || log.institution.legal_name}
                               </Link>
                             ) : (
-                              <span className="text-xs text-gray-400">—</span>
+                              <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
                         </TableRow>

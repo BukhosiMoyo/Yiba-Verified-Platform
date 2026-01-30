@@ -30,6 +30,7 @@ import {
   MapPin,
   Info,
   HelpCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 interface PageProps {
@@ -88,18 +89,6 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
           trading_name: true,
         },
       },
-      documents: {
-        orderBy: { uploaded_at: "desc" },
-        select: {
-          document_id: true,
-          file_name: true,
-          document_type: true,
-          mime_type: true,
-          file_size_bytes: true,
-          uploaded_at: true,
-          uploaded_by: true,
-        },
-      },
       recommendation: {
         include: {
           recommendedByUser: {
@@ -111,6 +100,53 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
             },
           },
         },
+      },
+      sectionReviews: {
+        include: {
+          reviewer: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { created_at: "desc" },
+      },
+      documents: {
+        orderBy: { uploaded_at: "desc" },
+        include: {
+          documentFlags: {
+            where: {
+              status: { in: ["FLAGGED", "RESOLVED"] },
+            },
+            include: {
+              flaggedBy: {
+                select: {
+                  user_id: true,
+                  first_name: true,
+                  last_name: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: { created_at: "desc" },
+          },
+        },
+      },
+      facilitators: {
+        include: {
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { created_at: "asc" },
       },
       _count: {
         select: {
@@ -881,8 +917,56 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
         </Card>
       )}
 
-      {/* QCTO Recommendation */}
-      {readiness.recommendation && (
+      {/* QCTO Return for Correction Feedback */}
+      {readiness.readiness_status === "RETURNED_FOR_CORRECTION" && readiness.recommendation && (
+        <div className="rounded-2xl border border-orange-200/80 bg-orange-50/50 overflow-hidden border-l-4 border-l-orange-500">
+          <div className="border-b border-orange-200/60 bg-orange-100/50 px-6 py-4 md:px-8 md:py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/20">
+                <AlertTriangle className="h-5 w-5 text-orange-700" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Returned for Correction</h2>
+                <p className="text-sm text-slate-600">QCTO has returned this readiness record for corrections</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 md:p-8">
+            <div className="space-y-4">
+              {(readiness.recommendation.verifier_remarks || readiness.recommendation.remarks) && (
+                <div className="rounded-xl bg-white border border-orange-200/60 p-4">
+                  <span className="text-xs font-medium text-orange-800 uppercase tracking-wider">QCTO Feedback</span>
+                  <p className="text-sm whitespace-pre-wrap mt-2 text-slate-900">
+                    {readiness.recommendation.verifier_remarks || readiness.recommendation.remarks}
+                  </p>
+                </div>
+              )}
+              {readiness.recommendation.recommendedByUser && (
+                <div className="flex gap-3 rounded-xl bg-white border border-orange-200/60 p-4">
+                  <Users className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Returned By</span>
+                    <p className="text-sm font-medium text-slate-900 mt-0.5">
+                      {readiness.recommendation.recommendedByUser.first_name}{" "}
+                      {readiness.recommendation.recommendedByUser.last_name}
+                    </p>
+                    <p className="text-xs text-slate-500">{readiness.recommendation.recommendedByUser.email}</p>
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg border border-blue-200/60 bg-blue-50/50 p-3">
+                <p className="text-sm text-blue-900">
+                  <strong>Action Required:</strong> Please review the feedback above, make the necessary corrections,
+                  and resubmit this readiness record.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QCTO Recommendation (Final Recommendation - Section 10) */}
+      {readiness.recommendation && readiness.readiness_status !== "RETURNED_FOR_CORRECTION" && (
         <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden border-l-4 border-l-emerald-500">
           <div className="border-b border-slate-200/80 bg-gradient-to-r from-emerald-50/60 to-white px-6 py-4 md:px-8 md:py-5">
             <div className="flex items-center gap-3">
@@ -890,8 +974,8 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
                 <MessageSquare className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">QCTO Recommendation</h2>
-                <p className="text-sm text-slate-600">Recommendation from QCTO review</p>
+                <h2 className="text-lg font-semibold text-slate-900">QCTO Final Recommendation (Form 5 Section 10)</h2>
+                <p className="text-sm text-slate-600">Final recommendation from QCTO review</p>
               </div>
             </div>
           </div>
@@ -901,15 +985,51 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
                 <MessageSquare className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Recommendation</span>
-                  <p className="text-base font-semibold text-slate-900 mt-0.5">{readiness.recommendation.recommendation}</p>
+                  <p className="text-base font-semibold text-slate-900 mt-0.5">
+                    {readiness.recommendation.recommendation === "RECOMMENDED" ? "✅ RECOMMENDED" : "❌ NOT RECOMMENDED"}
+                  </p>
                 </div>
               </div>
+              {readiness.recommendation.verifier_remarks && (
+                <div className="flex gap-3 rounded-xl bg-slate-50/80 p-4">
+                  <FileText className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Verifier Remarks</span>
+                    <p className="text-sm whitespace-pre-wrap mt-1 text-slate-700">
+                      {readiness.recommendation.verifier_remarks}
+                    </p>
+                  </div>
+                </div>
+              )}
               {readiness.recommendation.remarks && (
                 <div className="flex gap-3 rounded-xl bg-slate-50/80 p-4">
                   <FileText className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Remarks</span>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Additional Remarks</span>
                     <p className="text-sm whitespace-pre-wrap mt-1 text-slate-700">{readiness.recommendation.remarks}</p>
+                  </div>
+                </div>
+              )}
+              {readiness.recommendation.sme_name && (
+                <div className="flex gap-3 rounded-xl bg-slate-50/80 p-4">
+                  <FileSignature className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Subject Matter Expert (SME)</span>
+                    <p className="text-sm font-medium text-slate-900 mt-0.5">{readiness.recommendation.sme_name}</p>
+                    {readiness.recommendation.sme_signature && (
+                      <p className="text-xs text-slate-500 mt-1">Signature on file</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {readiness.recommendation.verification_date && (
+                <div className="flex gap-3 rounded-xl bg-slate-50/80 p-4">
+                  <Calendar className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Verification Date</span>
+                    <p className="text-sm text-slate-700 mt-0.5">
+                      {formatDate(readiness.recommendation.verification_date)}
+                    </p>
                   </div>
                 </div>
               )}
@@ -919,19 +1039,119 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
                   <div>
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Reviewed By</span>
                     <p className="text-sm font-medium text-slate-900 mt-0.5">
-                      {readiness.recommendation.recommendedByUser.first_name} {readiness.recommendation.recommendedByUser.last_name}
+                      {readiness.recommendation.recommendedByUser.first_name}{" "}
+                      {readiness.recommendation.recommendedByUser.last_name}
                     </p>
                     <p className="text-xs text-slate-500">{readiness.recommendation.recommendedByUser.email}</p>
                   </div>
                 </div>
               )}
-              <div className="flex gap-3 rounded-xl bg-slate-50/80 p-4">
-                <Calendar className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Review Date</span>
-                  <p className="text-sm text-slate-700 mt-0.5">{formatDate(readiness.recommendation.created_at)}</p>
-                </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Flags */}
+      {readiness.documents.some((doc) => doc.documentFlags && doc.documentFlags.length > 0) && (
+        <div className="rounded-2xl border border-red-200/80 bg-red-50/50 overflow-hidden border-l-4 border-l-red-500">
+          <div className="border-b border-red-200/60 bg-red-100/50 px-6 py-4 md:px-8 md:py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/20">
+                <AlertTriangle className="h-5 w-5 text-red-700" />
               </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Document Flags</h2>
+                <p className="text-sm text-slate-600">QCTO has flagged issues with the following documents</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 md:p-8">
+            <div className="space-y-4">
+              {readiness.documents
+                .filter((doc) => doc.documentFlags && doc.documentFlags.length > 0)
+                .map((doc) =>
+                  doc.documentFlags?.map((flag) => (
+                    <div key={flag.flag_id} className="rounded-xl bg-white border border-red-200/60 p-4">
+                      <div className="flex items-start gap-3">
+                        <FileText className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900">{doc.file_name}</p>
+                          <div className="mt-2">
+                            <span className="text-xs font-medium text-red-800 uppercase tracking-wider">Flag Reason</span>
+                            <p className="text-sm text-slate-700 mt-1">{flag.reason}</p>
+                          </div>
+                          {flag.flaggedBy && (
+                            <p className="text-xs text-slate-500 mt-2">
+                              Flagged by: {flag.flaggedBy.first_name} {flag.flaggedBy.last_name} on{" "}
+                              {formatDate(flag.created_at)}
+                            </p>
+                          )}
+                          {flag.status === "RESOLVED" && (
+                            <p className="text-xs text-emerald-600 mt-2">✓ This flag has been resolved</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section Reviews */}
+      {readiness.sectionReviews && readiness.sectionReviews.length > 0 && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden border-l-4 border-l-blue-500">
+          <div className="border-b border-slate-200/80 bg-gradient-to-r from-blue-50/60 to-white px-6 py-4 md:px-8 md:py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+                <ClipboardCheck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">QCTO Section Reviews</h2>
+                <p className="text-sm text-slate-600">Reviewer feedback on specific sections</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 md:p-8">
+            <div className="space-y-4">
+              {readiness.sectionReviews.map((review) => (
+                <div key={review.review_id} className="rounded-xl bg-blue-50/50 border border-blue-200/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900">
+                        {review.section_name.replace(/section_\d+_/g, "").replace(/_/g, " ")}
+                        {review.criterion_key && ` • ${review.criterion_key}`}
+                      </p>
+                      {review.response && (
+                        <p className="text-sm text-slate-600 mt-1">
+                          Response: <span className="font-medium">{review.response}</span>
+                        </p>
+                      )}
+                      {review.mandatory_remarks && (
+                        <div className="mt-2">
+                          <span className="text-xs font-medium text-blue-800 uppercase tracking-wider">Reviewer Remarks</span>
+                          <p className="text-sm text-slate-700 mt-1">{review.mandatory_remarks}</p>
+                        </div>
+                      )}
+                      {review.notes && (
+                        <div className="mt-2">
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Additional Notes</span>
+                          <p className="text-sm text-slate-600 mt-1">{review.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                    {review.reviewer && (
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-slate-500">
+                          {review.reviewer.first_name} {review.reviewer.last_name}
+                        </p>
+                        <p className="text-xs text-slate-400">{formatDate(review.created_at)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -953,19 +1173,42 @@ export default async function InstitutionReadinessDetailPage({ params }: PagePro
           </div>
           <div className="p-6 md:p-8">
             <div className="space-y-3">
-              {readiness.documents.map((doc) => (
-                <div key={doc.document_id} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 hover:bg-violet-50/40 transition-colors">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
-                    <FileText className="h-5 w-5 text-violet-600" />
+              {readiness.documents.map((doc) => {
+                const hasActiveFlags = doc.documentFlags?.some((f) => f.status === "FLAGGED");
+                return (
+                  <div
+                    key={doc.document_id}
+                    className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
+                      hasActiveFlags
+                        ? "border-red-200/80 bg-red-50/50"
+                        : "border-slate-200/80 bg-slate-50/50 hover:bg-violet-50/40"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                        hasActiveFlags ? "bg-red-500/10" : "bg-violet-500/10"
+                      }`}
+                    >
+                      {hasActiveFlags ? (
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                      ) : (
+                        <FileText className="h-5 w-5 text-violet-600" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900">{doc.file_name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {[doc.document_type || doc.mime_type || "—", doc.file_size_bytes != null ? `${(doc.file_size_bytes / 1024).toFixed(1)} KB` : null, formatDate(doc.uploaded_at)].filter(Boolean).join(" • ")}
+                      </p>
+                      {hasActiveFlags && (
+                        <p className="text-xs text-red-600 mt-1 font-medium">
+                          ⚠️ Flagged by QCTO - See Document Flags section above
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900">{doc.file_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {[doc.document_type || doc.mime_type || "—", doc.file_size_bytes != null ? `${(doc.file_size_bytes / 1024).toFixed(1)} KB` : null, formatDate(doc.uploaded_at)].filter(Boolean).join(" • ")}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

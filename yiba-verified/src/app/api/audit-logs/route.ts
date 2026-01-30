@@ -127,8 +127,75 @@ export async function GET(request: NextRequest) {
       prisma.auditLog.count({ where }),
     ]);
 
+    // For institution_id fields, resolve old and new values to institution names
+    const itemsWithResolvedInstitutions = await Promise.all(
+      items.map(async (log) => {
+        if (log.field_name === "institution_id") {
+          let oldInstitution = null;
+          let newInstitution = null;
+
+          // Parse old_value and new_value to get institution IDs
+          try {
+            const oldValue = log.old_value ? JSON.parse(log.old_value) : null;
+            const newValue = log.new_value ? JSON.parse(log.new_value) : null;
+
+            if (oldValue && typeof oldValue === "string") {
+              oldInstitution = await prisma.institution.findUnique({
+                where: { institution_id: oldValue },
+                select: {
+                  institution_id: true,
+                  legal_name: true,
+                  trading_name: true,
+                },
+              });
+            }
+
+            if (newValue && typeof newValue === "string") {
+              newInstitution = await prisma.institution.findUnique({
+                where: { institution_id: newValue },
+                select: {
+                  institution_id: true,
+                  legal_name: true,
+                  trading_name: true,
+                },
+              });
+            }
+          } catch (e) {
+            // If parsing fails, values might be plain strings
+            if (log.old_value && !log.old_value.startsWith("{")) {
+              oldInstitution = await prisma.institution.findUnique({
+                where: { institution_id: log.old_value },
+                select: {
+                  institution_id: true,
+                  legal_name: true,
+                  trading_name: true,
+                },
+              });
+            }
+            if (log.new_value && !log.new_value.startsWith("{")) {
+              newInstitution = await prisma.institution.findUnique({
+                where: { institution_id: log.new_value },
+                select: {
+                  institution_id: true,
+                  legal_name: true,
+                  trading_name: true,
+                },
+              });
+            }
+          }
+
+          return {
+            ...log,
+            oldInstitution,
+            newInstitution,
+          };
+        }
+        return log;
+      })
+    );
+
     // Format response (convert Prisma field names to camelCase)
-    const formattedItems = items.map((log) => ({
+    const formattedItems = itemsWithResolvedInstitutions.map((log: any) => ({
       audit_id: log.audit_id,
       entity_type: log.entity_type,
       entity_id: log.entity_id,
@@ -153,6 +220,20 @@ export async function GET(request: NextRequest) {
             institution_id: log.institution.institution_id,
             legal_name: log.institution.legal_name,
             trading_name: log.institution.trading_name,
+          }
+        : null,
+      oldInstitution: log.oldInstitution
+        ? {
+            institution_id: log.oldInstitution.institution_id,
+            legal_name: log.oldInstitution.legal_name,
+            trading_name: log.oldInstitution.trading_name,
+          }
+        : null,
+      newInstitution: log.newInstitution
+        ? {
+            institution_id: log.newInstitution.institution_id,
+            legal_name: log.newInstitution.legal_name,
+            trading_name: log.newInstitution.trading_name,
           }
         : null,
       change_type: log.change_type,

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Mail, Clock, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
+import { ContactForm } from "@/components/marketing/ContactForm";
+import { GradientShell } from "@/components/shared/Backgrounds";
 
 export const metadata: Metadata = {
   title: "Contact Us - Yiba Verified",
@@ -23,15 +25,43 @@ export const metadata: Metadata = {
   },
 };
 
+const contactInfo = [
+  {
+    icon: Mail,
+    title: "Email Us",
+    description: "Send us an email anytime",
+    value: "hello@yibaverified.co.za",
+    href: "mailto:hello@yibaverified.co.za",
+  },
+  {
+    icon: Clock,
+    title: "Response Time",
+    description: "We typically respond within",
+    value: "24 hours",
+    href: null,
+  },
+  {
+    icon: MessageSquare,
+    title: "Support",
+    description: "Existing customers can access",
+    value: "Dashboard Support",
+    href: null,
+  },
+];
+
 export default function ContactPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <MarketingNav />
       <main className="flex-1">
-        <section className="bg-background py-20 sm:py-32">
+        {/* Hero */}
+        <GradientShell as="section" className="py-16 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+              <Badge variant="secondary" className="mb-6 rounded-full px-4 py-1.5 text-xs font-medium border-border/60">
+                We&apos;d love to hear from you
+              </Badge>
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 Get in Touch
               </h1>
               <p className="mt-6 text-lg leading-8 text-muted-foreground">
@@ -39,76 +69,91 @@ export default function ContactPage() {
                 today to schedule a demo or learn more about Yiba Verified.
               </p>
             </div>
+          </div>
+        </GradientShell>
 
-            <div className="mx-auto mt-16 max-w-4xl">
-              <div className="grid gap-8 md:grid-cols-2">
-                <Card>
+        {/* Main Content */}
+        <section className="py-16 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-12 lg:grid-cols-5">
+              {/* Contact Form - Takes 3 columns */}
+              <div className="lg:col-span-3">
+                <Card className="border-[var(--border-subtle)] bg-card shadow-[var(--shadow-card)]">
                   <CardHeader>
-                    <CardTitle>Request a Demo</CardTitle>
-                    <CardDescription>
-                      Schedule a personalized demonstration of Yiba Verified
-                      tailored to your institution's needs.
+                    <CardTitle className="text-2xl">Send us a message</CardTitle>
+                    <CardDescription className="text-base">
+                      Fill out the form below and we&apos;ll get back to you as soon as possible.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Our team will show you how Yiba Verified can streamline
-                      your compliance workflows and help you meet QCTO
-                      requirements more efficiently.
-                    </p>
-                    <Button asChild className="w-full">
-                      <a href="mailto:info@yibaverified.com?subject=Demo Request">
-                        Schedule Demo
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>General Inquiries</CardTitle>
-                    <CardDescription>
-                      Have questions or need more information? We're here to
-                      help.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Reach out with any questions about features, pricing,
-                      implementation, or support.
-                    </p>
-                    <Button asChild variant="outline" className="w-full">
-                      <a href="mailto:info@yibaverified.com">Send Email</a>
-                    </Button>
+                    <ContactForm />
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="mt-12">
-                <Card>
+              {/* Contact Info Sidebar - Takes 2 columns */}
+              <div className="lg:col-span-2 space-y-6">
+                {contactInfo.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Card key={item.title} className="border-[var(--border-subtle)] bg-card">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <Icon className="h-6 w-6" strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground">{item.title}</h3>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              {item.description}
+                            </p>
+                            {item.href ? (
+                              <a
+                                href={item.href}
+                                className="text-sm font-medium text-primary hover:underline"
+                              >
+                                {item.value}
+                              </a>
+                            ) : (
+                              <p className="text-sm font-medium text-foreground">{item.value}</p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+                {/* Quick Links */}
+                <Card className="border-[var(--border-subtle)] bg-muted/30">
                   <CardHeader>
-                    <CardTitle>Contact Information</CardTitle>
+                    <CardTitle className="text-lg">Quick Links</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium">Email</p>
-                        <a
-                          href="mailto:info@yibaverified.com"
-                          className="text-sm text-muted-foreground hover:text-foreground"
-                        >
-                          info@yibaverified.com
-                        </a>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Support</p>
-                        <p className="text-sm text-muted-foreground">
-                          For technical support, please contact your account
-                          manager or use the support channels available in your
-                          dashboard.
-                        </p>
-                      </div>
-                    </div>
+                  <CardContent className="space-y-3">
+                    <a
+                      href="/how-it-works"
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      → How Yiba Verified Works
+                    </a>
+                    <a
+                      href="/features"
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      → Explore Features
+                    </a>
+                    <a
+                      href="/security"
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      → Security & Compliance
+                    </a>
+                    <a
+                      href="/pricing"
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      → Pricing Information
+                    </a>
                   </CardContent>
                 </Card>
               </div>

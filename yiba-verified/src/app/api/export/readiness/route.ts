@@ -50,9 +50,12 @@ export async function GET(request: NextRequest) {
       where.readiness_status = status;
     }
 
-    // Fetch readiness records with institution info
+    // Fetch readiness records (capped to avoid timeouts on large exports)
+    const EXPORT_MAX_ROWS = 50_000;
     const readinessRecords = await prisma.readiness.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { created_at: "desc" },
       include: {
         institution: {
           select: {
@@ -67,7 +70,6 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { created_at: "desc" },
     });
 
     // Determine format (default: CSV)

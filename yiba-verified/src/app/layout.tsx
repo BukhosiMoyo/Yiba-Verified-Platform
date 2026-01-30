@@ -9,7 +9,7 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.com";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),

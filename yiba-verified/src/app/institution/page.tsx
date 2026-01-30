@@ -1,5 +1,11 @@
 import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
 import { authOptions } from "@/lib/auth";
+import { getCurrentInstitutionForUser } from "@/lib/currentInstitution";
+import {
+  fetchInstitutionActivity,
+  fetchInstitutionDashboard,
+} from "@/lib/institution-dashboard-data";
 import { InstitutionDashboardClient } from "./InstitutionDashboardClient";
 
 function getGreeting() {
@@ -24,11 +30,49 @@ export default async function InstitutionDashboardPage() {
   const greeting = getGreeting();
   const todayDate = formatTodayDate();
 
+  let institutionId: string | null = null;
+  const role = session?.user?.role;
+  if (
+    session?.user?.userId &&
+    (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF")
+  ) {
+    const cookieStore = await cookies();
+    const preferredId = cookieStore.get("current_institution_id")?.value ?? null;
+    const resolved = await getCurrentInstitutionForUser(
+      session.user.userId,
+      preferredId
+    );
+    institutionId = resolved.currentInstitutionId;
+  } else if (session?.user?.institutionId) {
+    institutionId = session.user.institutionId as string;
+  }
+
+  if (!institutionId) {
+    return (
+      <InstitutionDashboardClient
+        greeting={greeting}
+        userName={userName}
+        todayDate={todayDate}
+        activities={[]}
+        metrics={null}
+        recentLearners={[]}
+      />
+    );
+  }
+
+  const [activityRes, dashboardRes] = await Promise.all([
+    fetchInstitutionActivity(institutionId),
+    fetchInstitutionDashboard(institutionId),
+  ]);
+
   return (
     <InstitutionDashboardClient
       greeting={greeting}
       userName={userName}
       todayDate={todayDate}
+      activities={activityRes.items}
+      metrics={dashboardRes.metrics}
+      recentLearners={dashboardRes.recentLearners}
     />
   );
 }

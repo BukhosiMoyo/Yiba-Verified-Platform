@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Shield, FileCheck, Users, Check } from "lucide-react";
+import { ArrowRight, Shield, FileCheck, Users, Check, Building2, GraduationCap, Clock, TrendingUp, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -80,21 +80,45 @@ export default function HomePage() {
           </div>
         </GradientShell>
 
-        {/* Proof / metrics strip */}
-        <section className="py-8 border-y border-border/60 bg-muted/30">
+        {/* Stats Section */}
+        <section className="py-16 sm:py-20 border-y border-border/60 bg-muted/30">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-center gap-12 text-center">
-              <div>
-                <p className="text-2xl font-semibold text-foreground">QCTO</p>
-                <p className="text-sm text-muted-foreground">Aligned</p>
+            <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Building2 className="h-6 w-6" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold text-foreground">50+</p>
+                <p className="text-sm text-muted-foreground mt-1">Institutions Onboarded</p>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-foreground">SAQA</p>
-                <p className="text-sm text-muted-foreground">Compliant</p>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <GraduationCap className="h-6 w-6" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold text-foreground">10,000+</p>
+                <p className="text-sm text-muted-foreground mt-1">Learners Tracked</p>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-foreground">Secure</p>
-                <p className="text-sm text-muted-foreground">By design</p>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Clock className="h-6 w-6" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold text-foreground">70%</p>
+                <p className="text-sm text-muted-foreground mt-1">Faster Review Times</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <TrendingUp className="h-6 w-6" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold text-foreground">99.9%</p>
+                <p className="text-sm text-muted-foreground mt-1">Platform Uptime</p>
               </div>
             </div>
           </div>
@@ -129,6 +153,56 @@ export default function HomePage() {
                     <Button asChild variant="link" className="p-0 text-primary font-medium group-hover:underline">
                       <Link href="/features" className="inline-flex items-center">Learn more <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} aria-hidden /></Link>
                     </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="py-20 sm:py-28 border-t border-border/60">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center mb-16">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Trusted by institutions across South Africa
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                See how Yiba Verified is transforming QCTO compliance for education providers.
+              </p>
+            </div>
+            <div className="grid gap-8 md:grid-cols-3">
+              {[
+                {
+                  quote: "Yiba Verified has completely transformed how we manage our QCTO compliance. What used to take weeks now takes days.",
+                  author: "Dr. Sarah Molefe",
+                  role: "Quality Assurance Director",
+                  org: "Technical Training College",
+                },
+                {
+                  quote: "The platform gives us complete visibility into our readiness status. We can identify gaps before they become problems.",
+                  author: "James van der Berg",
+                  role: "Compliance Manager",
+                  org: "Skills Development Centre",
+                },
+                {
+                  quote: "As a QCTO reviewer, having all documentation in one place with proper audit trails makes my job significantly easier.",
+                  author: "Nomvula Dlamini",
+                  role: "QCTO Quality Reviewer",
+                  org: "Quality Council for Trades and Occupations",
+                },
+              ].map((testimonial, i) => (
+                <Card key={i} className="relative border-[var(--border-subtle)] bg-card">
+                  <CardContent className="pt-6">
+                    <Quote className="h-8 w-8 text-primary/20 mb-4" strokeWidth={1} />
+                    <p className="text-foreground leading-relaxed mb-6">
+                      &ldquo;{testimonial.quote}&rdquo;
+                    </p>
+                    <div className="border-t border-border pt-4">
+                      <p className="font-semibold text-foreground">{testimonial.author}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.org}</p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

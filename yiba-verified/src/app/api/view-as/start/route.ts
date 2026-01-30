@@ -16,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/context";
+import { requireAuth, getEffectiveRoleForPermissions } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import {
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     const { ctx } = await requireAuth(request);
 
     // Check if user has permission to view as other users
+    // Use effective role (original role when viewing as someone) for permission checks
+    const effectiveRole = getEffectiveRoleForPermissions(ctx);
     const canViewAsRoles = [
       "PLATFORM_ADMIN",
       "QCTO_SUPER_ADMIN",
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
       "INSTITUTION_ADMIN",
     ];
 
-    if (!canViewAsRoles.includes(ctx.role)) {
+    if (!canViewAsRoles.includes(effectiveRole)) {
       return fail(
         new AppError(
           ERROR_CODES.FORBIDDEN,
@@ -68,7 +70,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if viewer can view as target
-    await assertCanViewAsUser(ctx.userId, body.targetUserId);
+    // Use original user ID (not viewing-as user ID) for permission check
+    const viewerUserId = ctx.originalUserId || ctx.userId;
+    await assertCanViewAsUser(viewerUserId, body.targetUserId);
 
     // Get viewing as context
     const viewAsContext = await getViewAsUserContext(body.targetUserId);

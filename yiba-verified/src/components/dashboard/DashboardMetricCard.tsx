@@ -6,29 +6,29 @@ import { cn } from "@/lib/utils";
 export type DashboardMetricColorVariant = "blue" | "green" | "amber" | "purple" | "cyan";
 export type DashboardMetricTrendTint = "green" | "amber" | "blue";
 
-/** Faint top gradient + light blue wash at bottom. */
-const gradientByVariant: Record<DashboardMetricColorVariant, string> = {
-  amber: "bg-gradient-to-b from-amber-50/60 to-sky-50/50",
-  green: "bg-gradient-to-b from-emerald-50/60 to-sky-50/50",
-  blue: "bg-gradient-to-b from-blue-50/60 to-sky-50/50",
-  purple: "bg-gradient-to-b from-indigo-50/60 to-sky-50/50",
-  cyan: "bg-gradient-to-b from-cyan-50/60 to-sky-50/50",
+/** Card background with subtle gradient - dark mode aware */
+const cardStyleByVariant: Record<DashboardMetricColorVariant, string> = {
+  amber: "bg-card border-amber-200/50 dark:border-amber-500/20",
+  green: "bg-card border-emerald-200/50 dark:border-emerald-500/20",
+  blue: "bg-card border-blue-200/50 dark:border-blue-500/20",
+  purple: "bg-card border-indigo-200/50 dark:border-indigo-500/20",
+  cyan: "bg-card border-cyan-200/50 dark:border-cyan-500/20",
 };
 
-/** Icon chip: rounded-xl p-2.5, tinted bg. */
+/** Icon chip: rounded-xl p-2.5, tinted bg - dark mode aware */
 const iconChipByVariant: Record<DashboardMetricColorVariant, string> = {
-  amber: "bg-amber-50 text-amber-700",
-  green: "bg-emerald-50 text-emerald-700",
-  blue: "bg-blue-50 text-blue-700",
-  purple: "bg-indigo-50 text-indigo-700",
-  cyan: "bg-cyan-50 text-cyan-700",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+  green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+  blue: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
+  purple: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400",
+  cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400",
 };
 
-/** Trend chip. */
+/** Trend chip - dark mode aware */
 const trendChipByTint: Record<DashboardMetricTrendTint, string> = {
-  green: "bg-emerald-50/90 text-emerald-600 border-emerald-200/60",
-  amber: "bg-amber-50/90 text-amber-600 border-amber-200/60",
-  blue: "bg-blue-50/90 text-blue-600 border-blue-200/60",
+  green: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30",
+  amber: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30",
+  blue: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30",
 };
 
 export interface DashboardMetricCardProps {
@@ -46,7 +46,7 @@ export interface DashboardMetricCardProps {
 }
 
 /**
- * Metric card for QCTO dashboard. Solid surface, gradient tint, light blue wash, icon chip.
+ * Metric card for QCTO dashboard. Solid surface, subtle colored border, icon chip.
  */
 export function DashboardMetricCard({
   title,
@@ -65,16 +65,15 @@ export function DashboardMetricCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-gray-200/70 shadow-sm",
-        "backdrop-blur-sm bg-white/95",
-        gradientByVariant[colorVariant],
+        "overflow-hidden rounded-xl border shadow-sm dark:shadow-none",
+        cardStyleByVariant[colorVariant],
         compact ? "p-4" : "p-5",
         "flex flex-col gap-3",
         className
       )}
     >
       <div className={cn("flex items-start justify-between gap-3", compact ? "gap-2" : "")}>
-        <span className="text-sm font-medium text-gray-600">{title}</span>
+        <span className="text-sm font-medium text-muted-foreground">{title}</span>
         <span
           className={cn(
             "flex shrink-0 items-center justify-center rounded-xl p-2.5",
@@ -88,13 +87,13 @@ export function DashboardMetricCard({
         <div>
           <div
             className={cn(
-              "font-semibold text-gray-900",
+              "font-semibold text-foreground",
               compact ? "text-2xl" : "text-3xl"
             )}
           >
             {value}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{subtext}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{subtext}</p>
         </div>
         <span
           className={cn(

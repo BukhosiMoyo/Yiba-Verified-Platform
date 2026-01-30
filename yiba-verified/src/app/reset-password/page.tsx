@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormItem, FormErrorMessage, FormHint } from "@/components/ui/form";
+import { PasswordStrengthIndicator } from "@/components/shared/PasswordStrengthIndicator";
+import { checkPasswordStrength } from "@/lib/password-strength";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -28,8 +30,16 @@ function ResetPasswordContent() {
 
   // Validate password on change
   useEffect(() => {
-    if (password && password.length < 8) {
+    if (!password) {
+      setPasswordError("");
+      return;
+    }
+    
+    const strength = checkPasswordStrength(password);
+    if (!strength.meetsMinimum) {
       setPasswordError("Password must be at least 8 characters");
+    } else if (strength.strength === "weak") {
+      setPasswordError("Password is too weak. Please use a stronger password.");
     } else {
       setPasswordError("");
     }
@@ -55,8 +65,13 @@ function ResetPasswordContent() {
       setPasswordError("Password is required");
       return;
     }
-    if (password.length < 8) {
+    const strength = checkPasswordStrength(password);
+    if (!strength.meetsMinimum) {
       setPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    if (strength.strength === "weak") {
+      setPasswordError("Password is too weak. Please use a stronger password.");
       return;
     }
     if (!confirmPassword) {
@@ -139,8 +154,11 @@ function ResetPasswordContent() {
             {passwordError && (
               <FormErrorMessage>{passwordError}</FormErrorMessage>
             )}
-            {!passwordError && (
-              <FormHint>Password must be at least 8 characters long</FormHint>
+            {password && (
+              <PasswordStrengthIndicator password={password} className="mt-2" />
+            )}
+            {!password && (
+              <FormHint>Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters</FormHint>
             )}
           </div>
 

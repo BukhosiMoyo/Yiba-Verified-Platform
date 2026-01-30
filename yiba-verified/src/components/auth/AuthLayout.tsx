@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Shield, FileCheck, Lock } from "lucide-react";
 import { DotGrid, DotGridDark } from "@/components/shared/Backgrounds";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
@@ -36,7 +37,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           <div className="flex-1 flex flex-col justify-center px-14 py-20 relative z-10">
             {/* Brand & Headline */}
             <div className="mb-10">
-              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-11 object-contain object-left mb-5" />
+              <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={200} height={44} className="h-11 object-contain object-left mb-5 dark:hidden" sizes="200px" priority loading="eager" />
+              <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={200} height={44} className="h-11 object-contain object-left mb-5 hidden dark:block" sizes="200px" priority loading="eager" />
               <h2 className="text-2xl font-semibold text-foreground mb-2">Yiba Verified</h2>
               <p className="text-base text-muted-foreground">
                 Streamline your qualification verification. Manage documents, track submissions, and ensure compliance with ease.

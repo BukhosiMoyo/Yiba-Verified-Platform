@@ -19,7 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { mutateWithAudit } from "@/server/mutations/mutate";
 
 interface CompleteOnboardingBody {
-  default_province: string;
+  default_province: string | null;
   assigned_provinces: string[];
 }
 
@@ -56,15 +56,17 @@ export async function POST(request: NextRequest) {
     // Validate province assignment
     validateProvinceAssignment(ctx.role, body.default_province, body.assigned_provinces);
 
-    // Update user with province assignments and mark onboarding as complete
+    // Update user with province assignments and mark onboarding as complete.
+    // Self-update only; omit institutionId so we skip institution scoping (QCTO users would otherwise get "insufficient permissions").
+    // allowQctoReviewOperations: skip assertNotQCTOEdit so QCTO_USER can complete their own onboarding (USER self-update).
     await mutateWithAudit({
       entityType: "USER",
       changeType: "UPDATE",
       fieldName: "onboarding_completed",
       oldValue: "false",
       newValue: "true",
-      institutionId: null,
       reason: "Complete QCTO onboarding with province assignments",
+      allowQctoReviewOperations: true,
       assertCan: async (tx, ctx) => {
         // User can update their own onboarding
       },

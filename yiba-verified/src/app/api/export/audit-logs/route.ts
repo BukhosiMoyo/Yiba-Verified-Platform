@@ -4,23 +4,28 @@ import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { canAccessQctoData } from "@/lib/rbac";
+import { devLogSlow } from "@/lib/devTiming";
+
+const ROUTE_LABEL = "GET /api/export/audit-logs";
 
 /**
  * GET /api/export/audit-logs
- * 
+ *
  * Export audit logs to CSV or JSON format.
  * - PLATFORM_ADMIN and QCTO_USER can export (AUDIT_EXPORT)
- * 
+ *
  * Query params:
  * - format: 'csv' | 'json' (default: 'csv')
  * - entity_type, entity_id, change_type, institution_id, changed_by: Filters
  * - start_date, end_date: Date range filters
  */
 export async function GET(request: NextRequest) {
+  const start = Date.now();
   try {
     const ctx = await requireApiContext(request);
 
     if (!canAccessQctoData(ctx.role)) {
+      devLogSlow(ROUTE_LABEL, start);
       return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only QCTO and platform administrators can export audit logs", 403));
     }
 
@@ -61,9 +66,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch audit logs (no pagination for exports)
+    // Fetch audit logs (capped to avoid timeouts on large exports)
+    const EXPORT_MAX_ROWS = 50_000;
     const auditLogs = await prisma.auditLog.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
       include: {
         changedBy: {
           select: {
@@ -88,6 +95,7 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get("format") || "csv";
 
     if (format === "json") {
+      devLogSlow(ROUTE_LABEL, start);
       return NextResponse.json(
         {
           count: auditLogs.length,
@@ -159,6 +167,7 @@ export async function GET(request: NextRequest) {
 
     const csv = csvRows.join("\n");
 
+    devLogSlow(ROUTE_LABEL, start);
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv",
@@ -166,6 +175,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    devLogSlow(ROUTE_LABEL, start);
     if (error instanceof AppError) {
       return fail(error);
     }

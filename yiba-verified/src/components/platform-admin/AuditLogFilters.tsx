@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DatePickerV2 } from "@/components/ui/date-picker-v2";
 import { Filter, X } from "lucide-react";
 
 type FilterState = {
@@ -117,14 +117,14 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
   const hasActive = toParams(filters).length > 0;
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between gap-3">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Filter audit logs</h2>
+          <Filter className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+          <h2 className="text-sm font-semibold text-foreground">Filter audit logs</h2>
         </div>
         {hasActive && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 -mr-1">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground -mr-1">
             <X className="h-4 w-4 mr-1.5" />
             Clear
           </Button>
@@ -135,14 +135,14 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
         {/* Entity & change */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="entity_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label htmlFor="entity_type" className="text-sm font-medium text-foreground">
               Entity type
             </Label>
             <Select
               id="entity_type"
               value={filters.entity_type}
               onChange={(e) => updateAndApply({ entity_type: e.target.value }, true)}
-              className="h-10 w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+              className="h-10 w-full rounded-lg"
             >
               <option value="">All entities</option>
               <option value="LEARNER">Learner</option>
@@ -151,17 +151,18 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
               <option value="USER">User</option>
               <option value="READINESS">Readiness</option>
               <option value="DOCUMENT">Document</option>
+              <option value="EMAIL_TEMPLATE">Email template</option>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="change_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label htmlFor="change_type" className="text-sm font-medium text-foreground">
               Change type
             </Label>
             <Select
               id="change_type"
               value={filters.change_type}
               onChange={(e) => updateAndApply({ change_type: e.target.value }, true)}
-              className="h-10 w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+              className="h-10 w-full rounded-lg"
             >
               <option value="">All changes</option>
               <option value="CREATE">Create</option>
@@ -174,10 +175,10 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
 
         {/* IDs */}
         <div className="space-y-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">IDs</span>
+          <span className="text-sm font-medium text-foreground">IDs</span>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="entity_id" className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <Label htmlFor="entity_id" className="text-xs font-medium text-muted-foreground">
                 Entity ID
               </Label>
               <Input
@@ -186,11 +187,11 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
                 placeholder="e.g. learner-123"
                 value={filters.entity_id}
                 onChange={(e) => setFilters((p) => ({ ...p, entity_id: e.target.value }))}
-                className="h-10 rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                className="h-10 rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="institution_id" className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <Label htmlFor="institution_id" className="text-xs font-medium text-muted-foreground">
                 Institution ID
               </Label>
               <Input
@@ -199,11 +200,11 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
                 placeholder="e.g. inst-123"
                 value={filters.institution_id}
                 onChange={(e) => setFilters((p) => ({ ...p, institution_id: e.target.value }))}
-                className="h-10 rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                className="h-10 rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="changed_by" className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <Label htmlFor="changed_by" className="text-xs font-medium text-muted-foreground">
                 Changed by (user ID)
               </Label>
               <Input
@@ -212,7 +213,7 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
                 placeholder="e.g. user-123"
                 value={filters.changed_by}
                 onChange={(e) => setFilters((p) => ({ ...p, changed_by: e.target.value }))}
-                className="h-10 rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                className="h-10 rounded-lg"
               />
             </div>
           </div>
@@ -220,30 +221,30 @@ export function AuditLogFilters({ searchParams, basePath = "/platform-admin/audi
 
         {/* Date range */}
         <div className="space-y-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Date range</span>
+          <span className="text-sm font-medium text-foreground">Date range</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date" className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <Label htmlFor="start_date" className="text-xs font-medium text-muted-foreground">
                 From
               </Label>
-              <DatePicker
+              <DatePickerV2
                 id="start_date"
                 value={filters.start_date}
-                onChange={(e) => updateAndApply({ start_date: e.target.value }, true)}
+                onChange={(value) => updateAndApply({ start_date: value }, true)}
                 placeholder="Start date"
-                className="h-10 w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                className="h-10 w-full"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end_date" className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <Label htmlFor="end_date" className="text-xs font-medium text-muted-foreground">
                 To
               </Label>
-              <DatePicker
+              <DatePickerV2
                 id="end_date"
                 value={filters.end_date}
-                onChange={(e) => updateAndApply({ end_date: e.target.value }, true)}
+                onChange={(value) => updateAndApply({ end_date: value }, true)}
                 placeholder="End date"
-                className="h-10 w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                className="h-10 w-full"
               />
             </div>
           </div>

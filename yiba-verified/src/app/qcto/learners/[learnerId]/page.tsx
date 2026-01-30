@@ -8,6 +8,7 @@ import { canAccessQctoData } from "@/lib/rbac";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
+import { LearnerAcademicHistory } from "@/components/qcto/LearnerAcademicHistory";
 
 interface PageProps {
   params: Promise<{ learnerId: string }>;
@@ -149,6 +150,8 @@ export default async function QCTOLearnerDetailPage({ params }: PageProps) {
           </div>
         </CardContent>
       </Card>
+
+      <LearnerAcademicHistory learnerId={learnerId} />
     </div>
   );
 }

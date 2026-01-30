@@ -92,10 +92,10 @@ export function AdditionalInfoStep({ initialData, onNext, onBack, onAutoSave }: 
             id="ethnicity"
             value={ethnicity}
             onChange={(e) => setEthnicity(e.target.value)}
-            placeholder="Select ethnicity"
             className={errors.ethnicity ? "border-red-500" : ""}
             aria-invalid={!!errors.ethnicity}
           >
+            <option value="">Select ethnicity</option>
             {ETHNICITY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

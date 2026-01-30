@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateRouteParamUUID, validateRouteParamsUUID } from "@/lib/security/validation";
 import { checkRateLimit, RATE_LIMITS, createRateLimitHeaders } from "./rateLimit";
 import { validateRequestSize, MAX_REQUEST_SIZE, MAX_UPLOAD_SIZE } from "./requestLimits";
+
+export { RATE_LIMITS };
 import { AppError, ERROR_CODES } from "./errors";
 import { fail } from "./response";
 import type { ApiContext } from "./context";

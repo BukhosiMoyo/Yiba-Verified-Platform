@@ -11,8 +11,9 @@ interface OnboardingLayoutWrapperProps {
 export function OnboardingLayoutWrapper({ children, withAppShell }: OnboardingLayoutWrapperProps) {
   const pathname = usePathname();
   const isOnboardingPage = pathname === "/student/onboarding";
+  const isEditCvPage = pathname?.startsWith("/student/profile/edit");
 
-  if (isOnboardingPage) {
+  if (isOnboardingPage || isEditCvPage) {
     return <>{children}</>;
   }
 

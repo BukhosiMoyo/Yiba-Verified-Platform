@@ -12,9 +12,9 @@ interface RouteParams {
 
 /**
  * PATCH /api/notifications/[notificationId]
- * 
+ *
  * Mark a notification as read.
- * - Users can only mark their own notifications as read
+ * Scoping: never return or modify another user's notification; only own (or PLATFORM_ADMIN for support).
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {

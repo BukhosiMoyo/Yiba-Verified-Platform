@@ -5,6 +5,7 @@ import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { canAccessQctoData } from "@/lib/rbac";
+import { Notifications } from "@/lib/notifications";
 
 interface RouteParams {
   params: Promise<{
@@ -70,6 +71,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         return newFlag;
       },
     });
+
+    // Notify document owner (uploader)
+    await Notifications.documentFlagged(document.uploaded_by, documentId);
 
     return NextResponse.json({
       flag_id: flag.flag_id,

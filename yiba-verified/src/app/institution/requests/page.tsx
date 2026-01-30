@@ -77,6 +77,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
       request_type: true,
       status: true,
       requested_at: true,
+      response_deadline: true,
       reviewed_at: true,
       expires_at: true,
       created_at: true,
@@ -163,6 +164,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
                 <TableHead>Status</TableHead>
                 <TableHead>Requested By</TableHead>
                 <TableHead>Requested</TableHead>
+                <TableHead>Response By</TableHead>
                 <TableHead>Reviewed</TableHead>
                 <TableHead>Expires</TableHead>
                 <TableHead>Resources</TableHead>
@@ -172,7 +174,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
             <TableBody>
               {requests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-12">
+                  <TableCell colSpan={10} className="py-12">
                     <EmptyState
                       title="No QCTO requests found"
                       description={
@@ -189,6 +191,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
                 requests.map((request) => {
                   const statusInfo = formatStatus(request.status);
                   const isExpired = request.expires_at && new Date(request.expires_at) < new Date();
+                  const isOverdue = request.status === "PENDING" && request.response_deadline && new Date(request.response_deadline) < new Date();
                   return (
                     <TableRow key={request.request_id}>
                       <TableCell className="font-medium">{request.title}</TableCell>
@@ -199,11 +202,25 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
                         >
                           {statusInfo.label}
                         </span>
+                        {isOverdue && (
+                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            Overdue
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser?.email || "N/A"}
                       </TableCell>
                       <TableCell>{formatDateTime(request.requested_at)}</TableCell>
+                      <TableCell>
+                        {request.response_deadline ? (
+                          <span className={isOverdue ? "text-amber-600 dark:text-amber-400" : ""}>
+                            {formatDate(request.response_deadline)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
                       <TableCell>
                         {request.reviewed_at ? formatDateTime(request.reviewed_at) : "Not reviewed"}
                       </TableCell>

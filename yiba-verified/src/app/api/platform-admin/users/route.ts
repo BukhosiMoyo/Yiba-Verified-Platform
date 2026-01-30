@@ -14,9 +14,10 @@
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/api/context";
+import { requireRole } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { createAuditLogs, serializeValue } from "@/services/audit.service";
 
 /**
  * GET /api/platform-admin/users
@@ -33,16 +34,8 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
  */
 export async function GET(request: NextRequest) {
   try {
-    const { ctx } = await requireAuth(request);
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
+    // RBAC: Only PLATFORM_ADMIN (uses original role when viewing as another user)
+    const ctx = await requireRole(request, "PLATFORM_ADMIN");
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -95,12 +88,12 @@ export async function GET(request: NextRequest) {
       where.institution_id = institutionId;
     }
 
-    // Add search filter
-    if (searchQuery.trim() && searchQuery.length >= 2) {
+    // Add search filter (allow 1+ character so search feels responsive)
+    if (searchQuery.trim()) {
       where.OR = [
-        { email: { contains: searchQuery, mode: "insensitive" } },
-        { first_name: { contains: searchQuery, mode: "insensitive" } },
-        { last_name: { contains: searchQuery, mode: "insensitive" } },
+        { email: { contains: searchQuery.trim(), mode: "insensitive" } },
+        { first_name: { contains: searchQuery.trim(), mode: "insensitive" } },
+        { last_name: { contains: searchQuery.trim(), mode: "insensitive" } },
       ];
     }
 
@@ -165,16 +158,8 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const { ctx } = await requireAuth(request);
-
-    // RBAC: Only PLATFORM_ADMIN
-    if (ctx.role !== "PLATFORM_ADMIN") {
-      throw new AppError(
-        ERROR_CODES.FORBIDDEN,
-        "Only PLATFORM_ADMIN can access this endpoint",
-        403
-      );
-    }
+    // RBAC: Only PLATFORM_ADMIN (uses original role when viewing as another user)
+    const ctx = await requireRole(request, "PLATFORM_ADMIN");
 
     const body = await request.json();
     const { user_id, ...updateData } = body;
@@ -187,9 +172,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Check if user exists
+    // Check if user exists and get all current values for comparison
     const existingUser = await prisma.user.findUnique({
       where: { user_id },
+      select: {
+        user_id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        phone: true,
+        role: true,
+        status: true,
+        institution_id: true,
+        deleted_at: true,
+      },
     });
 
     if (!existingUser || existingUser.deleted_at) {
@@ -230,30 +226,73 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { user_id },
-      data: {
-        ...updateData,
-        updated_at: new Date(),
-      },
-      select: {
-        user_id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        role: true,
-        status: true,
-        phone: true,
-        created_at: true,
-        institution: {
-          select: {
-            institution_id: true,
-            legal_name: true,
-            trading_name: true,
+    // Update user with audit logging
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { user_id },
+        data: {
+          ...updateData,
+          updated_at: new Date(),
+        },
+        select: {
+          user_id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          role: true,
+          status: true,
+          phone: true,
+          created_at: true,
+          institution_id: true,
+          institution: {
+            select: {
+              institution_id: true,
+              legal_name: true,
+              trading_name: true,
+            },
           },
         },
-      },
+      });
+
+      // Create audit logs for each changed field
+      const auditEntries = [];
+      for (const [field, newValue] of Object.entries(updateData)) {
+        if (field === "updated_at") continue; // Skip timestamp
+        
+        const oldValue = existingUser[field as keyof typeof existingUser];
+        
+        // Normalize values for comparison - handle null, undefined, empty string, and whitespace
+        const normalize = (val: any): string => {
+          if (val === null || val === undefined) return "";
+          if (typeof val === "string") return val.trim();
+          return String(val).trim();
+        };
+        
+        const normalizedOld = normalize(oldValue);
+        const normalizedNew = normalize(newValue);
+        
+        // Only create audit log if values actually changed
+        if (normalizedOld !== normalizedNew) {
+          auditEntries.push({
+            entityType: "USER" as const,
+            entityId: user_id,
+            fieldName: field,
+            oldValue: serializeValue(oldValue ?? null),
+            newValue: serializeValue(newValue ?? null),
+            changedBy: ctx.userId,
+            roleAtTime: ctx.role,
+            changeType: field === "status" ? ("STATUS_CHANGE" as const) : ("UPDATE" as const),
+            reason: null,
+            institutionId: updated.institution_id,
+          });
+        }
+      }
+
+      if (auditEntries.length > 0) {
+        await createAuditLogs(tx, auditEntries);
+      }
+
+      return updated;
     });
 
     return ok(updatedUser);

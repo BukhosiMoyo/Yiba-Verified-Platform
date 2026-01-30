@@ -27,7 +27,14 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingTable } from "@/components/shared/LoadingTable";
-import { Search, GraduationCap, Plus, ChevronDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Search, GraduationCap, Plus, ChevronDown, ArrowUp, ArrowDown, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:platform_admin_qualifications";
@@ -40,6 +47,7 @@ const COLUMNS = [
   { id: "code", label: "Code", minWidth: 120, sortable: true },
   { id: "created", label: "Created", minWidth: 110, sortable: true },
   { id: "updated", label: "Updated", minWidth: 110, sortable: true },
+  { id: "actions", label: "Actions", minWidth: 100, sortable: false },
 ] as const;
 
 function QualificationsPageContent() {
@@ -59,6 +67,57 @@ function QualificationsPageContent() {
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [detailsData, setDetailsData] = useState<{
+    qualification_id: string;
+    name: string;
+    code: string | null;
+    created_at: string;
+    updated_at: string;
+    _count: { enrolments: number };
+    enrolments: Array<{
+      enrolment_id: string;
+      qualification_title: string;
+      enrolment_status: string;
+      start_date: string;
+      created_at: string;
+      institution?: { legal_name: string | null; trading_name: string | null };
+      learner?: { first_name: string; last_name: string };
+    }>;
+  } | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  const openDetails = (qualificationId: string) => {
+    setDetailsId(qualificationId);
+    setDetailsOpen(true);
+    setDetailsData(null);
+    setDetailsError(null);
+    setDetailsLoading(true);
+    fetch(`/api/platform-admin/qualifications/${qualificationId}`)
+      .then((res) => {
+        if (!res.ok) {
+          if (res.status === 404) return { error: "Qualification not found." };
+          return res.json().then((d) => ({ error: d.error || "Failed to load" }));
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.error) {
+          setDetailsError(data.error);
+          setDetailsData(null);
+        } else {
+          setDetailsData(data);
+          setDetailsError(null);
+        }
+      })
+      .catch(() => {
+        setDetailsError("Failed to load qualification details.");
+        setDetailsData(null);
+      })
+      .finally(() => setDetailsLoading(false));
+  };
 
   useEffect(() => {
     try {
@@ -239,7 +298,7 @@ function QualificationsPageContent() {
               Add Qualification
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-white">
+          <DialogContent className="bg-card">
             <DialogHeader>
               <DialogTitle>Create New Qualification</DialogTitle>
               <DialogDescription>
@@ -281,7 +340,7 @@ function QualificationsPageContent() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-48 sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search qualifications"
             value={searchQuery}
@@ -292,7 +351,7 @@ function QualificationsPageContent() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+        <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg text-red-800 dark:text-red-300 text-sm">
           {error}
         </div>
       )}
@@ -312,7 +371,7 @@ function QualificationsPageContent() {
         />
       ) : (
         <>
-          <div className="rounded-xl border border-gray-200/60 overflow-x-auto bg-white">
+          <div className="rounded-xl border border-border overflow-x-auto bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -340,7 +399,7 @@ function QualificationsPageContent() {
                             ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
                             ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
                             minWidth: col.minWidth,
-                            backgroundColor: "rgb(249, 250, 251)",
+                            backgroundColor: "hsl(var(--muted))",
                           }
                         : { minWidth: col.minWidth };
                     return (
@@ -355,10 +414,10 @@ function QualificationsPageContent() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-gray-200/60"
+                                className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-muted"
                                 aria-label={`Column menu for ${col.label}`}
                               >
-                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
@@ -437,7 +496,7 @@ function QualificationsPageContent() {
                                 ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
                                 ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
                                 minWidth: col.minWidth,
-                                backgroundColor: "white",
+                                backgroundColor: "hsl(var(--card))",
                                 boxShadow: isLeft
                                   ? "2px 0 4px -2px rgba(0,0,0,0.06)"
                                   : isRight
@@ -550,6 +609,22 @@ function QualificationsPageContent() {
                             </TableCell>
                           );
                         }
+                        if (col.id === "actions") {
+                          return (
+                            <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDetails(qualification.qualification_id);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" /> View details
+                              </Button>
+                            </TableCell>
+                          );
+                        }
                         return (
                           <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
                         );
@@ -563,7 +638,7 @@ function QualificationsPageContent() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Rows per page</span>
+              <span className="text-sm text-muted-foreground">Rows per page</span>
               <Select
                 value={String(pageSize)}
                 onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
@@ -577,7 +652,7 @@ function QualificationsPageContent() {
               </Select>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total}
               </span>
               <div className="flex gap-2">
@@ -600,6 +675,79 @@ function QualificationsPageContent() {
               </div>
             </div>
           </div>
+
+          <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <SheetContent
+              side="right"
+              className="inset-y-0 right-0 h-full w-full max-w-xl rounded-none border-l border-border bg-background shadow-xl overflow-y-auto"
+            >
+              <SheetHeader className="text-left space-y-2 pb-6 border-b border-border">
+                <SheetTitle className="text-foreground text-xl">Qualification details</SheetTitle>
+                <SheetDescription className="text-muted-foreground">
+                  Extra details for this qualification, including linked enrolments.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                {detailsLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {detailsError && !detailsLoading && (
+                  <p className="text-destructive text-sm py-4 px-1">{detailsError}</p>
+                )}
+                {detailsData && !detailsLoading && (
+                  <div className="space-y-6">
+                    <section className="space-y-1">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</h3>
+                      <p className="text-foreground font-medium">{detailsData.name}</p>
+                    </section>
+                    {detailsData.code && (
+                      <section className="space-y-1">
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Code</h3>
+                        <p className="text-foreground font-mono text-sm">{detailsData.code}</p>
+                      </section>
+                    )}
+                    <section className="space-y-1">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</h3>
+                      <p className="text-foreground text-sm">{formatDate(detailsData.created_at)}</p>
+                    </section>
+                    <section className="space-y-1">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Updated</h3>
+                      <p className="text-foreground text-sm">{formatDate(detailsData.updated_at)}</p>
+                    </section>
+                    <section className="space-y-3">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Enrolments</h3>
+                      <p className="text-foreground text-sm">{detailsData._count.enrolments} linked enrolment(s)</p>
+                      {detailsData.enrolments.length > 0 && (
+                        <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 border-b border-border bg-background/80">
+                            Recent enrolments (up to 20)
+                          </h4>
+                          <ul className="divide-y divide-border">
+                            {detailsData.enrolments.map((e) => (
+                              <li key={e.enrolment_id} className="px-4 py-3 text-sm hover:bg-muted/40 transition-colors duration-150">
+                                <span className="font-medium text-foreground">
+                                  {e.learner ? `${e.learner.first_name} ${e.learner.last_name}` : "—"}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  · {e.institution ? (e.institution.trading_name || e.institution.legal_name || "—") : "—"}
+                                </span>
+                                <span className="block text-xs text-muted-foreground mt-1">
+                                  {e.qualification_title} · {e.enrolment_status} · from {formatDate(e.start_date)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </>
       )}
     </div>

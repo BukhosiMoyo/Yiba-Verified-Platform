@@ -71,7 +71,7 @@ export default function InviteAnalyticsPage() {
 
   const fetchInstitutions = async () => {
     try {
-      const response = await fetch("/api/dev/institutions?limit=100");
+      const response = await fetch("/api/platform-admin/institutions?limit=100");
       if (response.ok) {
         const data = await response.json();
         setInstitutions(data.items || []);

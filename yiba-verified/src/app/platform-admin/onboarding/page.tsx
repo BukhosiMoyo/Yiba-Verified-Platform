@@ -19,15 +19,15 @@ export default async function PlatformAdminOnboardingPage() {
     redirect("/unauthorized");
   }
 
-  // Check onboarding status
-  const user = await prisma.user.findUnique({
-    where: { user_id: session.user.userId },
-    select: {
-      onboarding_completed: true,
-    },
-  });
+  // Check onboarding status by email (same as layout and API)
+  const email = session.user.email;
+  const user = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { onboarding_completed: true },
+      })
+    : null;
 
-  // If already completed, redirect to dashboard
   if (user?.onboarding_completed) {
     redirect("/platform-admin");
   }

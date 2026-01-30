@@ -77,7 +77,7 @@ const PROVINCES = [
   "Western Cape",
 ];
 
-const INSTITUTION_TYPES = ["TVET", "PRIVATE_SDP", "NGO", "UNIVERSITY", "OTHER"] as const;
+const INSTITUTION_TYPES = ["TVET", "PRIVATE_SDP", "NGO", "UNIVERSITY", "EMPLOYER", "OTHER"] as const;
 const DELIVERY_MODES = ["FACE_TO_FACE", "BLENDED", "MOBILE"] as const;
 
 const MALE_FIRST = [

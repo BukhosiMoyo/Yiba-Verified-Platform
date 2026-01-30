@@ -14,6 +14,7 @@ import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { cookies } from "next/headers";
+import type { Role } from "@/lib/rbac";
 
 /**
  * POST /api/view-as/stop
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get original role before clearing cookies (for redirect)
+    const originalRole = ctx.originalRole || ctx.role;
+
     // Clear viewing as cookies
     const cookieStore = await cookies();
     cookieStore.delete("viewing_as_user_id");
@@ -41,9 +45,21 @@ export async function POST(request: NextRequest) {
     cookieStore.delete("viewing_as_institution_id");
     cookieStore.delete("viewing_as_qcto_id");
 
+    // Get dashboard route for original role
+    function getDashboardRoute(role: Role): string {
+      if (role === "PLATFORM_ADMIN") return "/platform-admin";
+      if (role.startsWith("QCTO_")) return "/qcto";
+      if (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF") return "/institution";
+      if (role === "STUDENT") return "/student";
+      return "/";
+    }
+
+    const dashboardRoute = getDashboardRoute(originalRole);
+
     return NextResponse.json({
       success: true,
       message: "Stopped viewing as another user",
+      redirectTo: dashboardRoute,
     });
   } catch (error) {
     if (error instanceof AppError) {

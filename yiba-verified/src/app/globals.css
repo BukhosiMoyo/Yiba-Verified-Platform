@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark mode: driven by .dark class on html (next-themes) so dark: utilities work when user toggles theme */
+@custom-variant dark (&&:where(.dark, .dark *));
+
 /* ==========================================================================
    Yiba Verified — Design tokens (Stripe/Linear-style SaaS)
    Light + Dark: :root = light, .dark = dark (use next-themes or class on html)
@@ -28,7 +31,9 @@
   --bg-gradient-cta-end: #e4e4e7;
 
   /* Pattern opacity (dial down in dark) */
-  --pattern-opacity: 0.5;
+  --pattern-opacity: 0.15;
+  /* Dot pattern color for onboarding (theme-aware) */
+  --pattern-dot: #3b82f6;
 
   /* Shadows */
   --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04);
@@ -60,7 +65,8 @@
   --bg-gradient-cta-start: #18181b;
   --bg-gradient-cta-end: #27272a;
 
-  --pattern-opacity: 0.25;
+  --pattern-opacity: 0.1;
+  --pattern-dot: rgba(96, 165, 250, 0.5);
 
   --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.25);
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
@@ -286,19 +292,318 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%2364748b' fill-opacity='0.10'/%3E%3C/svg%3E");
 }
 
-/* Form 5 Readiness: blue-tinted dot pattern for main form panel */
-.readiness-form-pattern {
-  position: relative;
-  overflow: hidden;
-}
-.readiness-form-pattern::before {
-  content: "";
-  position: absolute;
+/* Form 5 Readiness: blue-tinted dot pattern for page background (behind all content) */
+.readiness-page-pattern {
+  position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%232563eb' fill-opacity='0.08'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%232563eb' fill-opacity='0.06'/%3E%3C/svg%3E");
   background-repeat: repeat;
   pointer-events: none;
   z-index: 0;
-  mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
+}
+
+/* ==========================================================================
+   Custom Scrollbar Styles
+   Hidden by default, visible on hover with smooth transitions
+   ========================================================================== */
+
+/* Scrollbar container */
+.scrollbar-hidden {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-hidden:hover {
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Nice thin scrollbar (always visible but subtle) */
+.scrollbar-nice {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollbar-nice::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-nice::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-nice::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.scrollbar-nice::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Invisible scrollbar - still functional but completely hidden */
+.scrollbar-invisible {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.scrollbar-invisible::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* ==========================================================================
+   Blog Content Styles
+   Beautiful typography for blog posts with proper heading hierarchy
+   ========================================================================== */
+
+.blog-content {
+  /* CSS variables for blog theming */
+  --blog-text: var(--foreground);
+  --blog-text-muted: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --blog-primary: var(--color-primary, #2563eb);
+  --blog-border: var(--border);
+  --blog-muted: var(--muted);
+}
+
+/* Base prose overrides */
+.blog-content .prose {
+  --tw-prose-body: var(--blog-text-muted);
+  --tw-prose-headings: var(--blog-text);
+  --tw-prose-links: var(--blog-primary);
+  --tw-prose-bold: var(--blog-text);
+  --tw-prose-quotes: var(--blog-text-muted);
+  --tw-prose-quote-borders: var(--blog-primary);
+  --tw-prose-bullets: var(--blog-primary);
+  --tw-prose-counters: var(--blog-primary);
+  max-width: none;
+}
+
+/* Paragraphs - improved readability */
+.blog-content p {
+  font-size: 1.125rem;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
+  margin-bottom: 1.75rem;
+  color: var(--blog-text-muted);
+}
+
+/* H2 - Section headings with border */
+.blog-content h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  margin-top: 3.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--blog-border);
+  color: var(--blog-text);
+  scroll-margin-top: 6rem;
+}
+
+/* H3 - Subsection headings */
+.blog-content h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+  color: var(--blog-text);
+  scroll-margin-top: 6rem;
+}
+
+/* H4 - Minor headings */
+.blog-content h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: var(--blog-text);
+  scroll-margin-top: 6rem;
+}
+
+/* First heading - no top margin */
+.blog-content > .prose > h2:first-child {
+  margin-top: 0;
+}
+
+/* Links */
+.blog-content a {
+  color: var(--blog-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--blog-primary) 40%, transparent);
+  transition: text-decoration-color 0.2s ease;
+}
+
+.blog-content a:hover {
+  text-decoration-color: var(--blog-primary);
+}
+
+/* Strong/bold text */
+.blog-content strong {
+  font-weight: 600;
+  color: var(--blog-text);
+}
+
+/* Blockquotes */
+.blog-content blockquote {
+  border-left: 4px solid var(--blog-primary);
+  background: var(--blog-muted);
+  padding: 1.25rem 1.5rem;
+  border-radius: 0 0.75rem 0.75rem 0;
+  margin: 2rem 0;
+  font-style: normal;
+}
+
+.blog-content blockquote p {
+  margin-bottom: 0;
+  color: var(--blog-text-muted);
+}
+
+/* Lists */
+.blog-content ul,
+.blog-content ol {
+  margin: 1.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.blog-content li {
+  margin: 0.75rem 0;
+  padding-left: 0.5rem;
+  line-height: 1.85;
+  color: var(--blog-text-muted);
+}
+
+.blog-content li::marker {
+  color: var(--blog-primary);
+  font-weight: 500;
+}
+
+/* Nested lists */
+.blog-content li ul,
+.blog-content li ol {
+  margin: 0.5rem 0;
+}
+
+/* Code */
+.blog-content code {
+  background: var(--blog-muted);
+  color: var(--blog-primary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+.blog-content code::before,
+.blog-content code::after {
+  content: none !important;
+}
+
+/* Pre/code blocks */
+.blog-content pre {
+  background: var(--blog-muted);
+  border: 1px solid var(--blog-border);
+  border-radius: 0.75rem;
+  margin: 2rem 0;
+  padding: 1.25rem;
+  overflow-x: auto;
+}
+
+.blog-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 0.875rem;
+}
+
+/* Images */
+.blog-content img {
+  border-radius: 0.75rem;
+  margin: 2rem 0;
+}
+
+/* Horizontal rules */
+.blog-content hr {
+  border-color: var(--blog-border);
+  margin: 3rem 0;
+}
+
+/* Tables */
+.blog-content table {
+  margin: 2rem 0;
+  width: 100%;
+}
+
+.blog-content th {
+  background: var(--blog-muted);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.blog-content td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--blog-border);
+}
+
+/* First paragraph after heading - tighter spacing */
+.blog-content h2 + p,
+.blog-content h3 + p,
+.blog-content h4 + p {
+  margin-top: 0;
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  .blog-content p {
+    font-size: 1.1875rem;
+  }
+  
+  .blog-content h2 {
+    font-size: 2rem;
+  }
+  
+  .blog-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .blog-content h4 {
+    font-size: 1.25rem;
+  }
 }

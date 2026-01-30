@@ -1,9 +1,11 @@
 // Invite Queue System
 // Handles batch processing of invites with rate limiting and retry logic
 
+import type { EmailTemplateType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getEmailService } from "@/lib/email";
 import { getRawToken } from "./token-store";
+import { getTemplateTypeForInviteRole, buildInviteEmailFromTemplate } from "@/lib/email/templates/inviteTemplates";
 
 export interface QueueConfig {
   batchSize: number; // Number of invites per batch (default: 20)
@@ -131,7 +133,7 @@ export async function processInvite(
       throw new Error("Raw token not found - invite may have expired or been processed");
     }
     
-    // Get institution name if available
+    // Get institution name and inviter name (if not already on invite)
     let institutionName: string | undefined;
     if (invite.institution_id) {
       const institution = await prisma.institution.findUnique({
@@ -140,23 +142,78 @@ export async function processInvite(
       });
       institutionName = institution?.trading_name || institution?.legal_name;
     }
+    let inviterName: string = "A team member";
+    if (invite.createdBy) {
+      const parts = [invite.createdBy.first_name, invite.createdBy.last_name].filter(Boolean);
+      inviterName = parts.length ? parts.join(" ") : inviterName;
+    } else {
+      const creator = await prisma.user.findUnique({
+        where: { user_id: invite.created_by_user_id },
+        select: { first_name: true, last_name: true },
+      });
+      if (creator) {
+        const parts = [creator.first_name, creator.last_name].filter(Boolean);
+        inviterName = parts.length ? parts.join(" ") : inviterName;
+      }
+    }
 
-    // Generate invite link
+    // Generate invite link and tracked link / pixel
     const inviteLink = `${baseUrl}/invite?token=${rawToken}`;
-    
-    // Generate email
-    const { html, text } = generateInviteEmail(
-      inviteLink,
-      invite.email,
-      invite.role,
-      institutionName
-    );
+    const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(rawToken)}`;
+    const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(inviteLink)}`;
+
+    // Resolve template by invite role (or use invite.template_id if set)
+    const templateType = invite.template_id
+      ? (await prisma.emailTemplate.findUnique({ where: { id: invite.template_id } }))?.type
+      : getTemplateTypeForInviteRole(invite.role);
+    const template = templateType
+      ? await prisma.emailTemplate.findUnique({ where: { type: templateType as EmailTemplateType } })
+      : null;
+
+    let subject: string;
+    let html: string;
+    let text: string;
+
+    if (template && template.is_active) {
+      const expiryDateFormatted = invite.expires_at
+        ? invite.expires_at.toLocaleDateString(undefined, { dateStyle: "long" })
+        : "";
+      const context = {
+        recipient_name: invite.email.split("@")[0] || "there",
+        institution_name: institutionName || "the institution",
+        inviter_name: inviterName,
+        role: invite.role.replace(/_/g, " "),
+        invite_link: inviteLink, // raw link for copy-paste line; CTA uses trackedLink
+        action_url: inviteLink,
+        expiry_date: expiryDateFormatted,
+      };
+      const built = buildInviteEmailFromTemplate(
+        template,
+        context,
+        trackedLink,
+        trackingPixelUrl,
+        invite.custom_message ?? null
+      );
+      subject = built.subject;
+      html = built.html;
+      text = built.text;
+    } else {
+      const fallback = generateInviteEmail(
+        inviteLink,
+        invite.email,
+        invite.role,
+        institutionName
+      );
+      subject = "You're Invited to Yiba Verified";
+      html = fallback.html;
+      text = fallback.text;
+    }
 
     // Send email
     const emailService = getEmailService();
     const result = await emailService.send({
       to: invite.email,
-      subject: "You're Invited to Yiba Verified",
+      subject,
       html,
       text,
     });
@@ -217,7 +274,7 @@ export async function processInviteBatch(
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
   const config = DEFAULT_CONFIG;
   
-  // Get next batch of QUEUED invites (oldest first)
+  // Get next batch of QUEUED invites (oldest first), with createdBy for template context
   const queuedInvites = await prisma.invite.findMany({
     where: {
       status: "QUEUED",
@@ -226,6 +283,9 @@ export async function processInviteBatch(
     },
     orderBy: { created_at: "asc" },
     take: batchSize,
+    include: {
+      createdBy: { select: { first_name: true, last_name: true } },
+    },
   });
 
   // Also get RETRYING invites that are ready to retry
@@ -238,6 +298,9 @@ export async function processInviteBatch(
     },
     orderBy: { next_retry_at: "asc" },
     take: Math.max(1, Math.floor(batchSize / 4)), // Reserve some slots for retries
+    include: {
+      createdBy: { select: { first_name: true, last_name: true } },
+    },
   });
 
   const invitesToProcess = [...queuedInvites, ...retryInvites].slice(0, batchSize);

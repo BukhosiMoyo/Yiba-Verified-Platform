@@ -30,13 +30,14 @@ export default async function QctoOnboardingPage() {
     redirect("/unauthorized");
   }
 
-  // Check onboarding status
+  // Check onboarding status and fetch name for greeting
   const user = await prisma.user.findUnique({
     where: { user_id: session.user.userId },
     select: {
       onboarding_completed: true,
       default_province: true,
       assigned_provinces: true,
+      first_name: true,
     },
   });
 
@@ -45,5 +46,13 @@ export default async function QctoOnboardingPage() {
     redirect("/qcto");
   }
 
-  return <QctoOnboardingWizard initialData={user} userRole={session.user.role} />;
+  const userName = user?.first_name?.trim() || session.user.name?.split(/\s+/)[0] || "there";
+
+  return (
+    <QctoOnboardingWizard
+      initialData={user}
+      userRole={session.user.role}
+      userName={userName}
+    />
+  );
 }

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
 import { toast } from "sonner";
 import type { Role } from "@/lib/rbac";
 
@@ -54,31 +54,35 @@ export function ViewAsUserBanner({
   onStop,
 }: ViewAsUserBannerProps) {
   return (
-    <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 mb-4">
-      <Eye className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-      <AlertDescription className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-amber-900 dark:text-amber-100">
-            Viewing as:
-          </span>
-          <span className="text-amber-800 dark:text-amber-200">
-            {viewingAsUserName} ({roleLabels[viewingAsRole]})
-          </span>
-          <span className="text-amber-600 dark:text-amber-400 text-sm">
-            (You are {originalUserName}, {roleLabels[originalRole]})
-          </span>
+    <Alert
+      variant="warning"
+      icon={<Eye className="h-4 w-4 text-amber-600 dark:text-amber-500" />}
+      description={
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-amber-900 dark:text-amber-100">
+              Viewing as:
+            </span>
+            <span className="text-amber-800 dark:text-amber-200">
+              {viewingAsUserName} ({roleLabels[viewingAsRole]})
+            </span>
+            <span className="text-amber-600 dark:text-amber-400 text-sm">
+              (You are {originalUserName}, {roleLabels[originalRole]})
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onStop}
+            className="border-amber-500/50 text-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+          >
+            <X className="h-3 w-3 mr-1" />
+            Stop Viewing As
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onStop}
-          className="border-amber-500/50 text-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-        >
-          <X className="h-3 w-3 mr-1" />
-          Stop Viewing As
-        </Button>
-      </AlertDescription>
-    </Alert>
+      }
+      className="mb-4"
+    />
   );
 }
 

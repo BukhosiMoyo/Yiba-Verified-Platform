@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowLeft, Building2, User, GraduationCap, ClipboardCheck } from "lucide-react";
+import { AcademicSummaryCard } from "@/components/qcto/AcademicSummaryCard";
+import { AssessmentResultsDisplay } from "@/components/qcto/AssessmentResultsDisplay";
+import { ModuleCompletionDisplay } from "@/components/qcto/ModuleCompletionDisplay";
 
 interface PageProps {
   params: Promise<{ enrolmentId: string }>;
@@ -255,6 +258,12 @@ export default async function QCTOEnrolmentDetailPage({ params }: PageProps) {
           )}
         </CardContent>
       </Card>
+
+      <AcademicSummaryCard enrolmentId={enrolmentId} />
+
+      <AssessmentResultsDisplay enrolmentId={enrolmentId} />
+
+      <ModuleCompletionDisplay enrolmentId={enrolmentId} />
     </div>
   );
 }

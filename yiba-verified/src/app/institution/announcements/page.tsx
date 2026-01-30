@@ -42,10 +42,10 @@ interface Announcement {
 }
 
 const priorityConfig = {
-  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700" },
-  MEDIUM: { label: "Medium", icon: Bell, className: "bg-gray-100 text-gray-700" },
-  HIGH: { label: "High", icon: AlertTriangle, className: "bg-orange-100 text-orange-700" },
-  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700" },
+  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
+  MEDIUM: { label: "Medium", icon: Bell, className: "bg-muted text-muted-foreground" },
+  HIGH: { label: "High", icon: AlertTriangle, className: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300" },
+  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" },
 };
 
 // Institution admins can only target their own institution's students and staff
@@ -72,6 +72,11 @@ export default function InstitutionAnnouncementsPage() {
     try {
       const response = await fetch("/api/institution/announcements", {
         credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       });
       if (response.ok) {
         const data = await response.json();
@@ -233,13 +238,17 @@ export default function InstitutionAnnouncementsPage() {
       </div>
 
       {announcements.length === 0 ? (
-        <EmptyState
-          icon={Bell}
-          title="No announcements yet"
-          description="Create your first announcement to communicate with your institution's students and staff."
-          actionLabel="Create Announcement"
-          onAction={handleCreate}
-        />
+        <div className="flex flex-col items-center gap-4">
+          <EmptyState
+            icon={<Bell className="h-10 w-10 text-muted-foreground" />}
+            title="No announcements yet"
+            description="Create your first announcement to communicate with your institution's students and staff."
+          />
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Announcement
+          </Button>
+        </div>
       ) : (
         <div className="grid gap-4">
           {announcements.map((announcement) => {

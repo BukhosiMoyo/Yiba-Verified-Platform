@@ -64,12 +64,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
     >
       <div className="space-y-6">
         {/* Personal Information */}
-        <Card className="border-2 border-blue-100/50">
+        <Card className="border-2 border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/10">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-50">
-                  <User className="h-5 w-5 text-blue-600" />
+                <div className="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
+                  <User className="h-5 w-5 text-primary" />
                 </div>
                 <CardTitle className="text-xl font-semibold">Personal Information</CardTitle>
               </div>
@@ -124,12 +124,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
         </Card>
 
         {/* Address */}
-        <Card className="border-2 border-emerald-100/50">
+        <Card className="border-2 border-emerald-200/60 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/30">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-50">
-                  <MapPin className="h-5 w-5 text-emerald-600" />
+                <div className="p-2 rounded-lg bg-emerald-100/80 dark:bg-emerald-900/40">
+                  <MapPin className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <CardTitle className="text-xl font-semibold">Address & Location</CardTitle>
               </div>
@@ -153,7 +153,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
               <div className="space-y-1">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Province</div>
                 <div>
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                  <Badge variant="outline" className="bg-card text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700">
                     {allData.addressInfo?.province || "—"}
                   </Badge>
                 </div>
@@ -163,12 +163,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
         </Card>
 
         {/* Next of Kin */}
-        <Card className="border-2 border-violet-100/50">
+        <Card className="border-2 border-violet-200/60 dark:border-violet-800/60 bg-violet-50/50 dark:bg-violet-950/30">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-violet-50">
-                  <Users className="h-5 w-5 text-violet-600" />
+                <div className="p-2 rounded-lg bg-violet-100/80 dark:bg-violet-900/40">
+                  <Users className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <CardTitle className="text-xl font-semibold">Next of Kin</CardTitle>
               </div>
@@ -213,12 +213,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
         </Card>
 
         {/* Additional Information */}
-        <Card className="border-2 border-amber-100/50">
+        <Card className="border-2 border-amber-200/60 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/30">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-50">
-                  <Info className="h-5 w-5 text-amber-600" />
+                <div className="p-2 rounded-lg bg-amber-100/80 dark:bg-amber-900/40">
+                  <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <CardTitle className="text-xl font-semibold">Additional Information</CardTitle>
               </div>
@@ -237,7 +237,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
                     variant={allData.additionalInfo?.disability_status === "YES" ? "default" : "secondary"}
                     className={
                       allData.additionalInfo?.disability_status === "YES" 
-                        ? "bg-amber-100 text-amber-800 border-amber-200" 
+                        ? "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700" 
                         : ""
                     }
                   >
@@ -248,7 +248,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
               <div className="space-y-1">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ethnicity</div>
                 <div>
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  <Badge variant="outline" className="bg-card text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700">
                     {allData.additionalInfo?.ethnicity ? getEthnicityLabel(allData.additionalInfo.ethnicity) : "—"}
                   </Badge>
                 </div>
@@ -259,12 +259,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
 
         {/* POPIA Consent */}
         {allData.popiaConsent && (
-          <Card className="border-2 border-green-100/50">
+          <Card className="border-2 border-green-200/60 dark:border-green-800/60 bg-green-50/50 dark:bg-green-950/30">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-50">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div className="p-2 rounded-lg bg-green-100/80 dark:bg-green-900/40">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <CardTitle className="text-xl font-semibold">POPIA Consent</CardTitle>
                 </div>
@@ -275,11 +275,11 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50/50 border border-green-200">
-                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50/50 dark:bg-green-950/40 border border-green-200 dark:border-green-800">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-green-900">Consent Provided</div>
-                  <div className="text-xs text-green-700 mt-0.5">
+                  <div className="text-sm font-semibold text-green-900 dark:text-green-100">Consent Provided</div>
+                  <div className="text-xs text-green-700 dark:text-green-300 mt-0.5">
                     You have consented to the processing of your personal information in accordance with POPIA.
                   </div>
                 </div>
@@ -290,12 +290,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
 
         {/* Past Qualifications */}
         {allData.pastQualifications && allData.pastQualifications.length > 0 && (
-          <Card className="border-2 border-purple-100/50">
+          <Card className="border-2 border-purple-200/60 dark:border-purple-800/60 bg-purple-50/30 dark:bg-purple-950/30">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-50">
-                    <GraduationCap className="h-5 w-5 text-purple-600" />
+                  <div className="p-2 rounded-lg bg-purple-100/80 dark:bg-purple-900/40">
+                    <GraduationCap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <CardTitle className="text-xl font-semibold">Past Qualifications</CardTitle>
                 </div>
@@ -308,7 +308,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
             <CardContent>
               <div className="space-y-3">
                 {allData.pastQualifications.map((q: any, i: number) => (
-                  <div key={i} className="p-3 rounded-lg border border-purple-100 bg-purple-50/30">
+                  <div key={i} className="p-3 rounded-lg border border-purple-200/60 dark:border-purple-700/60 bg-purple-50/30 dark:bg-purple-950/30">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 space-y-1">
                         <div className="font-semibold text-foreground">{q.title || "—"}</div>
@@ -320,7 +320,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
                         )}
                       </div>
                       {q.year_completed && (
-                        <Badge variant="outline" className="bg-white text-purple-700 border-purple-200 shrink-0">
+                        <Badge variant="outline" className="bg-card text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700 shrink-0">
                           {q.year_completed}
                         </Badge>
                       )}
@@ -334,12 +334,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
 
         {/* Prior Learning */}
         {allData.priorLearning && allData.priorLearning.length > 0 && (
-          <Card className="border-2 border-teal-100/50">
+          <Card className="border-2 border-teal-200/60 dark:border-teal-800/60 bg-teal-50/30 dark:bg-teal-950/30">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-teal-50">
-                    <Briefcase className="h-5 w-5 text-teal-600" />
+                  <div className="p-2 rounded-lg bg-teal-100/80 dark:bg-teal-900/40">
+                    <Briefcase className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                   </div>
                   <CardTitle className="text-xl font-semibold">Prior Learning & Experience</CardTitle>
                 </div>
@@ -359,7 +359,7 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
                     : "—";
                   
                   return (
-                    <div key={i} className="p-3 rounded-lg border border-teal-100 bg-teal-50/30">
+                    <div key={i} className="p-3 rounded-lg border border-teal-200/60 dark:border-teal-700/60 bg-teal-50/30 dark:bg-teal-950/30">
                       <div className="space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
@@ -371,12 +371,12 @@ export function ReviewStep({ allData, onNext, onBack, onEditStep }: ReviewStepPr
                               </div>
                             )}
                           </div>
-                          <Badge variant="outline" className="bg-white text-teal-700 border-teal-200 shrink-0">
+                          <Badge variant="outline" className="bg-card text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-700 shrink-0">
                             {dateRange}
                           </Badge>
                         </div>
                         {l.description && (
-                          <div className="text-sm text-muted-foreground leading-relaxed pt-1 border-t border-teal-100">
+                          <div className="text-sm text-muted-foreground leading-relaxed pt-1 border-t border-border">
                             {l.description}
                           </div>
                         )}

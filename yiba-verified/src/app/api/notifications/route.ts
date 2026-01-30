@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
 
-    // Build where clause - always scope to current user
-    const where: any = {
+    // Build where clause - always scope to current user (never from input; prevents cross-account leakage)
+    const where: { user_id: string; is_read?: boolean } = {
       user_id: ctx.userId,
     };
 
@@ -108,6 +108,12 @@ export async function POST(request: NextRequest) {
       "READINESS_REJECTED",
       "DOCUMENT_FLAGGED",
       "SYSTEM_ALERT",
+      "ISSUE_RESPONSE",
+      "INVITE_ACCEPTED",
+      "READINESS_SUBMITTED",
+      "REVIEW_ASSIGNED",
+      "BULK_INVITE_COMPLETED",
+      "INSTITUTION_CREATED",
     ];
 
     if (!validTypes.includes(notification_type)) {
@@ -138,6 +144,33 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * PATCH /api/notifications
+ *
+ * Mark all notifications for the current user as read (batch).
+ * Body: { mark_all_read?: true }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const ctx = await requireApiContext(request);
+    const body = await request.json().catch(() => ({}));
+    if (body?.mark_all_read !== true) {
+      return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "Body must include { mark_all_read: true }", 400));
+    }
+
+    await prisma.notification.updateMany({
+      where: { user_id: ctx.userId, is_read: false },
+      data: { is_read: true, read_at: new Date() },
+    });
+
+    return NextResponse.json({
+      message: "All notifications marked as read",
+    });
   } catch (error) {
     return fail(error);
   }

@@ -8,20 +8,26 @@
  * - Reviews can be assigned to MULTIPLE reviewers simultaneously (fail-safe)
  * - Reviewers must have the review's province in their `assigned_provinces`
  * - QCTO_SUPER_ADMIN can be assigned to reviews from any province
- * - QCTO_ADMIN, QCTO_REVIEWER, QCTO_AUDITOR can assign reviews
+ * - Only QCTO_SUPER_ADMIN and QCTO_ADMIN can assign reviews (enforced via QCTO_ASSIGN capability in API)
  * - QCTO_VIEWER cannot assign reviews (read-only)
  */
 
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import type { ApiContext } from "@/lib/api/context";
+import { createAuditLog } from "@/services/audit.service";
+import type { AuditEntityType } from "@prisma/client";
+import { assignResourceToReviewer, removeAssignment } from "@/lib/qctoAssignments";
 
 export type ReviewType = "READINESS" | "SUBMISSION" | "QCTO_REQUEST";
+
+export type AssignmentRole = "REVIEWER" | "AUDITOR";
 
 export interface ReviewAssignmentInput {
   reviewType: ReviewType;
   reviewId: string;
   assignedToUserId: string;
+  assignmentRole?: AssignmentRole; // default REVIEWER
   notes?: string;
 }
 
@@ -56,6 +62,43 @@ export async function getReviewProvince(
     return request?.institution.province || null;
   }
 
+  return null;
+}
+
+const REVIEW_TYPE_TO_AUDIT_ENTITY: Record<ReviewType, AuditEntityType> = {
+  READINESS: "READINESS",
+  SUBMISSION: "SUBMISSION",
+  QCTO_REQUEST: "QCTO_REQUEST",
+};
+
+/**
+ * Get institution ID for a review (for audit log institution_id)
+ */
+export async function getReviewInstitutionId(
+  reviewType: ReviewType,
+  reviewId: string
+): Promise<string | null> {
+  if (reviewType === "READINESS") {
+    const r = await prisma.readiness.findUnique({
+      where: { readiness_id: reviewId },
+      select: { institution_id: true },
+    });
+    return r?.institution_id ?? null;
+  }
+  if (reviewType === "SUBMISSION") {
+    const s = await prisma.submission.findUnique({
+      where: { submission_id: reviewId },
+      select: { institution_id: true },
+    });
+    return s?.institution_id ?? null;
+  }
+  if (reviewType === "QCTO_REQUEST") {
+    const q = await prisma.qCTORequest.findUnique({
+      where: { request_id: reviewId },
+      select: { institution_id: true },
+    });
+    return q?.institution_id ?? null;
+  }
   return null;
 }
 
@@ -125,13 +168,11 @@ export async function assignReviewToReviewer(
   ctx: ApiContext,
   input: ReviewAssignmentInput
 ): Promise<void> {
-  // Check if assigner has permission to assign reviews
+  // Check if assigner has permission to assign reviews (Admin/Super Admin only; API also checks hasCap QCTO_ASSIGN)
   const CAN_ASSIGN_ROLES = [
     "PLATFORM_ADMIN",
     "QCTO_SUPER_ADMIN",
     "QCTO_ADMIN",
-    "QCTO_REVIEWER",
-    "QCTO_AUDITOR",
   ];
 
   if (!CAN_ASSIGN_ROLES.includes(ctx.role)) {
@@ -164,13 +205,16 @@ export async function assignReviewToReviewer(
     );
   }
 
-  // Check if assignment already exists
+  const assignmentRole = input.assignmentRole ?? "REVIEWER";
+
+  // Check if assignment already exists (same reviewer + role for this review)
   const existingAssignment = await prisma.reviewAssignment.findUnique({
     where: {
-      review_type_review_id_assigned_to: {
+      review_type_review_id_assigned_to_assignment_role: {
         review_type: input.reviewType,
         review_id: input.reviewId,
         assigned_to: input.assignedToUserId,
+        assignment_role: assignmentRole,
       },
     },
   });
@@ -184,7 +228,23 @@ export async function assignReviewToReviewer(
           notes: input.notes,
           status: "ASSIGNED", // Reset to ASSIGNED if it was cancelled
         },
-        },
+      });
+      const institutionId = await getReviewInstitutionId(input.reviewType, input.reviewId);
+      await createAuditLog(prisma, {
+        entityType: REVIEW_TYPE_TO_AUDIT_ENTITY[input.reviewType],
+        entityId: input.reviewId,
+        fieldName: "review_assignment",
+        oldValue: null,
+        newValue: JSON.stringify({
+          action: "reassigned",
+          assignedTo: input.assignedToUserId,
+          assignedBy: ctx.userId,
+          notes: input.notes,
+        }),
+        changedBy: ctx.userId,
+        roleAtTime: ctx.role as import("@prisma/client").UserRole,
+        changeType: "UPDATE",
+        institutionId,
       });
     }
     return; // Assignment already exists, no error
@@ -196,10 +256,37 @@ export async function assignReviewToReviewer(
       review_type: input.reviewType,
       review_id: input.reviewId,
       assigned_to: input.assignedToUserId,
+      assignment_role: assignmentRole,
       assigned_by: ctx.userId,
       status: "ASSIGNED",
       notes: input.notes || null,
     },
+  });
+
+  // Sync generic QctoAssignment for assertAssignedOrAdmin / list filtering
+  await assignResourceToReviewer(ctx, {
+    resource_type: input.reviewType,
+    resource_id: input.reviewId,
+    assigned_to_user_id: input.assignedToUserId,
+    assignment_role: assignmentRole,
+  });
+
+  const institutionId = await getReviewInstitutionId(input.reviewType, input.reviewId);
+  await createAuditLog(prisma, {
+    entityType: REVIEW_TYPE_TO_AUDIT_ENTITY[input.reviewType],
+    entityId: input.reviewId,
+    fieldName: "review_assignment",
+    oldValue: null,
+    newValue: JSON.stringify({
+      action: "assigned",
+      assignedTo: input.assignedToUserId,
+      assignedBy: ctx.userId,
+      notes: input.notes ?? null,
+    }),
+    changedBy: ctx.userId,
+    roleAtTime: ctx.role as import("@prisma/client").UserRole,
+    changeType: "CREATE",
+    institutionId,
   });
 }
 
@@ -212,13 +299,11 @@ export async function unassignReviewFromReviewer(
   reviewId: string,
   assignedToUserId: string
 ): Promise<void> {
-  // Check if assigner has permission to unassign reviews
+  // Check if assigner has permission to unassign reviews (same as assign: Admin/Super Admin only)
   const CAN_ASSIGN_ROLES = [
     "PLATFORM_ADMIN",
     "QCTO_SUPER_ADMIN",
     "QCTO_ADMIN",
-    "QCTO_REVIEWER",
-    "QCTO_AUDITOR",
   ];
 
   if (!CAN_ASSIGN_ROLES.includes(ctx.role)) {
@@ -229,18 +314,17 @@ export async function unassignReviewFromReviewer(
     );
   }
 
-  // Find and update assignment status to CANCELLED
-  const assignment = await prisma.reviewAssignment.findUnique({
+  // Find assignment(s) for this user and review; if multiple (REVIEWER + AUDITOR), cancel all
+  const assignments = await prisma.reviewAssignment.findMany({
     where: {
-      review_type_review_id_assigned_to: {
-        review_type: reviewType,
-        review_id: reviewId,
-        assigned_to: assignedToUserId,
-      },
+      review_type: reviewType,
+      review_id: reviewId,
+      assigned_to: assignedToUserId,
+      status: { not: "CANCELLED" },
     },
   });
 
-  if (!assignment) {
+  if (assignments.length === 0) {
     throw new AppError(
       ERROR_CODES.NOT_FOUND,
       `Review assignment not found`,
@@ -248,11 +332,39 @@ export async function unassignReviewFromReviewer(
     );
   }
 
-  await prisma.reviewAssignment.update({
-    where: { id: assignment.id },
+  await prisma.reviewAssignment.updateMany({
+    where: {
+      review_type: reviewType,
+      review_id: reviewId,
+      assigned_to: assignedToUserId,
+    },
     data: {
       status: "CANCELLED",
     },
+  });
+
+  // Sync generic QctoAssignment: mark as REMOVED
+  await removeAssignment(ctx, {
+    resource_type: reviewType,
+    resource_id: reviewId,
+    assigned_to_user_id: assignedToUserId,
+  });
+
+  const institutionId = await getReviewInstitutionId(reviewType, reviewId);
+  await createAuditLog(prisma, {
+    entityType: REVIEW_TYPE_TO_AUDIT_ENTITY[reviewType],
+    entityId: reviewId,
+    fieldName: "review_assignment",
+    oldValue: JSON.stringify({
+      action: "unassigned",
+      assignedTo: assignedToUserId,
+      assignedBy: ctx.userId,
+    }),
+    newValue: null,
+    changedBy: ctx.userId,
+    roleAtTime: ctx.role as import("@prisma/client").UserRole,
+    changeType: "DELETE",
+    institutionId,
   });
 }
 
@@ -261,13 +373,15 @@ export async function unassignReviewFromReviewer(
  */
 export async function getReviewAssignments(
   reviewType: ReviewType,
-  reviewId: string
+  reviewId: string,
+  assignmentRole?: AssignmentRole
 ): Promise<Array<{
   id: string;
   assigned_to: string;
   assigned_by: string;
   assigned_at: Date;
   status: string;
+  assignment_role: string;
   notes: string | null;
   reviewer: {
     user_id: string;
@@ -288,6 +402,7 @@ export async function getReviewAssignments(
       review_type: reviewType,
       review_id: reviewId,
       status: { not: "CANCELLED" }, // Only active assignments
+      ...(assignmentRole && { assignment_role: assignmentRole }),
     },
     include: {
       reviewer: {
@@ -319,6 +434,7 @@ export async function getReviewAssignments(
     assigned_by: a.assigned_by,
     assigned_at: a.assigned_at,
     status: a.status,
+    assignment_role: a.assignment_role,
     notes: a.notes,
     reviewer: a.reviewer,
     assigner: a.assigner,
@@ -362,29 +478,22 @@ export async function getReviewsAssignedToReviewer(
 }
 
 /**
- * Check if a reviewer is assigned to a review
+ * Check if a reviewer is assigned to a review (any role: REVIEWER or AUDITOR)
  */
 export async function isReviewerAssignedToReview(
   reviewerUserId: string,
   reviewType: ReviewType,
   reviewId: string
 ): Promise<boolean> {
-  const assignment = await prisma.reviewAssignment.findUnique({
+  const assignment = await prisma.reviewAssignment.findFirst({
     where: {
-      review_type_review_id_assigned_to: {
-        review_type: reviewType,
-        review_id: reviewId,
-        assigned_to: reviewerUserId,
-      },
+      review_type: reviewType,
+      review_id: reviewId,
+      assigned_to: reviewerUserId,
+      status: { not: "CANCELLED" },
     },
   });
-
-  if (!assignment) {
-    return false;
-  }
-
-  // Check if assignment is active (not cancelled)
-  return assignment.status !== "CANCELLED";
+  return assignment != null;
 }
 
 /**
@@ -445,16 +554,17 @@ export async function autoAssignReviewToEligibleReviewers(
 
   const assignedUserIds: string[] = [];
 
-  // Assign review to each eligible reviewer
+  // Assign review to each eligible reviewer (as REVIEWER role)
   for (const reviewer of eligibleReviewers) {
     try {
-      // Check if assignment already exists
+      // Check if assignment already exists (REVIEWER role)
       const existing = await prisma.reviewAssignment.findUnique({
         where: {
-          review_type_review_id_assigned_to: {
+          review_type_review_id_assigned_to_assignment_role: {
             review_type: reviewType,
             review_id: reviewId,
             assigned_to: reviewer.user_id,
+            assignment_role: "REVIEWER",
           },
         },
       });
@@ -465,13 +575,14 @@ export async function autoAssignReviewToEligibleReviewers(
         continue;
       }
 
-      // Create assignment
+      // Create or reactivate assignment (REVIEWER role)
       await prisma.reviewAssignment.upsert({
         where: {
-          review_type_review_id_assigned_to: {
+          review_type_review_id_assigned_to_assignment_role: {
             review_type: reviewType,
             review_id: reviewId,
             assigned_to: reviewer.user_id,
+            assignment_role: "REVIEWER",
           },
         },
         update: {
@@ -482,6 +593,7 @@ export async function autoAssignReviewToEligibleReviewers(
           review_type: reviewType,
           review_id: reviewId,
           assigned_to: reviewer.user_id,
+          assignment_role: "REVIEWER",
           assigned_by: assignerUserId,
           status: "ASSIGNED",
         },

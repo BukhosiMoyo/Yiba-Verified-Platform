@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiContext } from "@/lib/api/context";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { formatRoleForDisplay, ANNOUNCEMENT_TARGET_ROLES } from "@/lib/announcements";
+
+const QCTO_ROLES = [
+  "QCTO_USER",
+  "QCTO_SUPER_ADMIN",
+  "QCTO_ADMIN",
+  "QCTO_REVIEWER",
+  "QCTO_AUDITOR",
+  "QCTO_VIEWER",
+] as const;
 
 /**
  * GET /api/announcements
@@ -71,12 +81,29 @@ export async function GET(request: NextRequest) {
       // Institution admins see all their institution's announcements (no target_roles filter)
     } else if (userRole) {
       // Authenticated user without institution (platform admin, QCTO, etc.)
-      whereClause.AND.push({
-        OR: [
-          { target_roles: { isEmpty: true } }, // Visible to all
-          { target_roles: { has: userRole } }, // Visible to user's role
-        ],
-      });
+      if (userRole === "PLATFORM_ADMIN") {
+        // Platform Admin: Don't show QCTO-created announcements unless explicitly targeted to PLATFORM_ADMIN
+        // QCTO can send to everyone but not Platform Admin
+        whereClause.AND.push({
+          OR: [
+            // Announcements NOT created by QCTO roles (e.g., Platform Admin's own announcements)
+            { created_by_role: { notIn: QCTO_ROLES } },
+            // QCTO announcements explicitly targeted to PLATFORM_ADMIN
+            { 
+              created_by_role: { in: QCTO_ROLES },
+              target_roles: { has: "PLATFORM_ADMIN" },
+            },
+          ],
+        });
+      } else {
+        // Other roles (QCTO, etc.): see announcements visible to all or targeted to their role
+        whereClause.AND.push({
+          OR: [
+            { target_roles: { isEmpty: true } }, // Visible to all
+            { target_roles: { has: userRole } }, // Visible to user's role
+          ],
+        });
+      }
       whereClause.AND.push({ institution_id: null }); // Only platform-wide for non-institution users
     } else {
       // Not authenticated: only show platform-wide announcements with no target_roles
@@ -126,7 +153,7 @@ export async function GET(request: NextRequest) {
  * 
  * Create a new announcement.
  * - PLATFORM_ADMIN: Can create platform-wide announcements
- * - QCTO roles: Can create platform-wide announcements
+ * - QCTO_SUPER_ADMIN: Can create platform-wide announcements (other QCTO roles cannot)
  * - INSTITUTION_ADMIN: Can create institution-scoped announcements (automatically scoped to their institution)
  * - Can target specific user roles or all users (empty target_roles)
  */
@@ -135,18 +162,11 @@ export async function POST(request: NextRequest) {
     const ctx = await requireApiContext(request);
 
     // Check if user can create announcements
-    const QCTO_ROLES = [
-      "QCTO_USER",
-      "QCTO_SUPER_ADMIN",
-      "QCTO_ADMIN",
-      "QCTO_REVIEWER",
-      "QCTO_AUDITOR",
-      "QCTO_VIEWER",
-    ];
-    const canCreate = ctx.role === "PLATFORM_ADMIN" || QCTO_ROLES.includes(ctx.role) || ctx.role === "INSTITUTION_ADMIN";
+    // Only QCTO_SUPER_ADMIN can create announcements for QCTO (not regular QCTO_ADMIN)
+    const canCreate = ctx.role === "PLATFORM_ADMIN" || ctx.role === "QCTO_SUPER_ADMIN" || ctx.role === "INSTITUTION_ADMIN";
     
     if (!canCreate) {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO users, and institution admins can create announcements", 403));
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only platform admins, QCTO super admins, and institution admins can create announcements", 403));
     }
 
     const body = await request.json();
@@ -180,7 +200,7 @@ export async function POST(request: NextRequest) {
       if (!Array.isArray(target_roles)) {
         return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "target_roles must be an array", 400));
       }
-      targetRolesArray = target_roles.filter((r: string) => validRoles.includes(r));
+      targetRolesArray = target_roles.filter((r: string) => (validRoles as readonly string[]).includes(r));
       if (targetRolesArray.length !== target_roles.length) {
         return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid role(s) in target_roles", 400));
       }
@@ -231,7 +251,7 @@ export async function POST(request: NextRequest) {
       if (institution_id && institution_id !== creator.institution_id) {
         return fail(new AppError(ERROR_CODES.FORBIDDEN, "Institution admins can only create announcements for their own institution", 403));
       }
-    } else if (ctx.role === "PLATFORM_ADMIN" || QCTO_ROLES.includes(ctx.role)) {
+    } else if (ctx.role === "PLATFORM_ADMIN" || (QCTO_ROLES as readonly string[]).includes(ctx.role)) {
       // Platform admins and QCTO users can create platform-wide (null) or institution-specific announcements
       announcementInstitutionId = institution_id || null;
     }
@@ -244,7 +264,7 @@ export async function POST(request: NextRequest) {
         created_by: ctx.userId,
         created_by_name: creatorName, // Store name at creation time
         created_by_role: creator.role, // Store role at creation time
-        target_roles: targetRolesArray, // Store target roles (empty = all users)
+        target_roles: targetRolesArray as UserRole[], // Store target roles (empty = all users); validated above
         institution_id: announcementInstitutionId, // Institution-scoped or null for platform-wide
         expires_at: expiresAtDate,
       },

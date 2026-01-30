@@ -168,7 +168,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-3 bg-card rounded-md", className)}
       style={{
         width: 248.8 * (columnsDisplayed ?? 1) + "px",
       }}
@@ -320,7 +320,7 @@ function Nav({
     }
     goToMonth(previousMonth)
     onPrevClick?.(previousMonth)
-  }, [previousMonth, goToMonth, navView, displayYears, setDisplayYears, onPrevClick])
+  }, [previousMonth, goToMonth])
 
   const handleNextClick = React.useCallback(() => {
     if (!nextMonth) return
@@ -340,8 +340,7 @@ function Nav({
     }
     goToMonth(nextMonth)
     onNextClick?.(nextMonth)
-  }, [goToMonth, nextMonth, navView, displayYears, setDisplayYears, onNextClick])
-  
+  }, [goToMonth, nextMonth])
   return (
     <nav className={cn("flex items-center", className)}>
       <Button
@@ -471,17 +470,15 @@ function YearGrid({
         { length: displayYears.to - displayYears.from + 1 },
         (_, i) => {
           const isBefore =
-            startMonth &&
             differenceInCalendarDays(
               new Date(displayYears.from + i, 11, 31),
-              startMonth
+              startMonth!
             ) < 0
 
           const isAfter =
-            endMonth &&
             differenceInCalendarDays(
               new Date(displayYears.from + i, 0, 0),
-              endMonth
+              endMonth!
             ) > 0
 
           const isDisabled = isBefore || isAfter

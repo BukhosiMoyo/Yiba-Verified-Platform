@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AuditEntityType" ADD VALUE 'QUALIFICATION_REGISTRY';

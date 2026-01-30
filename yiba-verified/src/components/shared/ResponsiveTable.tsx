@@ -23,8 +23,8 @@ export function ResponsiveTable({
 }) {
   return (
     <div className={cn(
-      "w-full rounded-xl border border-gray-200/60 overflow-hidden",
-      withCard ? "bg-white shadow-sm" : "bg-white",
+      "w-full rounded-xl border border-border overflow-hidden",
+      withCard ? "bg-card shadow-sm dark:shadow-none" : "bg-card",
       className
     )}>
       <div className="w-full overflow-x-auto overflow-y-hidden">

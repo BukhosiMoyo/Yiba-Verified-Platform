@@ -105,7 +105,7 @@ export function StudentCVVersionsTable({
   return (
     <div className="space-y-4">
       {/* Filter bar: Search, Visibility, Role, Rows — one line with wrap */}
-      <div className="rounded-xl border border-stone-200/80 dark:border-stone-700/60 bg-stone-50/30 dark:bg-stone-900/30 p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-56">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500" strokeWidth={1.5} />
@@ -152,7 +152,7 @@ export function StudentCVVersionsTable({
           className={cn(
             "flex flex-col items-center justify-center py-20 px-8 text-center rounded-xl border-2 border-dashed",
             "border-stone-200 dark:border-stone-700",
-            "bg-stone-50/50 dark:bg-stone-900/20"
+            "bg-muted/50 dark:bg-muted/30"
           )}
         >
           <div className="rounded-full p-4 bg-stone-100 dark:bg-stone-800/60 mb-4">
@@ -170,9 +170,9 @@ export function StudentCVVersionsTable({
           </Button>
         </div>
       ) : (
-        <div className="rounded-xl border border-stone-200/80 dark:border-stone-700/60 bg-white dark:bg-stone-900/30 shadow-sm overflow-x-auto">
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
           {/* Table header bar: Create CV Version on the right */}
-          <div className="flex items-center justify-end px-4 py-2 border-b border-stone-200 dark:border-stone-700 bg-stone-50/80 dark:bg-stone-800/50 min-w-0">
+          <div className="flex items-center justify-end px-4 py-2 border-b border-border bg-muted/50 dark:bg-muted/30 min-w-0">
             <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 dark:border-stone-600">
               <FilePlus className="h-4 w-4" strokeWidth={1.5} />
               Create CV Version
@@ -182,22 +182,22 @@ export function StudentCVVersionsTable({
             <Table className="min-w-[880px]">
               <TableHeader>
                 <TableRow className="border-stone-200 dark:border-stone-700 hover:bg-transparent">
-                  <TableHead className="h-11 px-3 w-12 bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold">
+                  <TableHead className="h-11 px-3 w-12 bg-muted/50 dark:bg-muted/30 text-muted-foreground font-semibold">
                     #
                   </TableHead>
-                  <TableHead className="h-11 px-4 bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold">
+                  <TableHead className="h-11 px-4 bg-muted/50 dark:bg-muted/30 text-stone-600 dark:text-stone-400 font-semibold">
                     CV Name
                   </TableHead>
-                <TableHead className="h-11 px-4 bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold">
+                <TableHead className="h-11 px-4 bg-muted/50 dark:bg-muted/30 text-stone-600 dark:text-stone-400 font-semibold">
                   Target Role
                 </TableHead>
-                <TableHead className="h-11 px-4 bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold">
+                <TableHead className="h-11 px-4 bg-muted/50 dark:bg-muted/30 text-stone-600 dark:text-stone-400 font-semibold">
                   Visibility
                 </TableHead>
-                <TableHead className="h-11 px-4 bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold">
+                <TableHead className="h-11 px-4 bg-muted/50 dark:bg-muted/30 text-stone-600 dark:text-stone-400 font-semibold">
                   Last Updated
                 </TableHead>
-                <TableHead className="h-11 px-4 text-right bg-stone-50/80 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 font-semibold whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.2)]">
+                <TableHead className="h-11 px-4 text-right bg-muted/50 dark:bg-muted/30 text-stone-600 dark:text-stone-400 font-semibold whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.2)]">
                   Actions
                 </TableHead>
               </TableRow>
@@ -211,8 +211,8 @@ export function StudentCVVersionsTable({
                     className={cn(
                       "border-stone-100 dark:border-stone-700/80 cursor-pointer transition-colors",
                       isSelected
-                        ? "bg-blue-50/60 dark:bg-blue-950/30 border-l-2 border-l-blue-500"
-                        : "hover:bg-stone-50/80 dark:hover:bg-stone-800/40"
+                        ? "bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary"
+                        : "hover:bg-muted/50 dark:hover:bg-muted/30"
                     )}
                     onClick={() => onSelect?.(isSelected ? null : row.id)}
                   >
@@ -244,7 +244,7 @@ export function StudentCVVersionsTable({
                     <TableCell
                       className={cn(
                         "px-4 py-3 text-right whitespace-nowrap sticky right-0 z-10",
-                        isSelected ? "bg-blue-50/60 dark:bg-blue-950/30" : "bg-white dark:bg-stone-900/30"
+                        isSelected ? "bg-primary/5 dark:bg-primary/10" : "bg-card"
                       )}
                       onClick={(e) => e.stopPropagation()}
                     >

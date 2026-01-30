@@ -134,6 +134,12 @@ export function getEmailTemplate(
       case "DOCUMENT":
         actionUrl = `${url}/institution/documents/${entityId}`;
         break;
+      case "INSTITUTION_LEAD":
+        actionUrl = `${url}/institution/public-profile`;
+        break;
+      case "SERVICE_REQUEST":
+        actionUrl = `${url}/platform-admin/service-requests`;
+        break;
     }
   }
 

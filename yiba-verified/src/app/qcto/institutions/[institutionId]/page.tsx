@@ -30,6 +30,11 @@ import {
   Eye,
 } from "lucide-react";
 import Link from "next/link";
+import { CreateDocumentRequestForm } from "@/components/qcto/CreateDocumentRequestForm";
+import { CreateFacilitatorRequestForm } from "@/components/qcto/CreateFacilitatorRequestForm";
+import { CreateLearnerRequestForm } from "@/components/qcto/CreateLearnerRequestForm";
+import { CreateAssessmentRequestForm } from "@/components/qcto/CreateAssessmentRequestForm";
+import { BulkDataRequestForm } from "@/components/qcto/BulkDataRequestForm";
 
 const STATUS_CONFIG: Record<
   string,
@@ -37,52 +42,52 @@ const STATUS_CONFIG: Record<
 > = {
   APPROVED: {
     pattern: "institution-status-pattern--approved",
-    gradient: "bg-gradient-to-b from-emerald-50/70 to-white",
-    gradientTop: "before:from-emerald-50/30",
-    badge: "bg-emerald-100 text-emerald-800 border-emerald-200/60",
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
+    gradient: "bg-gradient-to-b from-emerald-50/70 to-white dark:from-emerald-950/30 dark:to-card",
+    gradientTop: "before:from-emerald-50/30 dark:before:from-emerald-950/20",
+    badge: "bg-emerald-100 text-emerald-800 border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60",
+    iconBg: "bg-emerald-50 dark:bg-emerald-950/50",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   PENDING: {
     pattern: "institution-status-pattern--pending",
-    gradient: "bg-gradient-to-b from-amber-50/70 to-white",
-    gradientTop: "before:from-amber-50/30",
-    badge: "bg-amber-100 text-amber-800 border-amber-200/60",
-    iconBg: "bg-amber-50",
-    iconColor: "text-amber-600",
+    gradient: "bg-gradient-to-b from-amber-50/70 to-white dark:from-amber-950/30 dark:to-card",
+    gradientTop: "before:from-amber-50/30 dark:before:from-amber-950/20",
+    badge: "bg-amber-100 text-amber-800 border-amber-200/60 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60",
+    iconBg: "bg-amber-50 dark:bg-amber-950/50",
+    iconColor: "text-amber-600 dark:text-amber-400",
   },
   REJECTED: {
     pattern: "institution-status-pattern--rejected",
-    gradient: "bg-gradient-to-b from-red-50/70 to-white",
-    gradientTop: "before:from-red-50/30",
-    badge: "bg-red-100 text-red-800 border-red-200/60",
-    iconBg: "bg-red-50",
-    iconColor: "text-red-600",
+    gradient: "bg-gradient-to-b from-red-50/70 to-white dark:from-red-950/30 dark:to-card",
+    gradientTop: "before:from-red-50/30 dark:before:from-red-950/20",
+    badge: "bg-red-100 text-red-800 border-red-200/60 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800/60",
+    iconBg: "bg-red-50 dark:bg-red-950/50",
+    iconColor: "text-red-600 dark:text-red-400",
   },
   DRAFT: {
     pattern: "institution-status-pattern--draft",
-    gradient: "bg-gradient-to-b from-slate-50/70 to-white",
-    gradientTop: "before:from-slate-50/30",
-    badge: "bg-slate-100 text-slate-800 border-slate-200/60",
-    iconBg: "bg-slate-50",
-    iconColor: "text-slate-600",
+    gradient: "bg-gradient-to-b from-slate-50/70 to-white dark:from-slate-900/30 dark:to-card",
+    gradientTop: "before:from-slate-50/30 dark:before:from-slate-900/20",
+    badge: "bg-slate-100 text-slate-800 border-slate-200/60 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700/60",
+    iconBg: "bg-slate-50 dark:bg-slate-800/50",
+    iconColor: "text-slate-600 dark:text-slate-400",
   },
   SUSPENDED: {
     pattern: "institution-status-pattern--suspended",
-    gradient: "bg-gradient-to-b from-orange-50/70 to-white",
-    gradientTop: "before:from-orange-50/30",
-    badge: "bg-orange-100 text-orange-800 border-orange-200/60",
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-600",
+    gradient: "bg-gradient-to-b from-orange-50/70 to-white dark:from-orange-950/30 dark:to-card",
+    gradientTop: "before:from-orange-50/30 dark:before:from-orange-950/20",
+    badge: "bg-orange-100 text-orange-800 border-orange-200/60 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800/60",
+    iconBg: "bg-orange-50 dark:bg-orange-950/50",
+    iconColor: "text-orange-600 dark:text-orange-400",
   },
 };
 const DEFAULT_STATUS = {
   pattern: "institution-status-pattern--default",
-  gradient: "bg-gradient-to-b from-gray-50/60 to-white",
-  gradientTop: "before:from-gray-50/25",
-  badge: "bg-gray-100 text-gray-800 border-gray-200/60",
-  iconBg: "bg-gray-50",
-  iconColor: "text-gray-600",
+  gradient: "bg-gradient-to-b from-muted/60 to-card",
+  gradientTop: "before:from-muted/25",
+  badge: "bg-muted text-muted-foreground border-border",
+  iconBg: "bg-muted",
+  iconColor: "text-muted-foreground",
 };
 function getStatusConfig(status: string) {
   return STATUS_CONFIG[status] || DEFAULT_STATUS;
@@ -269,9 +274,24 @@ export default function QCTOInstitutionDetailPage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Institution Type</p>
-                  <p className="mt-1 text-sm text-gray-900">{institution.institution_type}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {institution.institution_type === "EMPLOYER" ? "Organisation Type" : "Institution Type"}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {institution.institution_type === "EMPLOYER" ? "Company" : institution.institution_type}
+                  </p>
                 </div>
+                {(institution.offers_workplace_based_learning === true || institution.offers_web_based_learning === true) && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Delivery</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {[
+                        institution.offers_workplace_based_learning === true && "Workplace-based learning",
+                        institution.offers_web_based_learning === true && "Web-based (online) learning",
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Province</p>
                   <p className="mt-1 flex items-center gap-2 text-sm text-gray-900">
@@ -501,6 +521,64 @@ export default function QCTOInstitutionDetailPage() {
         </TabsContent>
 
         <TabsContent value="qcto" className="space-y-6">
+          {/* Request Actions */}
+          <Card className="overflow-hidden border border-gray-200/60">
+            <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent">
+              <CardTitle className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                  <FileText className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </span>
+                Request Data
+              </CardTitle>
+              <CardDescription>
+                Create requests to access institution resources
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Request Specific Data Types</p>
+                  <div className="flex flex-wrap gap-3">
+                    <CreateFacilitatorRequestForm
+                      institutionId={institution.institution_id}
+                      onSuccess={() => {
+                        window.location.reload();
+                      }}
+                    />
+                    <CreateLearnerRequestForm
+                      institutionId={institution.institution_id}
+                      onSuccess={() => {
+                        window.location.reload();
+                      }}
+                    />
+                    <CreateAssessmentRequestForm
+                      institutionId={institution.institution_id}
+                      onSuccess={() => {
+                        window.location.reload();
+                      }}
+                    />
+                    <CreateDocumentRequestForm
+                      institutionId={institution.institution_id}
+                      institutionName={institution.trading_name || institution.legal_name}
+                      onSuccess={() => {
+                        window.location.reload();
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-3">Bulk Data Request</p>
+                  <BulkDataRequestForm
+                    institutionId={institution.institution_id}
+                    onSuccess={() => {
+                      window.location.reload();
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="overflow-hidden border border-gray-200/60">
             <CardHeader className="bg-gradient-to-b from-gray-50/40 to-transparent">
               <CardTitle className="flex items-center gap-2">

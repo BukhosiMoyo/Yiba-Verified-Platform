@@ -44,8 +44,15 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Validate province assignment for existing user
-      const defaultProvince = body.default_province || existing.default_province || null;
-      const assignedProvinces = body.assigned_provinces || existing.assigned_provinces || [];
+      // Use province from invite if available, otherwise use existing or body
+      const defaultProvince = invite.province || body.default_province || existing.default_province || null;
+      let assignedProvinces = body.assigned_provinces || existing.assigned_provinces || [];
+      
+      // Ensure default_province is included in assigned_provinces
+      if (defaultProvince && !assignedProvinces.includes(defaultProvince)) {
+        assignedProvinces = [...assignedProvinces, defaultProvince];
+      }
+      
       validateProvinceAssignment(invite.role, defaultProvince, assignedProvinces);
 
       await prisma.$transaction([
@@ -83,8 +90,15 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Validate province assignment for new QCTO user
-    const defaultProvince = body.default_province || null;
-    const assignedProvinces = body.assigned_provinces || [];
+    // Use province from invite if available, otherwise use body
+    const defaultProvince = invite.province || body.default_province || null;
+    let assignedProvinces = body.assigned_provinces || [];
+    
+    // Ensure default_province is included in assigned_provinces
+    if (defaultProvince && !assignedProvinces.includes(defaultProvince)) {
+      assignedProvinces = [defaultProvince, ...assignedProvinces];
+    }
+    
     validateProvinceAssignment(invite.role, defaultProvince, assignedProvinces);
 
     const user = await prisma.$transaction(async (tx) => {

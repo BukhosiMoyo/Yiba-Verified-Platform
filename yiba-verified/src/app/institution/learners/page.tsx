@@ -34,7 +34,7 @@ export default async function InstitutionLearnersPage({ searchParams }: PageProp
   if (!userInstitutionId) {
     return (
       <div className="p-4 md:p-8">
-        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-8 md:p-12">
+        <div className="rounded-2xl border border-border bg-card p-8 md:p-12">
           <EmptyState
             title="No institution"
             description="Your account is not linked to an institution. Contact an administrator."
@@ -97,16 +97,16 @@ export default async function InstitutionLearnersPage({ searchParams }: PageProp
 
   return (
     <div className="space-y-6 md:space-y-8 p-4 md:p-8">
-      {/* Header with gradient */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 px-6 py-8 md:px-8 md:py-10 text-white shadow-lg">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.14)_0%,_transparent_50%)]" aria-hidden />
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-8 md:px-8 md:py-10 shadow-sm dark:shadow-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent dark:from-primary/10" aria-hidden />
         <div className="relative flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-            <GraduationCap className="h-7 w-7" strokeWidth={1.8} />
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20">
+            <GraduationCap className="h-7 w-7 text-primary" strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Learners</h1>
-            <p className="mt-1 text-amber-100 text-sm md:text-base">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Learners</h1>
+            <p className="mt-1 text-muted-foreground text-sm md:text-base">
               Manage learners at your institution
             </p>
           </div>
@@ -114,8 +114,8 @@ export default async function InstitutionLearnersPage({ searchParams }: PageProp
       </div>
 
       {/* Main card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden border-l-4 border-l-amber-500">
-        <Suspense fallback={<div className="border-b border-slate-200/80 bg-slate-50/30 px-4 py-4 md:px-6 md:py-5 h-[130px]" />}>
+      <div className="rounded-2xl border border-border bg-card shadow-sm dark:shadow-none overflow-hidden">
+        <Suspense fallback={<div className="border-b border-border bg-muted/30 px-4 py-4 md:px-6 md:py-5 h-[130px]" />}>
           <LearnersFilterBar total={total} />
         </Suspense>
 

@@ -82,9 +82,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Check if invitee already has an account (existing user → login + link)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: invite.email, deleted_at: null },
+      select: { user_id: true },
+    });
+
     // Valid invite
     return ok({
       valid: true,
+      existing_user: !!existingUser,
       invite: {
         email: invite.email,
         role: invite.role,

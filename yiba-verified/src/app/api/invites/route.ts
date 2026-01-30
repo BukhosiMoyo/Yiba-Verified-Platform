@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { randomBytes, createHash } from "crypto";
+import { createAuditLog, serializeValue } from "@/services/audit.service";
 
 /**
  * POST /api/invites
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, role, institution_id } = body;
+    const { email, role, institution_id, default_province } = body;
 
     // Validation
     if (!email || !role) {
@@ -86,16 +87,39 @@ export async function POST(request: NextRequest) {
       finalInstitutionId = ctx.institutionId;
     } else if (ctx.role === "PLATFORM_ADMIN") {
       // PLATFORM_ADMIN can invite anyone
-      // If role requires institution, institution_id must be provided
+      // INSTITUTION_ADMIN may be invited without institution — they add institution(s) during onboarding
+      // INSTITUTION_STAFF and STUDENT require an institution
       if (
-        (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "STUDENT") &&
+        (role === "INSTITUTION_STAFF" || role === "STUDENT") &&
         !finalInstitutionId
       ) {
         throw new AppError(
           ERROR_CODES.VALIDATION_ERROR,
-          "Institution ID is required for institution-scoped roles",
+          "Institution ID is required for Institution Staff and Student",
           400
         );
+      }
+      
+      // Validate province for QCTO roles that require it
+      const qctoRolesRequiringProvince = ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"];
+      if (qctoRolesRequiringProvince.includes(role) && !default_province) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_ERROR,
+          "Province is required for this QCTO role",
+          400
+        );
+      }
+      
+      // Validate province is valid if provided
+      if (default_province) {
+        const { PROVINCES } = await import("@/lib/provinces");
+        if (!PROVINCES.includes(default_province as any)) {
+          throw new AppError(
+            ERROR_CODES.VALIDATION_ERROR,
+            `Invalid province. Must be one of: ${PROVINCES.join(", ")}`,
+            400
+          );
+        }
       }
     }
 
@@ -125,26 +149,50 @@ export async function POST(request: NextRequest) {
     const { storeToken } = await import("@/lib/invites/token-store");
     storeToken(tokenHash, rawToken, 168); // Store for 7 days
 
-    // Create invite with QUEUED status
-    const invite = await prisma.invite.create({
-      data: {
-        email: email.toLowerCase().trim(),
-        role,
-        institution_id: finalInstitutionId || null,
-        token_hash: tokenHash,
-        expires_at: expiresAt,
-        created_by_user_id: ctx.userId,
-        status: "QUEUED",
-        max_attempts: parseInt(process.env.INVITE_MAX_ATTEMPTS || "3", 10),
-      },
-      select: {
-        invite_id: true,
-        email: true,
-        role: true,
-        institution_id: true,
-        expires_at: true,
-        created_at: true,
-      },
+    // Create invite with QUEUED status and audit log
+    const invite = await prisma.$transaction(async (tx) => {
+      const createdInvite = await tx.invite.create({
+        data: {
+          email: email.toLowerCase().trim(),
+          role,
+          institution_id: finalInstitutionId || null,
+          default_province: default_province || null,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+          created_by_user_id: ctx.userId,
+          status: "QUEUED",
+          max_attempts: parseInt(process.env.INVITE_MAX_ATTEMPTS || "3", 10),
+        },
+        select: {
+          invite_id: true,
+          email: true,
+          role: true,
+          institution_id: true,
+          expires_at: true,
+          created_at: true,
+        },
+      });
+
+      // Create audit log for invite creation
+      await createAuditLog(tx, {
+        entityType: "USER",
+        entityId: createdInvite.invite_id, // Use invite_id as entity ID since user doesn't exist yet
+        fieldName: "invite_created",
+        oldValue: null,
+        newValue: serializeValue({
+          email: createdInvite.email,
+          role: createdInvite.role,
+          institution_id: createdInvite.institution_id,
+          default_province: default_province,
+        }),
+        changedBy: ctx.userId,
+        roleAtTime: ctx.role,
+        changeType: "CREATE",
+        reason: `Invite created for ${role} role`,
+        institutionId: finalInstitutionId || null,
+      });
+
+      return createdInvite;
     });
 
     // Generate invite link (in production, this would be sent via email)

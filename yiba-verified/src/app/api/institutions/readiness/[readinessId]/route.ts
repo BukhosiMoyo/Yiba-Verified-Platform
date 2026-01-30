@@ -6,6 +6,9 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { mutateWithAudit } from "@/server/mutations/mutate";
 import type { DeliveryMode, ReadinessStatus } from "@prisma/client";
 import { autoAssignReviewToEligibleReviewers } from "@/lib/reviewAssignments";
+import { validateReadinessForSubmission } from "@/lib/readinessCompletion";
+import { unstable_cache } from "next/cache";
+import { Notifications } from "@/lib/notifications";
 
 /**
  * GET /api/institutions/readiness/[readinessId]
@@ -33,52 +36,61 @@ export async function GET(
       throw new AppError(ERROR_CODES.FORBIDDEN, "Insufficient permissions to view readiness records", 403);
     }
 
-    // Fetch readiness record
-    const readiness = await prisma.readiness.findFirst({
-      where: {
-        readiness_id: readinessId,
-        deleted_at: null,
-      },
-      include: {
-        institution: {
-          select: {
-            institution_id: true,
-            legal_name: true,
-            trading_name: true,
+    // Cache readiness fetch for 2 seconds to reduce database load
+    const getCachedReadiness = unstable_cache(
+      async (id: string) => {
+        return await prisma.readiness.findFirst({
+          where: {
+            readiness_id: id,
+            deleted_at: null,
           },
-        },
-        documents: {
-          orderBy: { uploaded_at: "desc" },
-          select: {
-            document_id: true,
-            file_name: true,
-            mime_type: true,
-            file_size_bytes: true,
-            uploaded_at: true,
-            uploaded_by: true,
-            related_entity: true,
-            related_entity_id: true,
-          },
-        },
-        recommendation: {
           include: {
-            recommendedByUser: {
+            institution: {
               select: {
-                user_id: true,
-                email: true,
-                first_name: true,
-                last_name: true,
+                institution_id: true,
+                legal_name: true,
+                trading_name: true,
+              },
+            },
+            documents: {
+              orderBy: { uploaded_at: "desc" },
+              select: {
+                document_id: true,
+                file_name: true,
+                mime_type: true,
+                file_size_bytes: true,
+                uploaded_at: true,
+                uploaded_by: true,
+                related_entity: true,
+                related_entity_id: true,
+              },
+            },
+            recommendation: {
+              include: {
+                recommendedByUser: {
+                  select: {
+                    user_id: true,
+                    email: true,
+                    first_name: true,
+                    last_name: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                documents: true,
               },
             },
           },
-        },
-        _count: {
-          select: {
-            documents: true,
-          },
-        },
+        });
       },
-    });
+      ["readiness-get"],
+      { revalidate: 2 }
+    );
+
+    // Fetch readiness record (cached)
+    const readiness = await getCachedReadiness(readinessId);
 
     if (!readiness) {
       throw new AppError(ERROR_CODES.NOT_FOUND, "Readiness record not found", 404);
@@ -99,10 +111,14 @@ export async function GET(
 }
 
 interface UpdateReadinessBody {
+  qualification_registry_id?: string | null;
   qualification_title?: string;
   saqa_id?: string;
   nqf_level?: number;
   curriculum_code?: string;
+  credits?: number;
+  occupational_category?: string;
+  intended_learner_intake?: number;
   delivery_mode?: DeliveryMode;
   readiness_status?: ReadinessStatus;
   // Section 2: Self-Assessment
@@ -119,9 +135,19 @@ interface UpdateReadinessBody {
   facilitator_learner_ratio?: string;
   // Section 5: Learning Material Alignment
   learning_material_exists?: boolean;
+  learning_material_coverage_percentage?: number;
+  learning_material_nqf_aligned?: boolean;
+  knowledge_components_complete?: boolean;
+  practical_components_complete?: boolean;
+  learning_material_quality_verified?: boolean;
   knowledge_module_coverage?: number;
   practical_module_coverage?: number;
   curriculum_alignment_confirmed?: boolean;
+  // Section 6: LMIS
+  lmis_functional?: boolean;
+  lmis_popia_compliant?: boolean;
+  lmis_data_storage_description?: string;
+  lmis_access_control_description?: string;
   // Section 6: Occupational Health & Safety (OHS)
   fire_extinguisher_available?: boolean;
   fire_extinguisher_service_date?: string;
@@ -210,15 +236,72 @@ export async function PATCH(
     }
     // PLATFORM_ADMIN can update any
 
-    const body: UpdateReadinessBody = await request.json();
+    let body: UpdateReadinessBody;
+    try {
+      const bodyText = await request.text();
+      if (!bodyText || bodyText.trim() === "") {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Request body is empty", 400);
+      }
+      body = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      console.error("Failed to parse request body:", error);
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid JSON in request body", 400);
+    }
 
     // Build update data
     const updateData: any = {};
-    if (body.qualification_title !== undefined) updateData.qualification_title = body.qualification_title;
-    if (body.saqa_id !== undefined) updateData.saqa_id = body.saqa_id;
-    if (body.nqf_level !== undefined) updateData.nqf_level = body.nqf_level;
-    if (body.curriculum_code !== undefined) updateData.curriculum_code = body.curriculum_code;
-    if (body.delivery_mode !== undefined) updateData.delivery_mode = body.delivery_mode;
+    
+    // Qualification Information (Section 2) - immutable after submission
+    const isSubmitted = existing.readiness_status === "SUBMITTED" || 
+                       existing.readiness_status === "UNDER_REVIEW" ||
+                       existing.readiness_status === "RETURNED_FOR_CORRECTION" ||
+                       existing.readiness_status === "REVIEWED" ||
+                       existing.readiness_status === "RECOMMENDED" ||
+                       existing.readiness_status === "REJECTED";
+    
+    if (!isSubmitted) {
+      // Qualification fields can only be updated if not yet submitted
+      if (body.qualification_registry_id !== undefined) {
+        updateData.qualification_registry_id = body.qualification_registry_id?.trim() || null;
+        if (body.qualification_registry_id) {
+          const registry = await prisma.qualificationRegistry.findFirst({
+            where: { id: body.qualification_registry_id, deleted_at: null, status: "ACTIVE" },
+          });
+          if (registry) {
+            updateData.qualification_title = registry.name;
+            updateData.saqa_id = registry.saqa_id ?? existing.saqa_id;
+            updateData.curriculum_code = registry.curriculum_code ?? existing.curriculum_code;
+            updateData.nqf_level = registry.nqf_level ?? existing.nqf_level;
+            updateData.credits = registry.credits ?? existing.credits;
+            updateData.occupational_category = registry.occupational_category ?? existing.occupational_category;
+          }
+        }
+      }
+      if (body.qualification_title !== undefined) updateData.qualification_title = body.qualification_title;
+      if (body.saqa_id !== undefined) updateData.saqa_id = body.saqa_id;
+      if (body.nqf_level !== undefined) updateData.nqf_level = body.nqf_level;
+      if (body.curriculum_code !== undefined) updateData.curriculum_code = body.curriculum_code;
+      if (body.credits !== undefined) updateData.credits = body.credits;
+      if (body.occupational_category !== undefined) updateData.occupational_category = body.occupational_category || null;
+      if (body.intended_learner_intake !== undefined) updateData.intended_learner_intake = body.intended_learner_intake;
+      if (body.delivery_mode !== undefined) updateData.delivery_mode = body.delivery_mode;
+    } else {
+      // If submitted, reject attempts to change qualification fields
+      if (body.qualification_registry_id !== undefined || body.qualification_title !== undefined || body.saqa_id !== undefined ||
+          body.curriculum_code !== undefined || body.credits !== undefined ||
+          body.occupational_category !== undefined || body.intended_learner_intake !== undefined ||
+          body.delivery_mode !== undefined) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_ERROR,
+          "Qualification information is immutable after submission. Contact QCTO if changes are needed.",
+          400
+        );
+      }
+    }
+    
     if (body.readiness_status !== undefined) {
       updateData.readiness_status = body.readiness_status;
       // If submitting, set submission_date
@@ -226,6 +309,40 @@ export async function PATCH(
         updateData.submission_date = new Date();
       }
     }
+
+    // When transitioning to SUBMITTED: enforce validation and set qualification_snapshot
+    if (body.readiness_status === "SUBMITTED" && existing.readiness_status !== "SUBMITTED" && !existing.submission_date) {
+      const readinessForValidation = await prisma.readiness.findFirst({
+        where: { readiness_id: readinessId },
+        include: {
+          facilitators: { select: { facilitator_id: true } },
+          documents: { select: { document_id: true, document_type: true } },
+        },
+      });
+      if (readinessForValidation) {
+        const merged = { ...readinessForValidation, ...updateData } as typeof readinessForValidation;
+        const validation = validateReadinessForSubmission(merged);
+        if (!validation.can_submit) {
+          return NextResponse.json(
+            { error: validation.errors?.[0] ?? "Validation failed", errors: validation.errors, warnings: validation.warnings },
+            { status: 400 }
+          );
+        }
+        updateData.qualification_snapshot = {
+          qualification_title: merged.qualification_title,
+          saqa_id: merged.saqa_id,
+          nqf_level: merged.nqf_level,
+          curriculum_code: merged.curriculum_code,
+          credits: merged.credits,
+          occupational_category: merged.occupational_category ?? null,
+          delivery_mode: merged.delivery_mode,
+          intended_learner_intake: merged.intended_learner_intake ?? null,
+          qualification_registry_id: merged.qualification_registry_id ?? null,
+          captured_at: new Date().toISOString(),
+        };
+      }
+    }
+
     // Section 2: Self-Assessment
     if (body.self_assessment_completed !== undefined) updateData.self_assessment_completed = body.self_assessment_completed;
     if (body.self_assessment_remarks !== undefined) updateData.self_assessment_remarks = body.self_assessment_remarks || null;
@@ -243,6 +360,12 @@ export async function PATCH(
     if (body.knowledge_module_coverage !== undefined) updateData.knowledge_module_coverage = body.knowledge_module_coverage || null;
     if (body.practical_module_coverage !== undefined) updateData.practical_module_coverage = body.practical_module_coverage || null;
     if (body.curriculum_alignment_confirmed !== undefined) updateData.curriculum_alignment_confirmed = body.curriculum_alignment_confirmed;
+    // Section 9: Learning Material (Form 5)
+    if (body.learning_material_coverage_percentage !== undefined) updateData.learning_material_coverage_percentage = body.learning_material_coverage_percentage;
+    if (body.learning_material_nqf_aligned !== undefined) updateData.learning_material_nqf_aligned = body.learning_material_nqf_aligned;
+    if (body.knowledge_components_complete !== undefined) updateData.knowledge_components_complete = body.knowledge_components_complete;
+    if (body.practical_components_complete !== undefined) updateData.practical_components_complete = body.practical_components_complete;
+    if (body.learning_material_quality_verified !== undefined) updateData.learning_material_quality_verified = body.learning_material_quality_verified;
     // Section 6: Occupational Health & Safety (OHS)
     if (body.fire_extinguisher_available !== undefined) updateData.fire_extinguisher_available = body.fire_extinguisher_available;
     if (body.fire_extinguisher_service_date !== undefined) updateData.fire_extinguisher_service_date = body.fire_extinguisher_service_date ? new Date(body.fire_extinguisher_service_date) : null;
@@ -250,7 +373,12 @@ export async function PATCH(
     if (body.accessibility_for_disabilities !== undefined) updateData.accessibility_for_disabilities = body.accessibility_for_disabilities;
     if (body.first_aid_kit_available !== undefined) updateData.first_aid_kit_available = body.first_aid_kit_available;
     if (body.ohs_representative_name !== undefined) updateData.ohs_representative_name = body.ohs_representative_name || null;
-    // Section 7: LMS & Online Delivery Capability
+    // Section 6: LMIS
+    if (body.lmis_functional !== undefined) updateData.lmis_functional = body.lmis_functional;
+    if (body.lmis_popia_compliant !== undefined) updateData.lmis_popia_compliant = body.lmis_popia_compliant;
+    if (body.lmis_data_storage_description !== undefined) updateData.lmis_data_storage_description = body.lmis_data_storage_description || null;
+    if (body.lmis_access_control_description !== undefined) updateData.lmis_access_control_description = body.lmis_access_control_description || null;
+    // Section 7: LMS & Online Delivery Capability (Hybrid/Blended)
     if (body.lms_name !== undefined) updateData.lms_name = body.lms_name || null;
     if (body.max_learner_capacity !== undefined) updateData.max_learner_capacity = body.max_learner_capacity || null;
     if (body.internet_connectivity_method !== undefined) updateData.internet_connectivity_method = body.internet_connectivity_method || null;
@@ -269,6 +397,52 @@ export async function PATCH(
     if (body.policies_procedures_notes !== undefined) updateData.policies_procedures_notes = body.policies_procedures_notes || null;
     // Section 10: Human Resources (Facilitators)
     if (body.facilitators_notes !== undefined) updateData.facilitators_notes = body.facilitators_notes || null;
+
+    // Calculate completion data if submitting
+    if (body.readiness_status === "SUBMITTED" && !existing.submission_date) {
+      try {
+        const readinessWithRelations = await prisma.readiness.findFirst({
+          where: { readiness_id: readinessId },
+          include: {
+            facilitators: { select: { facilitator_id: true } },
+            documents: { select: { document_id: true, document_type: true } },
+          },
+        });
+        if (readinessWithRelations) {
+          try {
+            const { calculateSectionCompletion } = await import("@/lib/readinessCompletion");
+            // Merge updateData into readinessWithRelations for accurate calculation
+            const readinessForCalculation = {
+              ...readinessWithRelations,
+              ...updateData,
+            } as typeof readinessWithRelations;
+            const completion = calculateSectionCompletion(readinessForCalculation);
+            updateData.section_completion_data = Object.fromEntries(
+              completion.sections.map((s) => [
+                s.section_name,
+                {
+                  completed: s.completed,
+                  required: s.required,
+                  missing_fields: s.missing_fields,
+                },
+              ])
+            );
+          } catch (importError) {
+            // Log import error but don't fail the request
+            console.error(`Failed to import or use readinessCompletion for readiness ${readinessId}:`, importError);
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the request - completion calculation is a convenience feature
+        console.error(`Failed to calculate section completion for readiness ${readinessId}:`, error);
+      }
+    }
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      // Return existing record (no changes, so return as-is)
+      return NextResponse.json(existing, { status: 200 });
+    }
 
     // Update readiness record
     const updated = await mutateWithAudit({
@@ -291,14 +465,18 @@ export async function PATCH(
       },
     });
 
-    // Auto-assign to eligible reviewers when readiness is submitted
+    // Auto-assign to eligible reviewers when readiness is submitted and notify them
     if (body.readiness_status === "SUBMITTED" && existing.readiness_status !== "SUBMITTED") {
       try {
-        await autoAssignReviewToEligibleReviewers(
+        const assignedUserIds = await autoAssignReviewToEligibleReviewers(
           "READINESS",
           readinessId,
           ctx.userId
         );
+        const qualificationTitle = updated?.qualification_title ?? existing.qualification_title ?? undefined;
+        for (const userId of assignedUserIds) {
+          await Notifications.readinessSubmitted(userId, readinessId, qualificationTitle);
+        }
       } catch (error) {
         // Log error but don't fail the request - assignment is a convenience feature
         console.error(
@@ -308,8 +486,18 @@ export async function PATCH(
       }
     }
 
+    // Invalidate cache after update
+    // Note: unstable_cache doesn't have a direct invalidation API, but revalidate: 2 means it will refresh soon
+    
     return NextResponse.json(updated, { status: 200 });
   } catch (error: any) {
+    // Enhanced error logging for debugging
+    console.error("PATCH /api/institutions/readiness/[readinessId] error:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as any)?.code,
+      status: (error as any)?.status,
+    });
     return fail(error);
   }
 }

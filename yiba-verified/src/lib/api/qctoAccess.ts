@@ -16,7 +16,8 @@ export type QCTOResourceType =
   | "LEARNER"
   | "ENROLMENT"
   | "DOCUMENT"
-  | "INSTITUTION";
+  | "INSTITUTION"
+  | "FACILITATOR";
 
 /**
  * Checks if QCTO can read a resource (submission/request-based access).
@@ -171,6 +172,12 @@ export async function canReadForQCTO(
           include: { institution: { select: { province: true } } },
         });
         institutionProvince = enrolment?.institution.province || null;
+      } else if (resourceType === "FACILITATOR") {
+        const facilitator = await prisma.facilitator.findUnique({
+          where: { facilitator_id: resourceId },
+          include: { readiness: { include: { institution: { select: { province: true } } } } },
+        });
+        institutionProvince = facilitator?.readiness.institution.province || null;
       } else if (resourceType === "DOCUMENT") {
         // Documents can be linked to different entities, need to find institution
         const doc = await prisma.document.findUnique({
@@ -200,6 +207,12 @@ export async function canReadForQCTO(
             include: { institution: { select: { province: true } } },
           });
           institutionProvince = readiness?.institution.province || null;
+        } else if (doc?.related_entity === "FACILITATOR") {
+          const facilitator = await prisma.facilitator.findUnique({
+            where: { facilitator_id: doc.related_entity_id },
+            include: { readiness: { include: { institution: { select: { province: true } } } } },
+          });
+          institutionProvince = facilitator?.readiness.institution.province || null;
         }
       }
     }
@@ -238,11 +251,22 @@ export async function canReadForQCTO(
       });
       institutionProvince = learner?.institution.province || null;
     } else if (resourceType === "ENROLMENT") {
-      const enrolment = await prisma.enrolment.findUnique({
-        where: { enrolment_id: resourceId },
-        include: { institution: { select: { province: true } } },
+      try {
+        const enrolment = await prisma.enrolment.findUnique({
+          where: { enrolment_id: resourceId },
+          include: { institution: { select: { province: true } } },
+        });
+        institutionProvince = enrolment?.institution?.province ?? null;
+      } catch (error) {
+        console.error("Error fetching enrolment for province check:", error);
+        institutionProvince = null;
+      }
+    } else if (resourceType === "FACILITATOR") {
+      const facilitator = await prisma.facilitator.findUnique({
+        where: { facilitator_id: resourceId },
+        include: { readiness: { include: { institution: { select: { province: true } } } } },
       });
-      institutionProvince = enrolment?.institution.province || null;
+      institutionProvince = facilitator?.readiness.institution.province || null;
     } else if (resourceType === "DOCUMENT") {
       // Documents can be linked to different entities, need to find institution
       const doc = await prisma.document.findUnique({
@@ -272,6 +296,12 @@ export async function canReadForQCTO(
           include: { institution: { select: { province: true } } },
         });
         institutionProvince = readiness?.institution.province || null;
+      } else if (doc?.related_entity === "FACILITATOR") {
+        const facilitator = await prisma.facilitator.findUnique({
+          where: { facilitator_id: doc.related_entity_id },
+          include: { readiness: { include: { institution: { select: { province: true } } } } },
+        });
+        institutionProvince = facilitator?.readiness.institution.province || null;
       }
     }
   }
@@ -321,7 +351,8 @@ export async function canReadForQCTO(
     return true; // Resource is in a submission being reviewed - QCTO can see it! ✅
   }
 
-  // Check if resource is in an APPROVED QCTORequest
+  // Check if resource is in an APPROVED QCTORequest (and not expired)
+  const now = new Date();
   const approvedRequest = await prisma.qCTORequestResource.findFirst({
     where: {
       resource_type: resourceType,
@@ -329,6 +360,10 @@ export async function canReadForQCTO(
       request: {
         status: "APPROVED",
         deleted_at: null,
+        OR: [
+          { expires_at: null },
+          { expires_at: { gt: now } },
+        ],
       },
     },
     select: {
@@ -337,7 +372,59 @@ export async function canReadForQCTO(
   });
 
   if (approvedRequest) {
-    return true; // Resource is in an approved request - QCTO can see it! ✅
+    return true; // Resource is in an approved, non-expired request - QCTO can see it! ✅
+  }
+
+  // Special case: For ENROLMENT resources, also check if the learner is in an approved submission/request
+  if (resourceType === "ENROLMENT") {
+    try {
+      const enrolment = await prisma.enrolment.findUnique({
+        where: { enrolment_id: resourceId },
+        select: { learner_id: true },
+      });
+
+      if (enrolment?.learner_id) {
+        // Check if learner is in an approved submission
+        const learnerInSubmission = await prisma.submissionResource.findFirst({
+          where: {
+            resource_type: "LEARNER",
+            resource_id_value: enrolment.learner_id,
+            submission: {
+              status: { in: ["APPROVED", "SUBMITTED", "UNDER_REVIEW"] },
+              deleted_at: null,
+            },
+          },
+        });
+
+        if (learnerInSubmission) {
+          return true; // Learner is in a submission - QCTO can see their enrolments! ✅
+        }
+
+        // Check if learner is in an approved, non-expired request
+        const learnerInRequest = await prisma.qCTORequestResource.findFirst({
+          where: {
+            resource_type: "LEARNER",
+            resource_id_value: enrolment.learner_id,
+            request: {
+              status: "APPROVED",
+              deleted_at: null,
+              OR: [
+                { expires_at: null },
+                { expires_at: { gt: now } },
+              ],
+            },
+          },
+        });
+
+        if (learnerInRequest) {
+          return true; // Learner is in an approved, non-expired request - QCTO can see their enrolments! ✅
+        }
+      }
+    } catch (error) {
+      // If there's an error checking learner access, log it but don't fail
+      // The enrolment might still be directly accessible
+      console.error("Error checking learner access for enrolment:", error);
+    }
   }
 
   // Resource not shared/approved - QCTO can't see it (deny-by-default)
@@ -471,6 +558,10 @@ export async function canReadInstitutionForQCTO(
       institution_id: institutionId,
       status: "APPROVED",
       deleted_at: null,
+      OR: [
+        { expires_at: null },
+        { expires_at: { gt: new Date() } },
+      ],
     },
     select: {
       request_id: true,
@@ -478,7 +569,7 @@ export async function canReadInstitutionForQCTO(
   });
 
   if (hasApprovedRequest) {
-    return true; // Institution has approved requests - QCTO can see it! ✅
+    return true; // Institution has approved, non-expired requests - QCTO can see it! ✅
   }
 
   // Institution not shared/approved - QCTO can't see it (deny-by-default)

@@ -1,3 +1,4 @@
+// GET /api/qcto/invites - List QCTO invites (requires QCTO_TEAM_MANAGE)
 // POST /api/qcto/invites - Create QCTO invite (requires QCTO_TEAM_MANAGE)
 
 import { NextRequest } from "next/server";
@@ -18,6 +19,67 @@ const QCTO_INVITE_ROLES = [
 
 const EXPIRY_DAYS = 7;
 
+export async function GET(request: NextRequest) {
+  try {
+    const { ctx } = await requireAuth(request);
+
+    if (!hasCap(ctx.role, "QCTO_TEAM_MANAGE")) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "QCTO_TEAM_MANAGE capability required", 403);
+    }
+
+    let qctoId = ctx.qctoId;
+    if (!qctoId && hasCap(ctx.role, "QCTO_TEAM_MANAGE")) {
+      const org = await prisma.qCTOOrg.findFirst();
+      if (org) qctoId = org.id;
+    }
+    if (!qctoId) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, "No QCTO organisation access", 403);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
+
+    const where: any = {
+      qcto_id: qctoId,
+    };
+
+    if (status && status !== "all") {
+      where.status = status;
+    }
+
+    const [invites, total] = await Promise.all([
+      prisma.qCTOInvite.findMany({
+        where,
+        include: {
+          invitedBy: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { created_at: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.qCTOInvite.count({ where }),
+    ]);
+
+    return Response.json({
+      items: invites,
+      total,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { ctx } = await requireAuth(request);
@@ -27,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     let qctoId = ctx.qctoId;
-    if (!qctoId && ctx.role === "PLATFORM_ADMIN") {
+    if (!qctoId && hasCap(ctx.role, "QCTO_TEAM_MANAGE")) {
       const org = await prisma.qCTOOrg.findFirst();
       if (org) qctoId = org.id;
     }
@@ -36,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { full_name, email, role } = body;
+    const { full_name, email, role, province } = body;
 
     if (!full_name || typeof full_name !== "string" || !full_name.trim()) {
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Full name is required", 400);
@@ -49,7 +111,15 @@ export async function POST(request: NextRequest) {
     if (!QCTO_INVITE_ROLES.includes(roleVal as (typeof QCTO_INVITE_ROLES)[number])) {
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid role", 400);
     }
+    if (ctx.role === "QCTO_SUPER_ADMIN" && roleVal === "QCTO_SUPER_ADMIN") {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        "Only platform administrators can invite QCTO Super Admins.",
+        403
+      );
+    }
 
+    // Check if pending invite already exists for this email
     const existing = await prisma.qCTOInvite.findFirst({
       where: {
         qcto_id: qctoId,
@@ -65,6 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate secure token
     const rawToken = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
     const expiresAt = new Date();
@@ -76,6 +147,7 @@ export async function POST(request: NextRequest) {
         email: emailNorm,
         full_name: full_name.trim(),
         role: roleVal as (typeof QCTO_INVITE_ROLES)[number],
+        province: province && typeof province === "string" ? province.trim() : null,
         token_hash: tokenHash,
         status: "PENDING",
         expires_at: expiresAt,
@@ -85,14 +157,11 @@ export async function POST(request: NextRequest) {
 
     const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const acceptUrl = `${base}/auth/qcto/accept-invite?token=${encodeURIComponent(rawToken)}`;
-    if (process.env.NODE_ENV === "development") {
-      console.log("[QCTO Invite] Accept URL (demo – no email sent):", acceptUrl);
-    }
 
     return Response.json({
       success: true,
       accept_url: acceptUrl,
-      message: "Invite created. In demo mode the accept URL is returned here and logged to the console.",
+      message: "Invite created successfully",
     });
   } catch (error) {
     return fail(error);

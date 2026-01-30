@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function MarketingFooter() {
   return (
@@ -8,7 +9,8 @@ export function MarketingFooter() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="inline-block">
-              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-8 w-auto max-w-[140px] object-contain object-left opacity-90" />
+              <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={140} height={32} className="h-8 w-auto max-w-[140px] object-contain object-left opacity-90 dark:hidden" sizes="140px" />
+              <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={140} height={32} className="h-8 w-auto max-w-[140px] object-contain object-left opacity-90 hidden dark:block" sizes="140px" priority loading="eager" />
             </Link>
             <p className="mt-3 text-sm text-muted-foreground max-w-[220px]">
               QCTO compliance and oversight, simplified.
@@ -20,6 +22,11 @@ export function MarketingFooter() {
           <div>
             <h3 className="text-sm font-semibold text-foreground">Compliance</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+              <li>
+                <Link href="/institutions" className="transition-colors hover:text-foreground">
+                  Find institutions
+                </Link>
+              </li>
               <li>
                 <Link href="/features" className="transition-colors hover:text-foreground">
                   Features
@@ -48,8 +55,8 @@ export function MarketingFooter() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:info@yibaverified.com" className="transition-colors hover:text-foreground">
-                  info@yibaverified.com
+                <a href="mailto:hello@yibaverified.co.za" className="transition-colors hover:text-foreground">
+                  hello@yibaverified.co.za
                 </a>
               </li>
             </ul>
@@ -60,7 +67,7 @@ export function MarketingFooter() {
             <h3 className="text-sm font-semibold text-foreground">Legal</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <Link href="/" className="transition-colors hover:text-foreground">
+                <Link href="/about" className="transition-colors hover:text-foreground">
                   About
                 </Link>
               </li>
@@ -70,14 +77,14 @@ export function MarketingFooter() {
                 </Link>
               </li>
               <li>
-                <a href="#" className="transition-colors hover:text-foreground">
+                <Link href="/privacy-policy" className="transition-colors hover:text-foreground">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="transition-colors hover:text-foreground">
+                <Link href="/terms" className="transition-colors hover:text-foreground">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

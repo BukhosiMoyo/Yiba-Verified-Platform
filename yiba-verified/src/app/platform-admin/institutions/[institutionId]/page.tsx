@@ -806,9 +806,12 @@ export default function InstitutionDetailPage() {
                     required
                   >
                     <option value="">Select type</option>
-                    <option value="PRIVATE">Private</option>
-                    <option value="PUBLIC">Public</option>
+                    <option value="TVET">TVET</option>
+                    <option value="PRIVATE_SDP">Private SDP</option>
                     <option value="NGO">NGO</option>
+                    <option value="UNIVERSITY">University</option>
+                    <option value="EMPLOYER">Company (accredited for workplace training)</option>
+                    <option value="OTHER">Other</option>
                   </Select>
                 </div>
               </div>

@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const ctx = await requireApiContext(request);
 
-    // Only INSTITUTION_ADMIN can view their institution's announcements
-    if (ctx.role !== "INSTITUTION_ADMIN") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only institution admins can view institution announcements", 403));
+    // INSTITUTION_ADMIN and INSTITUTION_STAFF can view their institution's announcements
+    if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF") {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Only institution admins and staff can view institution announcements", 403));
     }
 
     // Get user's institution

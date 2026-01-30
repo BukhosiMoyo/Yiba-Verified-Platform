@@ -1,4 +1,4 @@
-// POST /api/invites/accept - Accept an invite and create user account
+// POST /api/invites/accept - Accept an invite (new user: create account; existing user: link institution)
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -7,37 +7,29 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import { validateProvinceAssignment } from "@/lib/security/validation";
+import { getServerSession } from "@/lib/get-server-session";
+import { Notifications } from "@/lib/notifications";
 
 /**
  * POST /api/invites/accept
- * Accepts an invite and creates a user account.
+ * - With token + name + password: create new user and mark invite accepted.
+ * - With token only (and session): existing user — link institution/role and mark invite accepted (session email must match invite email).
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { token, name, password } = body;
 
-    if (!token || !name || !password) {
+    if (!token || typeof token !== "string") {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
-        "Token, name, and password are required",
+        "Token is required",
         400
       );
     }
 
-    // Validate password
-    if (password.length < 8) {
-      throw new AppError(
-        ERROR_CODES.VALIDATION_ERROR,
-        "Password must be at least 8 characters",
-        400
-      );
-    }
-
-    // Hash the token to look it up
     const tokenHash = createHash("sha256").update(token).digest("hex");
 
-    // Find invite
     const invite = await prisma.invite.findUnique({
       where: {
         token_hash: tokenHash,
@@ -53,8 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if already used
-    if (invite.used_at) {
+    if (invite.used_at || invite.accepted_at) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
         "This invite has already been used",
@@ -62,7 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if expired
+    if (invite.declined_at) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        "This invite was declined",
+        400
+      );
+    }
+
     if (new Date() > invite.expires_at) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
@@ -71,14 +69,95 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: invite.email },
+      where: { email: invite.email, deleted_at: null },
+      select: { user_id: true, institution_id: true, role: true },
     });
-    if (existingUser && !existingUser.deleted_at) {
+
+    // Existing user path: token only, require session email === invite.email
+    if (existingUser && (!name || !password)) {
+      const session = await getServerSession();
+      const sessionEmail = (session?.user?.email as string)?.toLowerCase?.();
+      if (!sessionEmail || sessionEmail !== invite.email.toLowerCase()) {
+        throw new AppError(
+          ERROR_CODES.UNAUTHENTICATED,
+          "Sign in with the invited email to accept this invitation",
+          401
+        );
+      }
+
+      const now = new Date();
+      await prisma.$transaction(async (tx) => {
+        await tx.invite.update({
+          where: { invite_id: invite.invite_id },
+          data: {
+            used_at: now,
+            accepted_at: now,
+            status: "ACCEPTED",
+          },
+        });
+
+        if (invite.institution_id) {
+          const uiRole = invite.role === "INSTITUTION_ADMIN" ? "ADMIN" : "STAFF";
+          await tx.userInstitution.upsert({
+            where: {
+              user_id_institution_id: {
+                user_id: existingUser.user_id,
+                institution_id: invite.institution_id,
+              },
+            },
+            create: {
+              user_id: existingUser.user_id,
+              institution_id: invite.institution_id,
+              role: uiRole,
+              is_primary: !existingUser.institution_id,
+            },
+            update: {},
+          });
+          if (!existingUser.institution_id) {
+            await tx.user.update({
+              where: { user_id: existingUser.user_id },
+              data: { institution_id: invite.institution_id },
+            });
+          }
+        }
+      });
+
+      // Notify institution admins that invite was accepted (one row per recipient)
+      if (invite.institution_id) {
+        const admins = await prisma.userInstitution.findMany({
+          where: { institution_id: invite.institution_id, role: "ADMIN" },
+          select: { user_id: true },
+        });
+        for (const { user_id } of admins) {
+          await Notifications.inviteAccepted(user_id, invite.institution_id, invite.email);
+        }
+      }
+
+      return ok({
+        success: true,
+        existingUser: true,
+        user: {
+          user_id: existingUser.user_id,
+          email: invite.email,
+          role: existingUser.role,
+        },
+      });
+    }
+
+    // New user path: require name and password
+    if (!existingUser && (!name || !password)) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
-        "User with this email already exists",
+        "Name and password are required to create your account",
+        400
+      );
+    }
+
+    if (existingUser && (name || password)) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        "User with this email already exists — sign in and accept the invite from the link",
         400
       );
     }
@@ -99,14 +178,18 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Validate province assignment if provided in body (for QCTO roles)
-    const defaultProvince = body.default_province || null;
-    const assignedProvinces = body.assigned_provinces || [];
+    // Use province from invite if available, otherwise from body (for QCTO roles)
+    const defaultProvince = invite.default_province || body.default_province || null;
+    const assignedProvinces = body.assigned_provinces || (defaultProvince ? [defaultProvince] : []);
     
     // Validate province assignment based on role
     validateProvinceAssignment(invite.role, defaultProvince, assignedProvinces);
 
+    // Platform admins are auto-verified with BLACK badge
+    const isPlatformAdmin = invite.role === "PLATFORM_ADMIN";
+
     // Create user in a transaction
+    // Institution admin may have invite.institution_id null — they add institution(s) during onboarding; no UserInstitution row here
     const result = await prisma.$transaction(async (tx) => {
       // Create user
       const user = await tx.user.create({
@@ -116,11 +199,16 @@ export async function POST(request: NextRequest) {
           last_name: lastName,
           password_hash: passwordHash,
           role: invite.role,
-          institution_id: invite.institution_id,
+          institution_id: invite.institution_id, // null for INSTITUTION_ADMIN without institution; they add during onboarding
           status: "ACTIVE",
-          onboarding_completed: false, // Students must complete onboarding
+          onboarding_completed: false, // Students and institution admins without institution must complete onboarding
           default_province: defaultProvince,
           assigned_provinces: assignedProvinces,
+          // Auto-verify platform admins with BLACK badge
+          ...(isPlatformAdmin && {
+            verification_level: "BLACK",
+            verification_date: new Date(),
+          }),
         },
       });
 
@@ -147,8 +235,20 @@ export async function POST(request: NextRequest) {
       return user;
     });
 
+    // Notify institution admins that invite was accepted (one row per recipient)
+    if (invite.institution_id) {
+      const admins = await prisma.userInstitution.findMany({
+        where: { institution_id: invite.institution_id, role: "ADMIN" },
+        select: { user_id: true },
+      });
+      for (const { user_id } of admins) {
+        await Notifications.inviteAccepted(user_id, invite.institution_id, invite.email);
+      }
+    }
+
     return ok({
       success: true,
+      existingUser: false,
       user: {
         user_id: result.user_id,
         email: result.email,

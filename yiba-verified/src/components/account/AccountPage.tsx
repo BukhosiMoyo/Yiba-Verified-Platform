@@ -20,11 +20,11 @@ export function AccountPage({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-2 text-sm text-gray-500">{subtitle}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
         {actions && <div className="flex-shrink-0">{actions}</div>}
@@ -60,7 +60,7 @@ export function AccountSection({
             {title && (
               <h3 className={cn(
                 "text-lg font-semibold",
-                isDangerZone ? "text-red-900 dark:text-red-100" : "text-gray-900"
+                isDangerZone ? "text-red-900 dark:text-red-100" : "text-foreground"
               )}>
                 {title}
               </h3>
@@ -68,7 +68,7 @@ export function AccountSection({
             {description && (
               <p className={cn(
                 "text-sm",
-                isDangerZone ? "text-red-700 dark:text-red-300" : "text-gray-500"
+                isDangerZone ? "text-red-700 dark:text-red-300" : "text-muted-foreground"
               )}>
                 {description}
               </p>

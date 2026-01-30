@@ -36,8 +36,8 @@ export type MockStudentSystem = {
 // LocalStorage key for editable profile data
 const PROFILE_STORAGE_KEY = "student_profile_editable";
 
-// Styles for locked (auto-filled) cards: subtle tint, works in light/dark
-const LOCKED_CARD_CLASS = "bg-blue-50/40 dark:bg-blue-950/20 border-blue-100/60 dark:border-blue-900/30";
+// Styles for locked (auto-filled) cards: opaque so dot grid does not show through; distinct verified look
+const LOCKED_CARD_CLASS = "bg-card border-l-4 border-l-blue-500/80 border-border shadow-sm";
 
 export type StudentProfileClientProps = {
   initialEditable: MockStudentEditable;
@@ -59,6 +59,7 @@ export function StudentProfileClient({ initialEditable, system, cvVersions, lear
   const [pdfRequest, setPdfRequest] = useState<{ targetRole: string; versionName: string } | null>(null);
   const [verifyUrl, setVerifyUrl] = useState<string>("yibaverified.co.za");
   const [isSavingPublic, setIsSavingPublic] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Load public profile settings on mount to ensure we have latest state
@@ -201,16 +202,50 @@ export function StudentProfileClient({ initialEditable, system, cvVersions, lear
     if (url) void navigator.clipboard.writeText(url).then(() => toast.success("Private link copied (login required)"));
   };
 
+  const viewLiveProfileHref =
+    publicProfile && (publicProfileId || learnerId)
+      ? `/p/${publicProfileId || learnerId}`
+      : null;
+
   return (
     <div className="space-y-6 pb-8">
-      <StudentProfileHeader
-        photoUrl={editable.photoUrl}
-        onPhotoChange={setPhoto}
-        system={system.header}
-        onDownloadCv={handleDownloadCv}
-        onSharePublicLink={handleShareProfile}
-        onSharePrivateLink={handleSharePrivateLink}
-      />
+      {headerCollapsed ? (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
+          <span className="text-sm text-muted-foreground">Profile header hidden — more space to edit</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setHeaderCollapsed(false)}
+            aria-label="Show profile header"
+          >
+            <ChevronDown className="h-4 w-4" strokeWidth={1.5} />
+            Show header
+          </Button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 right-2 z-10 h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={() => setHeaderCollapsed(true)}
+            aria-label="Hide profile header for more editing space"
+          >
+            <ChevronUp className="h-4 w-4" strokeWidth={1.5} />
+            Hide header
+          </Button>
+          <StudentProfileHeader
+            photoUrl={editable.photoUrl}
+            onPhotoChange={setPhoto}
+            system={system.header}
+            onDownloadCv={handleDownloadCv}
+            onSharePublicLink={handleShareProfile}
+            onSharePrivateLink={handleSharePrivateLink}
+            viewLiveProfileHref={viewLiveProfileHref}
+          />
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto gap-1">
@@ -226,10 +261,15 @@ export function StudentProfileClient({ initialEditable, system, cvVersions, lear
           <div className="grid gap-6 lg:grid-cols-5">
             {/* Preview first in DOM so it stacks above on mobile; lg:col-span-3 so it dominates */}
             <div className="space-y-6 lg:col-span-3">
+              {!publicProfile && (
+                <p className="text-sm text-muted-foreground rounded-lg border border-border bg-muted/30 px-3 py-2">
+                  Turn on public profile in Settings to get a shareable link and preview.
+                </p>
+              )}
               <div>
                 <h2 className="text-sm font-semibold text-foreground mb-2">Live CV Preview</h2>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Changes to About, Skills, and Projects appear here as you edit.
+                  Live preview — changes to About, Skills, and Projects appear here as you edit.
                 </p>
                 <StudentCVPreview
                   editable={editable}
@@ -740,7 +780,7 @@ function LockedCard({ title, children, className }: { title: string; children: R
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2 flex-wrap">
           <Lock className="h-4 w-4 text-muted-foreground dark:text-gray-400 shrink-0" strokeWidth={1.5} />
-          <CardTitle className="text-lg dark:text-gray-100">{title}</CardTitle>
+          <CardTitle className="text-lg text-foreground">{title}</CardTitle>
           <Badge variant="secondary" className="text-xs dark:bg-gray-700/50 dark:text-gray-300">Auto-filled</Badge>
         </div>
       </CardHeader>
@@ -763,8 +803,8 @@ function VerificationCard({ system, locked }: { system: MockStudentSystem; locke
   );
   if (locked) return <LockedCard title="Verification">{inner}</LockedCard>;
   return (
-    <Card className="dark:border-gray-700/60 dark:bg-gray-900/50">
-      <CardHeader><CardTitle className="text-lg dark:text-gray-100">Verification</CardTitle></CardHeader>
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Verification</CardTitle></CardHeader>
       <CardContent className="space-y-2">{inner}</CardContent>
     </Card>
   );
@@ -791,8 +831,8 @@ function QuickStatsCard({ system, locked }: { system: MockStudentSystem; locked?
   );
   if (locked) return <LockedCard title="Quick stats">{inner}</LockedCard>;
   return (
-    <Card className="dark:border-gray-700/60 dark:bg-gray-900/50">
-      <CardHeader><CardTitle className="text-lg dark:text-gray-100">Quick stats</CardTitle></CardHeader>
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Quick stats</CardTitle></CardHeader>
       <CardContent className="space-y-2">{inner}</CardContent>
     </Card>
   );
@@ -815,8 +855,8 @@ function QualificationsPreviewCard({ system, locked }: { system: MockStudentSyst
   );
   if (locked) return <LockedCard title="Qualifications">{inner}</LockedCard>;
   return (
-    <Card className="dark:border-gray-700/60 dark:bg-gray-900/50">
-      <CardHeader><CardTitle className="text-lg dark:text-gray-100">Qualifications</CardTitle></CardHeader>
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Qualifications</CardTitle></CardHeader>
       <CardContent>{inner}</CardContent>
     </Card>
   );
@@ -840,8 +880,8 @@ function WorkplaceEvidencePreviewCard({ system, locked }: { system: MockStudentS
   );
   if (locked) return <LockedCard title="Workplace evidence">{inner}</LockedCard>;
   return (
-    <Card className="dark:border-gray-700/60 dark:bg-gray-900/50">
-      <CardHeader><CardTitle className="text-lg dark:text-gray-100">Workplace evidence</CardTitle></CardHeader>
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Workplace evidence</CardTitle></CardHeader>
       <CardContent>{inner}</CardContent>
     </Card>
   );

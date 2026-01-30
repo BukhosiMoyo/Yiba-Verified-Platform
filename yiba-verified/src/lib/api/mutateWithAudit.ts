@@ -14,7 +14,9 @@ export type LegacyMutateAction =
   | "DOCUMENT_CREATE"
   | "DOCUMENT_REPLACE"
   | "DOCUMENT_ACCEPT"
+  | "DOCUMENT_VERIFY"
   | "DOCUMENT_FLAG"
+  | "DOCUMENT_LINK"
   | "READINESS_REVIEW";
 
 export type LegacyMutateOptions<T> = {
@@ -31,7 +33,10 @@ function getChangeTypeAndField(action: LegacyMutateAction): { changeType: "CREAT
       return { changeType: "CREATE", fieldName: "document_id" };
     case "DOCUMENT_REPLACE":
       return { changeType: "CREATE", fieldName: "version" };
+    case "DOCUMENT_LINK":
+      return { changeType: "CREATE", fieldName: "document_id" };
     case "DOCUMENT_ACCEPT":
+    case "DOCUMENT_VERIFY":
       return { changeType: "STATUS_CHANGE", fieldName: "status" };
     case "DOCUMENT_FLAG":
       return { changeType: "STATUS_CHANGE", fieldName: "flags" };
@@ -43,7 +48,7 @@ function getChangeTypeAndField(action: LegacyMutateAction): { changeType: "CREAT
 }
 
 function isQctoReviewAction(action: LegacyMutateAction): boolean {
-  return ["DOCUMENT_ACCEPT", "DOCUMENT_FLAG", "READINESS_REVIEW"].includes(action);
+  return ["DOCUMENT_ACCEPT", "DOCUMENT_VERIFY", "DOCUMENT_FLAG", "READINESS_REVIEW"].includes(action);
 }
 
 /**

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Table,
   TableBody,
@@ -15,14 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { AuditLogDiffViewer } from "@/components/platform-admin/AuditLogDiffViewer";
+import { AuditLogDetailModal } from "@/components/platform-admin/AuditLogDetailModal";
 import { formatFieldLabel, formatValueForDisplay } from "@/lib/audit-display";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Eye, ClipboardList } from "lucide-react";
@@ -64,7 +59,7 @@ const PILL_BASE = "rounded-full px-2.5 py-1 text-xs font-medium border shrink-0"
 function getRoleChip(role: string) {
   const label = role.replace(/_/g, " ");
   return (
-    <span className={`${PILL_BASE} bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:border-slate-700`}>
+    <span className={`${PILL_BASE} bg-slate-100 text-slate-700 border-slate-200 dark:bg-muted dark:text-muted-foreground dark:border-border`}>
       {label}
     </span>
   );
@@ -72,12 +67,12 @@ function getRoleChip(role: string) {
 
 function getActionChip(changeType: string) {
   const T: Record<string, { label: string; c: string }> = {
-    CREATE: { label: "Created", c: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800" },
-    UPDATE: { label: "Updated", c: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700" },
-    STATUS_CHANGE: { label: "Status changed", c: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800" },
-    DELETE: { label: "Deleted", c: "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/50 dark:text-red-200 dark:border-red-800" },
+    CREATE: { label: "Created", c: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400/80 dark:border-blue-500/20" },
+    UPDATE: { label: "Updated", c: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-muted dark:text-muted-foreground dark:border-border" },
+    STATUS_CHANGE: { label: "Status changed", c: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400/80 dark:border-amber-500/20" },
+    DELETE: { label: "Deleted", c: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/10 dark:text-red-400/80 dark:border-red-500/20" },
   };
-  const t = T[changeType] ?? { label: changeType, c: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700" };
+  const t = T[changeType] ?? { label: changeType, c: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-muted dark:text-muted-foreground dark:border-border" };
   return <span className={`${PILL_BASE} ${t.c}`}>{t.label}</span>;
 }
 
@@ -116,6 +111,30 @@ type AuditLogEntry = {
     request_id: string;
     title: string | null;
     status: string | null;
+  } | null;
+  oldInstitution?: {
+    institution_id: string;
+    legal_name: string | null;
+    trading_name: string | null;
+  } | null;
+  newInstitution?: {
+    institution_id: string;
+    legal_name: string | null;
+    trading_name: string | null;
+  } | null;
+  entityUser?: {
+    user_id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+    role: string;
+    status: string;
+    institution: {
+      institution_id: string;
+      legal_name: string | null;
+      trading_name: string | null;
+    } | null;
   } | null;
 };
 
@@ -192,6 +211,13 @@ export function AuditLogsTableClient({
 }: AuditLogsTableClientProps) {
   const router = useRouter();
   const [viewEntry, setViewEntry] = useState<AuditLogEntry | null>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56,
+    overscan: 5,
+  });
   const isQcto = basePath.startsWith("/qcto");
   const institutionsPath = isQcto ? "/qcto/institutions" : "/platform-admin/institutions";
   const submissionsPath = isQcto ? "/qcto/submissions" : "/institution/submissions";
@@ -267,45 +293,56 @@ export function AuditLogsTableClient({
             variant={hasActiveFilters ? "no-results" : "default"}
           />
         ) : (
-          <div className="w-full min-w-0 rounded-xl border border-gray-200/60 dark:border-gray-800/60 bg-white dark:bg-gray-950 shadow-sm">
-            <div className="overflow-x-auto">
-              <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-800 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-800">
+          <div className="w-full min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div
+              ref={parentRef}
+              className="overflow-x-auto overflow-y-auto"
+              style={{ height: "60vh", minHeight: 320 }}
+            >
+              <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-12">
+                  <TableRow className="bg-muted/50 border-b border-border">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 w-12">
                       #
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-[152px]">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 w-[152px]">
                       Timestamp
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 min-w-[180px]">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 min-w-[180px]">
                       User
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5">
                       Action
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5">
                       Entity
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5">
                       Field
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 py-2.5 min-w-[200px]">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground py-2.5 min-w-[200px]">
                       Change
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 py-2.5 min-w-[120px] max-w-[180px]">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground py-2.5 min-w-[120px] max-w-[180px]">
                       Reason
                     </TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 min-w-[140px]">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 min-w-[140px]">
                       Related
                     </TableHead>
-                    <TableHead className="sticky right-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 border-l border-gray-200 dark:border-gray-800 text-[11px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400 whitespace-nowrap py-2.5 w-[88px]">
+                    <TableHead className="sticky right-0 z-10 bg-muted/50 border-l border-border text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 w-[88px]">
                       Actions
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {logs.map((log, index) => {
+                <TableBody
+                  style={{
+                    height: virtualizer.getTotalSize(),
+                    position: "relative",
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const log = logs[virtualRow.index];
+                    const index = virtualRow.index;
                     const userName =
                       log.changedBy?.first_name || log.changedBy?.last_name
                         ? `${(log.changedBy.first_name || "").trim()} ${(log.changedBy.last_name || "").trim()}`.trim()
@@ -359,11 +396,19 @@ export function AuditLogsTableClient({
                         : "—";
 
                     return (
-                      <TableRow key={log.audit_id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
-                        <TableCell className="py-2 whitespace-nowrap w-12 text-gray-800 dark:text-gray-200 font-bold align-top">
+                      <TableRow
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        className="group hover:bg-muted/50 transition-colors absolute left-0 top-0 w-full"
+                        style={{
+                          transform: `translateY(${virtualRow.start}px)`,
+                          height: `${virtualRow.size}px`,
+                        }}
+                      >
+                        <TableCell className="py-2 whitespace-nowrap w-12 text-foreground font-bold align-top">
                           {offset + index + 1}
                         </TableCell>
-                        <TableCell className="font-mono text-xs py-2 whitespace-nowrap w-[152px] text-gray-700 dark:text-gray-300">
+                        <TableCell className="font-mono text-xs py-2 whitespace-nowrap w-[152px] text-muted-foreground">
                           {formatDate(log.changed_at)}
                         </TableCell>
                         <TableCell className="py-2 min-w-[180px]">
@@ -372,7 +417,7 @@ export function AuditLogsTableClient({
                               <TooltipTrigger asChild>
                                 <div className="flex items-start justify-between gap-2 min-w-0">
                                   <div className="min-w-0 flex flex-col gap-0.5">
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{userLine1}</span>
+                                    <span className="font-semibold text-foreground truncate">{userLine1}</span>
                                     {userLine2 && (
                                       <span className="text-xs text-muted-foreground truncate">{userLine2}</span>
                                     )}
@@ -424,7 +469,7 @@ export function AuditLogsTableClient({
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className="py-2 min-w-0 max-w-[180px]" title={log.reason || "No reason provided"}>
-                          <span className="line-clamp-2 text-xs text-gray-700 dark:text-gray-300">
+                          <span className="line-clamp-2 text-xs text-muted-foreground">
                             {log.reason || "No reason provided"}
                           </span>
                         </TableCell>
@@ -446,14 +491,14 @@ export function AuditLogsTableClient({
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="sticky right-0 z-10 bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900 py-2 w-[88px] whitespace-nowrap align-top">
+                        <TableCell className="sticky right-0 z-10 bg-card border-l border-border group-hover:bg-muted/50 py-2 w-[88px] whitespace-nowrap align-top">
                           <TooltipProvider>
                             <Tooltip delayDuration={200}>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 shrink-0 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  className="h-8 w-8 shrink-0"
                                   onClick={() => setViewEntry(log)}
                                   aria-label="View audit entry"
                                 >
@@ -472,10 +517,10 @@ export function AuditLogsTableClient({
             </div>
 
             {/* Footer: Rows per page, Showing X–Y of Z, Prev / Next */}
-            <footer className="border-t border-gray-200 dark:border-gray-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-900/30">
+            <footer className="border-t border-border px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-muted/30">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Rows per page</span>
+                  <span className="text-sm text-muted-foreground">Rows per page</span>
                   <Select
                     value={String(limit)}
                     onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
@@ -513,7 +558,7 @@ export function AuditLogsTableClient({
           <footer className="pt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Rows per page</span>
+                <span className="text-sm text-muted-foreground">Rows per page</span>
                 <Select
                   value={String(limit)}
                   onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
@@ -530,96 +575,12 @@ export function AuditLogsTableClient({
         )}
       </div>
 
-      {/* View entry drawer */}
-      <Sheet open={!!viewEntry} onOpenChange={(open) => !open && setViewEntry(null)}>
-        <SheetContent side="right" className="flex flex-col sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Audit entry</SheetTitle>
-            <SheetDescription>Full change details and metadata</SheetDescription>
-          </SheetHeader>
-          {viewEntry && (
-            <div className="mt-4 flex-1 overflow-y-auto space-y-4 pr-2">
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Timestamp</p>
-                <p className="text-sm font-mono mt-0.5">{formatDate(viewEntry.changed_at)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">User</p>
-                <p className="text-sm mt-0.5">
-                  {viewEntry.changedBy?.first_name && viewEntry.changedBy?.last_name
-                    ? `${viewEntry.changedBy.first_name} ${viewEntry.changedBy.last_name}`
-                    : viewEntry.changedBy?.email || viewEntry.changed_by || "—"}
-                </p>
-                <p className="text-xs text-muted-foreground">{viewEntry.changedBy?.email || viewEntry.changed_by || "—"}</p>
-                <Badge variant="outline" className="mt-1 text-xs">{viewEntry.role_at_time.replace("_", " ")}</Badge>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Action</p>
-                <Badge variant={formatChangeType(viewEntry.change_type).variant} className="mt-0.5">
-                  {formatChangeType(viewEntry.change_type).label}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Entity</p>
-                <p className="text-sm mt-0.5">{formatEntityType(viewEntry.entity_type)}</p>
-                <p className="text-xs font-mono text-muted-foreground break-all">{viewEntry.entity_id}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Field</p>
-                <p className="text-sm mt-0.5">{formatFieldLabel(viewEntry.field_name)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Change</p>
-                <p className="text-sm mt-0.5">
-                  From: {formatValueForDisplay(viewEntry.old_value, viewEntry.field_name)} → To: {formatValueForDisplay(viewEntry.new_value, viewEntry.field_name)}
-                </p>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mt-3">Raw (technical)</p>
-                <div className="mt-1.5 rounded-lg border border-gray-200/60 bg-gray-50/50 p-3 max-h-64 overflow-auto">
-                  <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-                    {`Old: ${formatValue(viewEntry.old_value)}\n\nNew: ${formatValue(viewEntry.new_value)}`}
-                  </pre>
-                </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Reason</p>
-                <p className="text-sm mt-0.5">{viewEntry.reason || "No reason provided"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Related</p>
-                <div className="mt-1.5 space-y-1.5">
-                  {viewEntry.institution && (
-                    <Link
-                      href={`${institutionsPath}/${viewEntry.institution.institution_id}`}
-                      className="block text-sm text-primary hover:underline"
-                    >
-                      Institution: {viewEntry.institution.trading_name || viewEntry.institution.legal_name}
-                    </Link>
-                  )}
-                  {viewEntry.relatedSubmission && (
-                    <Link
-                      href={`${submissionsPath}/${viewEntry.relatedSubmission.submission_id}`}
-                      className="block text-sm text-primary hover:underline"
-                    >
-                      Submission: {viewEntry.relatedSubmission.title || viewEntry.relatedSubmission.submission_id}
-                    </Link>
-                  )}
-                  {viewEntry.relatedQCTORequest && (
-                    <Link
-                      href={`/qcto/requests/${viewEntry.relatedQCTORequest.request_id}`}
-                      className="block text-sm text-primary hover:underline"
-                    >
-                      Request: {viewEntry.relatedQCTORequest.title || viewEntry.relatedQCTORequest.request_id}
-                    </Link>
-                  )}
-                  {!viewEntry.institution && !viewEntry.relatedSubmission && !viewEntry.relatedQCTORequest && (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* View entry modal */}
+      <AuditLogDetailModal
+        entry={viewEntry}
+        open={!!viewEntry}
+        onOpenChange={(open) => !open && setViewEntry(null)}
+      />
     </>
   );
 }

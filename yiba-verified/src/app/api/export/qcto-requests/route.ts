@@ -37,14 +37,16 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
+    const EXPORT_MAX_ROWS = 50_000;
     const requests = await prisma.qCTORequest.findMany({
       where,
+      take: EXPORT_MAX_ROWS,
+      orderBy: { requested_at: "desc" },
       include: {
         institution: { select: { institution_id: true, legal_name: true, trading_name: true } },
         requestedByUser: { select: { first_name: true, last_name: true, email: true } },
         reviewedByUser: { select: { first_name: true, last_name: true, email: true } },
       },
-      orderBy: { requested_at: "desc" },
     });
 
     const format = searchParams.get("format") || "csv";

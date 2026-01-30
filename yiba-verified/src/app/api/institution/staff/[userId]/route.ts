@@ -31,8 +31,11 @@ export async function PATCH(
     const target = await prisma.user.findFirst({
       where: {
         user_id: userId,
-        institution_id: ctx.institutionId,
         deleted_at: null,
+        OR: [
+          { institution_id: ctx.institutionId },
+          { userInstitutions: { some: { institution_id: ctx.institutionId } } },
+        ],
       },
     });
 
@@ -41,18 +44,60 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status } = body;
+    const { status, can_facilitate, can_assess, can_moderate } = body;
 
-    if (!status || !["ACTIVE", "INACTIVE"].includes(String(status))) {
-      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "status must be ACTIVE or INACTIVE", 400);
+    const userUpdate: { status?: string } = {};
+    if (status !== undefined) {
+      if (!["ACTIVE", "INACTIVE"].includes(String(status))) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "status must be ACTIVE or INACTIVE", 400);
+      }
+      userUpdate.status = String(status);
     }
 
-    const updated = await prisma.user.update({
-      where: { user_id: userId },
-      data: { status: String(status) },
+    const ui = await prisma.userInstitution.findUnique({
+      where: {
+        user_id_institution_id: { user_id: userId, institution_id: ctx.institutionId },
+      },
     });
 
-    return ok({ user_id: updated.user_id, status: updated.status });
+    if (!ui) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, "User is not a member of your institution", 404);
+    }
+
+    const institutionUpdate: { can_facilitate?: boolean; can_assess?: boolean; can_moderate?: boolean } = {};
+    if (typeof can_facilitate === "boolean") institutionUpdate.can_facilitate = can_facilitate;
+    if (typeof can_assess === "boolean") institutionUpdate.can_assess = can_assess;
+    if (typeof can_moderate === "boolean") institutionUpdate.can_moderate = can_moderate;
+
+    if (Object.keys(userUpdate).length > 0) {
+      await prisma.user.update({
+        where: { user_id: userId },
+        data: userUpdate,
+      });
+    }
+    if (Object.keys(institutionUpdate).length > 0) {
+      await prisma.userInstitution.update({
+        where: { user_id_institution_id: { user_id: userId, institution_id: ctx.institutionId } },
+        data: institutionUpdate,
+      });
+    }
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { user_id: userId },
+      select: { user_id: true, status: true },
+    });
+    const updatedUi = await prisma.userInstitution.findUnique({
+      where: { user_id_institution_id: { user_id: userId, institution_id: ctx.institutionId } },
+      select: { can_facilitate: true, can_assess: true, can_moderate: true },
+    });
+
+    return ok({
+      user_id: updatedUser?.user_id ?? userId,
+      status: updatedUser?.status,
+      can_facilitate: updatedUi?.can_facilitate,
+      can_assess: updatedUi?.can_assess,
+      can_moderate: updatedUi?.can_moderate,
+    });
   } catch (error) {
     return fail(error);
   }

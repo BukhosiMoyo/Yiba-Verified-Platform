@@ -24,7 +24,7 @@ export default function AccountDeactivatedPage() {
                 variant="outline"
                 className="w-full h-10 font-semibold"
               >
-                <a href="mailto:support@yibaverified.com">Contact support</a>
+                <a href="mailto:support@yibaverified.co.za">Contact support</a>
               </Button>
             </div>
           }

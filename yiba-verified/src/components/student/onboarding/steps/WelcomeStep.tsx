@@ -16,8 +16,8 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
     >
       <div className="text-center py-8">
         <div className="flex justify-center mb-6">
-          <div className="rounded-full p-6 bg-gradient-to-br from-violet-50 to-violet-100 ring-2 ring-violet-200">
-            <Sparkles className="h-12 w-12 text-violet-600" strokeWidth={1.5} />
+          <div className="rounded-full p-6 bg-gradient-to-br from-violet-50 to-violet-100 ring-2 ring-violet-200 dark:from-violet-950/60 dark:to-violet-900/40 dark:ring-violet-800/50">
+            <Sparkles className="h-12 w-12 text-violet-600 dark:text-violet-400" strokeWidth={1.5} />
           </div>
         </div>
         <div className="space-y-4 max-w-md mx-auto">

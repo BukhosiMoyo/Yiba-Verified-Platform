@@ -87,15 +87,9 @@ export function BulkInviteDrawer({
         errors.push("Invalid email format");
       }
 
-      const validRoles = [
-        "PLATFORM_ADMIN",
-        "QCTO_USER",
-        "INSTITUTION_ADMIN",
-        "INSTITUTION_STAFF",
-        "STUDENT",
-      ];
-      if (!validRoles.includes(role)) {
-        errors.push(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
+      // Bulk invites are only for INSTITUTION_ADMIN
+      if (role !== "INSTITUTION_ADMIN") {
+        errors.push("Bulk invites are only available for INSTITUTION_ADMIN role");
       }
 
       let institution_id: string | undefined;
@@ -110,12 +104,8 @@ export function BulkInviteDrawer({
         } else {
           errors.push(`Institution "${institutionName}" not found`);
         }
-      } else if (
-        role === "INSTITUTION_ADMIN" ||
-        role === "INSTITUTION_STAFF" ||
-        role === "STUDENT"
-      ) {
-        errors.push("Institution required for this role");
+      } else if (role === "INSTITUTION_ADMIN") {
+        errors.push("Institution required for INSTITUTION_ADMIN");
       }
 
       invites.push({
@@ -279,9 +269,9 @@ export function BulkInviteDrawer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-900">Bulk Invite</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-gray-900">Bulk Invite Institution Admins</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            Create multiple invites at once. Invites will be queued and sent gradually.
+            Create multiple institution admin invites at once. Invites will be queued and sent gradually. Only INSTITUTION_ADMIN role is supported for bulk invites.
           </DialogDescription>
         </DialogHeader>
 
@@ -322,12 +312,12 @@ export function BulkInviteDrawer({
                 <Textarea
                   value={manualEntries}
                   onChange={(e) => setManualEntries(e.target.value)}
-                  placeholder="email@example.com,ROLE,Institution Name (optional)&#10;user2@example.com,STUDENT,My Institution"
+                  placeholder="email@example.com,INSTITUTION_ADMIN,Institution Name&#10;user2@example.com,INSTITUTION_ADMIN,My Institution"
                   rows={10}
                   className="font-mono text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg resize-none"
                 />
                 <p className="text-xs text-gray-500">
-                  Format: email,role,institution (optional). One invite per line.
+                  Format: email,INSTITUTION_ADMIN,institution. One invite per line. Only INSTITUTION_ADMIN role is supported for bulk invites.
                 </p>
               </div>
               <Button 
@@ -382,7 +372,7 @@ export function BulkInviteDrawer({
                         Click to upload CSV file
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Format: email,role,institution (optional)
+                        Format: email,INSTITUTION_ADMIN,institution. Only INSTITUTION_ADMIN role is supported.
                       </p>
                     </div>
                     <Button

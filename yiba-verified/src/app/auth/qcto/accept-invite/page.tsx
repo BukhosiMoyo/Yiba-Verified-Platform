@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormErrorMessage, FormHint } from "@/components/ui/form";
+import { PasswordStrengthIndicator } from "@/components/shared/PasswordStrengthIndicator";
+import { checkPasswordStrength } from "@/lib/password-strength";
 
 function QCTOAcceptInviteContent() {
   const router = useRouter();
@@ -38,9 +40,12 @@ function QCTOAcceptInviteContent() {
       return;
     }
 
+    const ac = new AbortController();
     const validate = async () => {
       try {
-        const res = await fetch(`/api/qcto/invites/validate?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`/api/qcto/invites/validate?token=${encodeURIComponent(token)}`, {
+          signal: ac.signal,
+        });
         const data = await res.json();
         if (!data.valid) {
           if (data.reason === "already_used") setError("This invite has already been used.");
@@ -52,17 +57,30 @@ function QCTOAcceptInviteContent() {
         setInvite(data.invite);
         setRequiresPassword(!!data.requires_password);
       } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
         setError(e instanceof Error ? e.message : "Failed to validate invite");
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     };
     validate();
+    return () => ac.abort();
   }, [token]);
 
   useEffect(() => {
-    if (password && password.length < 8) setPasswordError("Password must be at least 8 characters");
-    else setPasswordError("");
+    if (!password) {
+      setPasswordError("");
+      return;
+    }
+    
+    const strength = checkPasswordStrength(password);
+    if (!strength.meetsMinimum) {
+      setPasswordError("Password must be at least 8 characters");
+    } else if (strength.strength === "weak") {
+      setPasswordError("Password is too weak. Please use a stronger password.");
+    } else {
+      setPasswordError("");
+    }
   }, [password]);
 
   useEffect(() => {
@@ -74,8 +92,13 @@ function QCTOAcceptInviteContent() {
     e.preventDefault();
     setError("");
     if (requiresPassword) {
-      if (!password || password.length < 8) {
+      const strength = checkPasswordStrength(password);
+      if (!strength.meetsMinimum) {
         setPasswordError("Password must be at least 8 characters");
+        return;
+      }
+      if (strength.strength === "weak") {
+        setPasswordError("Password is too weak. Please use a stronger password.");
         return;
       }
       if (password !== confirmPassword) {
@@ -101,8 +124,8 @@ function QCTOAcceptInviteContent() {
       }
 
       if (data.existing_user) {
-        router.push("/login?qcto_accepted=1");
-        router.refresh();
+        // For existing users, redirect to login with message
+        window.location.href = "/login?qcto_accepted=1";
         return;
       }
 
@@ -112,8 +135,9 @@ function QCTOAcceptInviteContent() {
         redirect: false,
       });
       if (signInResult?.ok) {
-        router.push("/qcto");
-        router.refresh();
+        // Use window.location for a full page reload to ensure session is established
+        // This prevents redirect loops with the onboarding check
+        window.location.href = "/qcto";
       } else {
         router.push("/login?registered=1");
       }
@@ -128,7 +152,7 @@ function QCTOAcceptInviteContent() {
       <AuthLayout>
         <AuthCard title="Validating invite…" subtitle="Please wait">
           <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </AuthCard>
       </AuthLayout>
@@ -160,18 +184,18 @@ function QCTOAcceptInviteContent() {
         title="Join QCTO on Yiba Verified"
         subtitle="Accept your invitation to access QCTO operations"
       >
-        <div className="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-200 mb-4">
+        <div className="bg-muted/50 rounded-lg p-4 space-y-2 border border-border mb-4">
           <div>
-            <p className="text-xs font-medium text-gray-500">Email</p>
-            <p className="text-sm text-gray-900 font-medium">{invite?.email}</p>
+            <p className="text-xs font-medium text-muted-foreground">Email</p>
+            <p className="text-sm text-foreground font-medium">{invite?.email}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500">Name</p>
-            <p className="text-sm text-gray-900">{invite?.full_name}</p>
+            <p className="text-xs font-medium text-muted-foreground">Name</p>
+            <p className="text-sm text-foreground">{invite?.full_name}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500">Role</p>
-            <p className="text-sm text-gray-900">{invite?.role?.replace(/_/g, " ")}</p>
+            <p className="text-xs font-medium text-muted-foreground">Role</p>
+            <p className="text-sm text-foreground">{invite?.role?.replace(/_/g, " ")}</p>
           </div>
         </div>
 
@@ -194,14 +218,17 @@ function QCTOAcceptInviteContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {passwordError && <FormErrorMessage>{passwordError}</FormErrorMessage>}
-                {!passwordError && <FormHint>At least 8 characters</FormHint>}
+                {password && (
+                  <PasswordStrengthIndicator password={password} className="mt-2" />
+                )}
+                {!password && <FormHint>At least 8 characters with uppercase, lowercase, numbers, and special characters</FormHint>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm password *</Label>
@@ -219,7 +246,7 @@ function QCTOAcceptInviteContent() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -231,7 +258,7 @@ function QCTOAcceptInviteContent() {
           )}
 
           {!requiresPassword && (
-            <p className="text-sm text-gray-600">You already have an account. Accept to add QCTO access, then sign in.</p>
+            <p className="text-sm text-muted-foreground">You already have an account. Accept to add QCTO access, then sign in.</p>
           )}
 
           {error && <Alert variant="error" description={error} className="mb-0" />}
@@ -245,8 +272,8 @@ function QCTOAcceptInviteContent() {
             {submitting ? "Accepting…" : "Accept invite"}
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
-            <Link href="/login" className="text-blue-700 hover:underline font-medium">Sign in</Link> if you already have an account.
+          <p className="text-center text-sm text-muted-foreground">
+            <Link href="/login" className="text-primary hover:underline font-medium">Sign in</Link> if you already have an account.
           </p>
         </form>
       </AuthCard>
@@ -259,9 +286,9 @@ export default function QCTOAcceptInvitePage() {
     <Suspense
       fallback={
         <AuthLayout>
-          <AuthCard title="Loading…" subtitle="Please wait">
+          <AuthCard title="Validating invite…" subtitle="Please wait">
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           </AuthCard>
         </AuthLayout>

@@ -51,33 +51,36 @@ export async function POST(request: NextRequest) {
         updateData.current_step = Math.max(existingProgress.current_step, step);
       }
 
-      // Map step number to field name
-      switch (step) {
-        case 2:
-          updateData.personal_info = data;
-          break;
-        case 3:
-          updateData.address_info = data;
-          break;
-        case 4:
-          updateData.next_of_kin_info = data;
-          break;
-        case 5:
-          updateData.additional_info = data;
-          break;
-        case 6:
-          updateData.popia_consent = data.consent === true;
-          updateData.popia_consent_date = data.consent === true ? new Date() : null;
-          break;
-        case 7:
-          updateData.past_qualifications = data.qualifications || [];
-          break;
-        case 8:
-          updateData.prior_learning = data.learning || [];
-          break;
-        default:
-          // Steps 1 and 9 don't save data
-          break;
+      // Only update step content when we have actual data (auto-save or Next click).
+      // When updateCurrentStep is true with empty data, we only update current_step so we don't wipe step content.
+      const hasStepData = data != null && typeof data === "object" && (updateCurrentStep !== true || Object.keys(data).length > 0);
+      if (hasStepData) {
+        switch (step) {
+          case 2:
+            updateData.personal_info = data;
+            break;
+          case 3:
+            updateData.address_info = data;
+            break;
+          case 4:
+            updateData.next_of_kin_info = data;
+            break;
+          case 5:
+            updateData.additional_info = data;
+            break;
+          case 6:
+            updateData.popia_consent = data.consent === true;
+            updateData.popia_consent_date = data.consent === true ? new Date() : null;
+            break;
+          case 7:
+            updateData.past_qualifications = data.qualifications || [];
+            break;
+          case 8:
+            updateData.prior_learning = data.learning || [];
+            break;
+          default:
+            break;
+        }
       }
 
       progress = await prisma.onboardingProgress.update({
@@ -85,35 +88,38 @@ export async function POST(request: NextRequest) {
         data: updateData,
       });
     } else {
-      // Create new progress
+      // Create new progress (only set step content when we have data)
       const createData: any = {
         user_id: ctx.userId,
         current_step: step,
       };
 
-      switch (step) {
-        case 2:
-          createData.personal_info = data;
-          break;
-        case 3:
-          createData.address_info = data;
-          break;
-        case 4:
-          createData.next_of_kin_info = data;
-          break;
-        case 5:
-          createData.additional_info = data;
-          break;
-        case 6:
-          createData.popia_consent = data.consent === true;
-          createData.popia_consent_date = data.consent === true ? new Date() : null;
-          break;
-        case 7:
-          createData.past_qualifications = data.qualifications || [];
-          break;
-        case 8:
-          createData.prior_learning = data.learning || [];
-          break;
+      const hasData = data != null && typeof data === "object" && Object.keys(data).length > 0;
+      if (hasData) {
+        switch (step) {
+          case 2:
+            createData.personal_info = data;
+            break;
+          case 3:
+            createData.address_info = data;
+            break;
+          case 4:
+            createData.next_of_kin_info = data;
+            break;
+          case 5:
+            createData.additional_info = data;
+            break;
+          case 6:
+            createData.popia_consent = data.consent === true;
+            createData.popia_consent_date = data.consent === true ? new Date() : null;
+            break;
+          case 7:
+            createData.past_qualifications = data.qualifications || [];
+            break;
+          case 8:
+            createData.prior_learning = data.learning || [];
+            break;
+        }
       }
 
       progress = await prisma.onboardingProgress.create({

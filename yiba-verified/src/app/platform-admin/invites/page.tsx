@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingTable } from "@/components/shared/LoadingTable";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
@@ -36,6 +37,8 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { BulkInviteDrawer } from "@/components/invites/BulkInviteDrawer";
+import { InstitutionSearch } from "@/components/shared/InstitutionSearch";
+import { PROVINCES } from "@/lib/provinces";
 
 const INVITE_STATUSES = [
   { value: "all", label: "All Statuses" },
@@ -44,6 +47,7 @@ const INVITE_STATUSES = [
   { value: "SENT", label: "Sent" },
   { value: "OPENED", label: "Opened" },
   { value: "ACCEPTED", label: "Accepted" },
+  { value: "DECLINED", label: "Declined" },
   { value: "FAILED", label: "Failed" },
   { value: "RETRYING", label: "Retrying" },
   { value: "EXPIRED", label: "Expired" },
@@ -58,14 +62,40 @@ export default function InvitesPage() {
   const [loadingInstitutions, setLoadingInstitutions] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "all");
+  const [institutionFilter, setInstitutionFilter] = useState("");
+  const [emailSearch, setEmailSearch] = useState("");
   const [total, setTotal] = useState(0);
 
   // Sync status filter from URL when navigating via sidebar links
   useEffect(() => {
     setStatusFilter(searchParams.get("status") || "all");
   }, [searchParams]);
-  const [limit] = useState(50);
+  
+  const PAGE_SIZE_KEY = "yv_table_page_size:platform_admin_invites";
+  const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100] as const;
+  const [pageSize, setPageSize] = useState(20);
   const [offset, setOffset] = useState(0);
+  
+  // Load saved page size from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PAGE_SIZE_KEY);
+      if (stored) {
+        const n = parseInt(stored, 10);
+        if (ROWS_PER_PAGE_OPTIONS.includes(n as (typeof ROWS_PER_PAGE_OPTIONS)[number])) {
+          setPageSize(n);
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }, []);
+  
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setOffset(0);
+    try {
+      localStorage.setItem(PAGE_SIZE_KEY, String(size));
+    } catch (_) { /* ignore */ }
+  };
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
@@ -76,16 +106,18 @@ export default function InvitesPage() {
     email: "",
     role: "",
     institution_id: "",
+    default_province: "",
   });
   const [createdInvite, setCreatedInvite] = useState<any>(null);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [selectedInstitution, setSelectedInstitution] = useState<any>(null);
 
   // Fetch institutions for dropdown
   useEffect(() => {
     const fetchInstitutions = async () => {
       try {
         setLoadingInstitutions(true);
-        const response = await fetch("/api/dev/institutions?limit=100");
+        const response = await fetch("/api/platform-admin/institutions?limit=100");
         if (response.ok) {
           const data = await response.json();
           setInstitutions(data.items || []);
@@ -101,7 +133,7 @@ export default function InvitesPage() {
 
   useEffect(() => {
     fetchInvites();
-  }, [statusFilter, offset]);
+  }, [statusFilter, institutionFilter, emailSearch, offset, pageSize]);
 
   const fetchInvites = async () => {
     try {
@@ -112,7 +144,13 @@ export default function InvitesPage() {
       if (statusFilter !== "all") {
         params.set("status", statusFilter);
       }
-      params.set("limit", limit.toString());
+      if (institutionFilter) {
+        params.set("institution_id", institutionFilter);
+      }
+      if (emailSearch.trim()) {
+        params.set("q", emailSearch.trim());
+      }
+      params.set("limit", pageSize.toString());
       params.set("offset", offset.toString());
 
       const response = await fetch(`/api/platform-admin/invites?${params}`);
@@ -136,6 +174,27 @@ export default function InvitesPage() {
 
   const handleCreateInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate based on role
+    // Institution required only for INSTITUTION_STAFF and STUDENT; INSTITUTION_ADMIN may add institution(s) during onboarding
+    const institutionRequired =
+      createFormData.role === "INSTITUTION_STAFF" || createFormData.role === "STUDENT";
+    const needsProvince =
+      createFormData.role === "QCTO_ADMIN" ||
+      createFormData.role === "QCTO_USER" ||
+      createFormData.role === "QCTO_REVIEWER" ||
+      createFormData.role === "QCTO_AUDITOR" ||
+      createFormData.role === "QCTO_VIEWER";
+    
+    if (institutionRequired && !createFormData.institution_id) {
+      toast.error("Institution is required for Institution Staff and Student");
+      return;
+    }
+    if (needsProvince && !createFormData.default_province) {
+      toast.error("Province is required for this role");
+      return;
+    }
+    
     try {
       setCreateLoading(true);
       const response = await fetch("/api/invites", {
@@ -147,6 +206,7 @@ export default function InvitesPage() {
           email: createFormData.email.trim(),
           role: createFormData.role,
           institution_id: createFormData.institution_id || null,
+          default_province: createFormData.default_province || null,
         }),
       });
 
@@ -164,6 +224,24 @@ export default function InvitesPage() {
     } finally {
       setCreateLoading(false);
     }
+  };
+  
+  // Determine which fields to show based on role
+  const getRoleFields = () => {
+    const role = createFormData.role;
+    const simpleRoles = ["PLATFORM_ADMIN", "QCTO_SUPER_ADMIN", "ADVISOR"];
+    const qctoRolesWithProvince = ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"];
+    const institutionRoles = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"];
+    // Institution required only for STAFF and STUDENT; optional for INSTITUTION_ADMIN (they add during onboarding)
+    const institutionRequired = role === "INSTITUTION_STAFF" || role === "STUDENT";
+    
+    return {
+      isSimple: simpleRoles.includes(role),
+      needsProvince: qctoRolesWithProvince.includes(role),
+      needsInstitution: institutionRoles.includes(role),
+      institutionRequired,
+      showAdminInfo: role === "INSTITUTION_ADMIN",
+    };
   };
 
   const handleResend = async (inviteId: string) => {
@@ -196,7 +274,7 @@ export default function InvitesPage() {
         setCopiedToken(false);
         setCreateModalOpen(false);
         setCreatedInvite(null);
-        setCreateFormData({ email: "", role: "", institution_id: "" });
+        setCreateFormData({ email: "", role: "", institution_id: "", default_province: "" });
       }, 2000);
     }
   };
@@ -220,6 +298,7 @@ export default function InvitesPage() {
       DELIVERED: { label: "Delivered", variant: "secondary" },
       OPENED: { label: "Opened", variant: "default" },
       ACCEPTED: { label: "Accepted", variant: "default" },
+      DECLINED: { label: "Declined", variant: "secondary" },
       FAILED: { label: "Failed", variant: "destructive" },
       RETRYING: { label: "Retrying", variant: "outline" },
       EXPIRED: { label: "Expired", variant: "secondary" },
@@ -227,6 +306,17 @@ export default function InvitesPage() {
 
     const config = statusConfig[status] || { label: status, variant: "outline" as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getDeclineReasonLabel = (reason: string | null | undefined, other: string | null | undefined) => {
+    if (!reason) return "—";
+    const labels: Record<string, string> = {
+      already_using_other_platform: "Already using another platform",
+      not_responsible: "Not responsible for this institution",
+      not_interested: "Not interested",
+      other: other || "Other",
+    };
+    return labels[reason] ?? reason;
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -250,8 +340,8 @@ export default function InvitesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Invites</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-semibold text-foreground">Invites</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage user invitations and track delivery
           </p>
         </div>
@@ -275,28 +365,14 @@ export default function InvitesPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>All Invites</CardTitle>
-              <CardDescription>
-                {loading ? "Loading..." : `${total} invite${total !== 1 ? "s" : ""} found`}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-3">
-              <Select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setOffset(0);
-                }}
-                className="w-48"
-              >
-                {INVITE_STATUSES.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </Select>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Invites</CardTitle>
+                <CardDescription>
+                  {loading ? "Loading..." : `${total} invite${total !== 1 ? "s" : ""} found`}
+                </CardDescription>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -306,6 +382,75 @@ export default function InvitesPage() {
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               </Button>
             </div>
+            
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Email Search */}
+              <div className="relative w-48 sm:w-64">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by email..."
+                  value={emailSearch}
+                  onChange={(e) => {
+                    setEmailSearch(e.target.value);
+                    setOffset(0);
+                  }}
+                  className="pl-10"
+                />
+              </div>
+              
+              {/* Status Filter */}
+              <Select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setOffset(0);
+                }}
+                className="w-40"
+              >
+                {INVITE_STATUSES.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </Select>
+              
+              {/* Institution Filter */}
+              <SearchableSelect
+                value={institutionFilter}
+                onChange={(value) => {
+                  setInstitutionFilter(value);
+                  setOffset(0);
+                }}
+                options={institutions.map((inst) => ({
+                  value: inst.institution_id,
+                  label: inst.trading_name || inst.legal_name,
+                }))}
+                placeholder="Select institution"
+                searchPlaceholder="Search institutions..."
+                allOptionLabel="All Institutions"
+                emptyText="No institutions found"
+                disabled={loadingInstitutions}
+                className="w-[180px]"
+              />
+              
+              {/* Clear Filters */}
+              {(statusFilter !== "all" || institutionFilter || emailSearch) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setInstitutionFilter("");
+                    setEmailSearch("");
+                    setOffset(0);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -313,7 +458,7 @@ export default function InvitesPage() {
             <LoadingTable />
           ) : error ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           ) : invites.length === 0 ? (
             <EmptyState
@@ -323,7 +468,7 @@ export default function InvitesPage() {
                   ? "Try adjusting your filter"
                   : "Create your first invite to get started"
               }
-              icon={<Mail className="h-12 w-12 text-gray-400" />}
+              icon={<Mail className="h-12 w-12 text-muted-foreground" />}
             />
           ) : (
             <>
@@ -369,7 +514,16 @@ export default function InvitesPage() {
                               ? invite.institution.trading_name || invite.institution.legal_name
                               : "—"}
                           </TableCell>
-                          <TableCell>{getStatusBadge(invite.status || "QUEUED")}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              {getStatusBadge(invite.status || "QUEUED")}
+                              {invite.status === "DECLINED" && (invite.decline_reason || invite.decline_reason_other) && (
+                                <span className="text-xs text-muted-foreground" title={getDeclineReasonLabel(invite.decline_reason, invite.decline_reason_other)}>
+                                  {getDeclineReasonLabel(invite.decline_reason, invite.decline_reason_other)}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-sm">
                             {invite.attempts || 0}
                             {invite.max_attempts && ` / ${invite.max_attempts}`}
@@ -412,27 +566,43 @@ export default function InvitesPage() {
 
               {/* Pagination */}
               {!loading && invites.length > 0 && (
-                <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-500">
-                    Showing {offset + 1} to {Math.min(offset + limit, total)} of {total}
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">Rows per page</span>
+                    <Select
+                      value={String(pageSize)}
+                      onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
+                      className="w-[70px]"
+                    >
+                      {ROWS_PER_PAGE_OPTIONS.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setOffset(Math.max(0, offset - limit))}
-                      disabled={offset === 0}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setOffset(offset + limit)}
-                      disabled={offset + limit >= total}
-                    >
-                      Next
-                    </Button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500">
+                      Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                        disabled={offset === 0}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOffset(offset + pageSize)}
+                        disabled={offset + pageSize >= total}
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -459,28 +629,29 @@ export default function InvitesPage() {
           setCreateModalOpen(open);
           if (!open) {
             setCreatedInvite(null);
-            setCreateFormData({ email: "", role: "", institution_id: "" });
+            setCreateFormData({ email: "", role: "", institution_id: "", default_province: "" });
+            setSelectedInstitution(null);
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-xl rounded-2xl border-border/80 shadow-xl bg-card">
           {createdInvite ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Invite Created</DialogTitle>
-                <DialogDescription>
+              <DialogHeader className="space-y-1.5 pb-4 border-b border-border">
+                <DialogTitle className="text-xl font-semibold tracking-tight">Invite Created</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Copy the invite link and share it with the user
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-200">
+                <div className="rounded-xl p-4 space-y-2 border border-border bg-muted/40">
                   <div>
-                    <p className="text-xs font-medium text-gray-500">Email</p>
-                    <p className="text-sm text-gray-900 font-medium">{createdInvite.email}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Email</p>
+                    <p className="text-sm font-medium text-foreground">{createdInvite.email}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-500">Role</p>
-                    <p className="text-sm text-gray-900">
+                    <p className="text-xs font-medium text-muted-foreground">Role</p>
+                    <p className="text-sm text-foreground">
                       {createdInvite.role.replace(/_/g, " ")}
                     </p>
                   </div>
@@ -506,7 +677,7 @@ export default function InvitesPage() {
                       )}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     This link expires in 7 days. The invite will be sent via email automatically.
                   </p>
                 </div>
@@ -517,7 +688,8 @@ export default function InvitesPage() {
                   onClick={() => {
                     setCreateModalOpen(false);
                     setCreatedInvite(null);
-                    setCreateFormData({ email: "", role: "", institution_id: "" });
+                    setCreateFormData({ email: "", role: "", institution_id: "", default_province: "" });
+                    setSelectedInstitution(null);
                   }}
                 >
                   Done
@@ -526,28 +698,16 @@ export default function InvitesPage() {
             </>
           ) : (
             <form onSubmit={handleCreateInvite}>
-              <DialogHeader>
-                <DialogTitle>Create New Invite</DialogTitle>
-                <DialogDescription>
+              <DialogHeader className="space-y-1.5 pb-4 border-b border-border">
+                <DialogTitle className="text-xl font-semibold tracking-tight">Create New Invite</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Send an invitation to join Yiba Verified
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-5 py-5 max-h-[60vh] overflow-y-auto pr-1">
+                {/* Role Selection - First Step */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={createFormData.email}
-                    onChange={(e) =>
-                      setCreateFormData({ ...createFormData, email: e.target.value })
-                    }
-                    required
-                    placeholder="user@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
+                  <Label htmlFor="role" className="text-sm font-medium text-foreground">Role *</Label>
                   <Select
                     id="role"
                     value={createFormData.role}
@@ -557,52 +717,110 @@ export default function InvitesPage() {
                         ...createFormData,
                         role: newRole,
                         institution_id: "",
+                        default_province: "",
                       });
+                      setSelectedInstitution(null);
                     }}
                     required
+                    className="h-10 rounded-lg border-border bg-background"
                   >
                     <option value="">Select role</option>
                     <option value="PLATFORM_ADMIN">Platform Admin</option>
+                    <option value="ADVISOR">Advisor (service requests)</option>
+                    <option value="QCTO_SUPER_ADMIN">QCTO Super Admin</option>
+                    <option value="QCTO_ADMIN">QCTO Admin</option>
                     <option value="QCTO_USER">QCTO User</option>
+                    <option value="QCTO_REVIEWER">QCTO Reviewer</option>
+                    <option value="QCTO_AUDITOR">QCTO Auditor</option>
+                    <option value="QCTO_VIEWER">QCTO Viewer</option>
                     <option value="INSTITUTION_ADMIN">Institution Admin</option>
                     <option value="INSTITUTION_STAFF">Institution Staff</option>
                     <option value="STUDENT">Student</option>
                   </Select>
                 </div>
-                {(createFormData.role === "INSTITUTION_ADMIN" ||
-                  createFormData.role === "INSTITUTION_STAFF" ||
-                  createFormData.role === "STUDENT") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="institution_id">Institution *</Label>
-                    <Select
-                      id="institution_id"
-                      value={createFormData.institution_id}
-                      onChange={(e) =>
-                        setCreateFormData({ ...createFormData, institution_id: e.target.value })
-                      }
-                      required
-                      disabled={loadingInstitutions}
-                    >
-                      <option value="">Select institution</option>
-                      {institutions.map((inst) => (
-                        <option key={inst.institution_id} value={inst.institution_id}>
-                          {inst.trading_name || inst.legal_name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
+
+                {/* Dynamic Fields Based on Role */}
+                {createFormData.role && (
+                  <>
+                    {/* Email - Always shown after role selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-foreground">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={createFormData.email}
+                        onChange={(e) =>
+                          setCreateFormData({ ...createFormData, email: e.target.value })
+                        }
+                        required
+                        placeholder="user@example.com"
+                        className="h-10 rounded-lg border-border"
+                      />
+                    </div>
+
+                    {/* Province Selection for QCTO Roles */}
+                    {getRoleFields().needsProvince && (
+                      <div className="space-y-2">
+                        <Label htmlFor="province" className="text-sm font-medium text-foreground">Province *</Label>
+                        <Select
+                          id="province"
+                          value={createFormData.default_province}
+                          onChange={(e) =>
+                            setCreateFormData({ ...createFormData, default_province: e.target.value })
+                          }
+                          required
+                          className="h-10 rounded-lg border-border bg-background"
+                        >
+                          <option value="">Select province</option>
+                          {PROVINCES.map((province) => (
+                            <option key={province} value={province}>
+                              {province}
+                            </option>
+                          ))}
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          This will set the user's default province and assigned provinces.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Institution Selection for Institution Roles */}
+                    {getRoleFields().needsInstitution && (
+                      <div className="space-y-2">
+                        <Label htmlFor="institution_id" className="text-sm font-medium text-foreground">
+                          Institution {getRoleFields().institutionRequired ? "*" : "(optional)"}
+                        </Label>
+                        <InstitutionSearch
+                          value={createFormData.institution_id}
+                          onChange={(institutionId, institution) => {
+                            setCreateFormData({ ...createFormData, institution_id: institutionId || "" });
+                            setSelectedInstitution(institution);
+                          }}
+                          showAdminInfo={getRoleFields().showAdminInfo}
+                          placeholder="Search institutions by name or registration number..."
+                          disabled={createLoading}
+                        />
+                        {createFormData.role === "INSTITUTION_ADMIN" && (
+                          <p className="text-xs text-muted-foreground">
+                            Leave blank to let the admin add institution(s) during onboarding.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-              <DialogFooter>
+              <DialogFooter className="gap-2 pt-4 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setCreateModalOpen(false)}
                   disabled={createLoading}
+                  className="rounded-lg"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createLoading}>
+                <Button type="submit" disabled={createLoading || !createFormData.role} className="rounded-lg">
                   {createLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Create Invite
                 </Button>

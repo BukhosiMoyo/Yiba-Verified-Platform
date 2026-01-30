@@ -43,14 +43,14 @@ export function ChartPlaceholder({
   const heights = values.map((v) => (v / max) * 100);
 
   return (
-    <Card className={`border border-gray-200/60 bg-white rounded-xl ${className || ""}`}>
-      <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-100/60">
+    <Card className={`border border-border bg-card rounded-xl ${className || ""}`}>
+      <CardHeader className="px-6 pt-6 pb-4 border-b border-border/60">
         <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-blue-600" />
-          <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
+          <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
         </div>
         {description && (
-          <CardDescription className="mt-1 text-sm text-gray-500">
+          <CardDescription className="mt-1 text-sm text-muted-foreground">
             {description}
           </CardDescription>
         )}
@@ -62,7 +62,7 @@ export function ChartPlaceholder({
             {[...Array(5)].map((_, i) => (
               <div
                 key={i}
-                className="border-b border-gray-100/60"
+                className="border-b border-border/60"
                 style={{ height: `${100 / 5}%` }}
               />
             ))}
@@ -76,11 +76,11 @@ export function ChartPlaceholder({
                 className={`flex-1 rounded-t transition-all duration-300 hover:opacity-90 ${
                   type === "bar"
                     ? hasData
-                      ? "bg-gradient-to-t from-blue-500 to-blue-400"
-                      : "bg-gradient-to-t from-blue-100 to-blue-50"
+                      ? "bg-gradient-to-t from-blue-500 to-blue-400 dark:from-blue-600 dark:to-blue-500"
+                      : "bg-gradient-to-t from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-950/30"
                     : hasData
                       ? "bg-gradient-to-t from-transparent via-blue-500/60 to-transparent"
-                      : "bg-gradient-to-t from-transparent via-blue-100/50 to-transparent"
+                      : "bg-gradient-to-t from-transparent via-blue-100/50 to-transparent dark:via-blue-800/30"
                 }`}
                 style={{ height: `${Math.max(h, 2)}%` }}
                 title={hasData ? `${xLabels[i]}: ${values[i]}` : undefined}
@@ -91,13 +91,13 @@ export function ChartPlaceholder({
           {/* X-axis labels */}
           <div className="absolute bottom-0 left-0 right-0 flex justify-around px-4 pb-2">
             {xLabels.slice(0, 7).map((day, i) => (
-              <span key={i} className="text-xs text-gray-500 font-medium">
+              <span key={i} className="text-xs text-muted-foreground font-medium">
                 {day}
               </span>
             ))}
           </div>
 
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/20 pointer-events-none rounded-b-xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card/20 pointer-events-none rounded-b-xl" />
         </div>
       </CardContent>
     </Card>

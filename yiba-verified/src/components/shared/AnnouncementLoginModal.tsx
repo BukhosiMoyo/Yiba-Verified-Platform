@@ -26,10 +26,10 @@ interface Announcement {
 }
 
 const priorityConfig = {
-  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700" },
-  MEDIUM: { label: "Medium", icon: Bell, className: "bg-gray-100 text-gray-700" },
-  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700" },
-  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700" },
+  LOW: { label: "Low", icon: Info, className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
+  MEDIUM: { label: "Medium", icon: Bell, className: "bg-muted text-muted-foreground" },
+  HIGH: { label: "High", icon: AlertTriangle, className: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" },
+  URGENT: { label: "Urgent", icon: AlertCircle, className: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" },
 };
 
 const STORAGE_KEY = "yv_announcements_popup_seen";
@@ -118,7 +118,7 @@ export function AnnouncementLoginModal({ enabled = true }: AnnouncementLoginModa
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-[480px] rounded-2xl border border-gray-200/70 bg-white p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[480px] rounded-2xl border border-border bg-card p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function AnnouncementLoginModal({ enabled = true }: AnnouncementLoginModa
             className="text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-4 [&_ol]:pl-4"
           />
         </div>
-        <DialogFooter className="px-6 py-4 border-t border-gray-100 flex-row justify-between sm:justify-between">
+        <DialogFooter className="px-6 py-4 border-t border-border flex-row justify-between sm:justify-between">
           <div className="text-xs text-muted-foreground">
             {unseen.length > 1 && (
               <span>

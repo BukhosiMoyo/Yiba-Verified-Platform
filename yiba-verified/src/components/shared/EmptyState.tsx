@@ -48,46 +48,47 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-gray-200/60 bg-gray-50/30",
+        "flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-border bg-muted/30",
         className
       )}
     >
       {/* Icon Container */}
       {icon && (
         <div className="mb-5 flex items-center justify-center">
-          <div className="rounded-full p-3 bg-gray-100 text-gray-400">
+          <div className="rounded-full p-3 bg-muted text-muted-foreground">
             {icon}
           </div>
         </div>
       )}
 
       {/* Title */}
-      <h3 className="text-base font-semibold text-gray-900 mb-2">{title}</h3>
+      <h3 className="text-base font-semibold text-foreground mb-2">{title}</h3>
 
       {/* Description */}
       {description && (
-        <p className="text-sm text-gray-500 mb-6 max-w-md leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-6 max-w-md leading-relaxed">
           {description}
         </p>
       )}
 
-      {/* Actions */}
-      {(action || secondaryAction) && (
+      {/* Actions - only render Link when href is a non-empty string to avoid undefined href */}
+      {(action?.href && typeof action.href === "string" && action.href.length > 0) ||
+      (secondaryAction?.href && typeof secondaryAction.href === "string" && secondaryAction.href.length > 0) ? (
         <div className="flex items-center gap-3">
-          {action && (
+          {action && typeof action.href === "string" && action.href.length > 0 && (
             <Button asChild size="sm">
               <Link href={action.href}>{action.label}</Link>
             </Button>
           )}
-          {secondaryAction && (
+          {secondaryAction && typeof secondaryAction.href === "string" && secondaryAction.href.length > 0 && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href={secondaryAction.href} className="text-gray-600 hover:text-gray-900">
+              <Link href={secondaryAction.href} className="text-muted-foreground hover:text-foreground">
                 {secondaryAction.label}
               </Link>
             </Button>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

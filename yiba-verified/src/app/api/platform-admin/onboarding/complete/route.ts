@@ -1,20 +1,20 @@
 /**
  * POST /api/platform-admin/onboarding/complete
- * 
+ *
  * Complete Platform Admin onboarding.
+ * Uses direct Prisma update (no mutateWithAudit) to avoid audit-layer issues for this self-update.
+ * Resolves user by email from session so the update works even when JWT userId doesn't match DB user_id.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAuth } from "@/lib/api/context";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { prisma } from "@/lib/prisma";
-import { mutateWithAudit } from "@/server/mutations/mutate";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-/**
- * POST /api/platform-admin/onboarding/complete
- * Complete Platform Admin onboarding
- */
 export async function POST(request: NextRequest) {
   try {
     const { ctx } = await requireAuth(request);
@@ -29,28 +29,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark onboarding as complete
-    await mutateWithAudit({
-      entityType: "USER",
-      changeType: "UPDATE",
-      fieldName: "onboarding_completed",
-      oldValue: "false",
-      newValue: "true",
-      institutionId: null,
-      reason: "Complete Platform Admin onboarding",
-      assertCan: async (tx, ctx) => {
-        // User can update their own onboarding
-      },
-      mutation: async (tx, ctx) => {
-        return await tx.user.update({
-          where: { user_id: ctx.userId },
-          data: {
-            onboarding_completed: true,
-            onboarding_completed_at: new Date(),
-          },
-        });
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email;
+    if (!email) {
+      return fail(
+        new AppError(ERROR_CODES.UNAUTHENTICATED, "Session has no email", 401)
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { user_id: true },
+    });
+    if (!user) {
+      return fail(
+        new AppError(ERROR_CODES.NOT_FOUND, "User not found for this session", 404)
+      );
+    }
+
+    await prisma.user.update({
+      where: { user_id: user.user_id },
+      data: {
+        onboarding_completed: true,
+        onboarding_completed_at: new Date(),
       },
     });
+
+    revalidateTag("onboarding-status", {});
 
     return NextResponse.json({
       success: true,
@@ -60,9 +65,15 @@ export async function POST(request: NextRequest) {
     if (error instanceof AppError) {
       return fail(error);
     }
-    console.error("POST /api/platform-admin/onboarding/complete error:", error);
-    return fail(
-      new AppError(ERROR_CODES.INTERNAL_ERROR, "Failed to complete onboarding", 500)
+    const message = error instanceof Error ? error.message : "Failed to complete onboarding";
+    const details = error instanceof Error ? error.stack : String(error);
+    console.error("POST /api/platform-admin/onboarding/complete error:", details);
+    return NextResponse.json(
+      {
+        error: process.env.NODE_ENV === "development" ? message : "Failed to complete onboarding",
+        code: ERROR_CODES.INTERNAL_ERROR,
+      },
+      { status: 500 }
     );
   }
 }

@@ -157,9 +157,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const targetRole = qualifications[0]?.title.split(":")[1]?.trim() || "General";
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
+        <p className="text-xs text-muted-foreground mb-4">
           Yiba Verified — Public profile
         </p>
         <StudentCVPreview

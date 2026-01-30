@@ -47,7 +47,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-gray-50/80 px-2 py-1.5 rounded-t-lg",
+        "flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/50 px-2 py-1.5 rounded-t-lg",
         disabled && "opacity-60 pointer-events-none"
       )}
     >
@@ -65,7 +65,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
       >
         <Italic className="h-4 w-4" strokeWidth={2.5} />
       </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 mx-1" />
+      <div className="w-px h-5 bg-border mx-1" />
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive("heading", { level: 2 })}
@@ -87,7 +87,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
       >
         <Quote className="h-4 w-4" strokeWidth={2} />
       </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 mx-1" />
+      <div className="w-px h-5 bg-border mx-1" />
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive("bulletList")}
@@ -105,7 +105,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
       <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
         <Minus className="h-4 w-4" strokeWidth={2.5} />
       </ToolbarButton>
-      <div className="w-px h-5 bg-gray-300 mx-1" />
+      <div className="w-px h-5 bg-border mx-1" />
       <ToolbarButton onClick={setLink} active={editor.isActive("link")} title="Link">
         <Link2 className="h-4 w-4" strokeWidth={2} />
       </ToolbarButton>
@@ -133,7 +133,7 @@ function ToolbarButton({
       variant="ghost"
       size="icon"
       className={cn(
-        "h-8 w-8 text-gray-600 hover:text-gray-900 hover:bg-gray-200/80",
+        "h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted",
         active && "bg-primary/10 text-primary"
       )}
       onClick={onClick}
@@ -170,10 +170,10 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "focus:outline-none px-4 py-3 min-w-0 text-sm text-gray-800 " +
+          "focus:outline-none px-4 py-3 min-w-0 text-sm text-foreground " +
           "[&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 " +
           "[&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 " +
-          "[&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-gray-600 [&_blockquote]:my-2 " +
+          "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:my-2 " +
           "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded [&_img]:my-2",
       },
     },
@@ -182,7 +182,7 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "rounded-lg border border-gray-200 bg-white overflow-hidden",
+        "rounded-lg border border-border bg-card overflow-hidden",
         disabled && "opacity-70",
         className
       )}

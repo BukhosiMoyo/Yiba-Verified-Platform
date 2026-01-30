@@ -146,10 +146,13 @@ export async function GET(request: NextRequest) {
 }
 
 interface CreateReadinessBody {
-  qualification_title: string;
-  saqa_id: string;
+  qualification_registry_id?: string | null;
+  qualification_title?: string;
+  saqa_id?: string;
   nqf_level?: number;
-  curriculum_code: string;
+  curriculum_code?: string;
+  credits?: number;
+  occupational_category?: string;
   delivery_mode: DeliveryMode;
   institution_id?: string; // optional, for PLATFORM_ADMIN when creating for a specific institution
 }
@@ -194,16 +197,45 @@ export async function POST(request: NextRequest) {
 
     const body: CreateReadinessBody = await request.json();
 
-    // Validation
-    if (!body.qualification_title || !body.saqa_id || !body.curriculum_code || !body.delivery_mode) {
-      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Missing required fields: qualification_title, saqa_id, curriculum_code, delivery_mode", 400);
+    if (!body.delivery_mode) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "delivery_mode is required", 400);
+    }
+
+    let qualification_title: string;
+    let saqa_id: string;
+    let curriculum_code: string;
+    let nqf_level: number | null = body.nqf_level ?? null;
+    let credits: number | null = body.credits ?? null;
+    let occupational_category: string | null = body.occupational_category?.trim() || null;
+    let qualification_registry_id: string | null = body.qualification_registry_id?.trim() || null;
+
+    if (body.qualification_registry_id) {
+      const registry = await prisma.qualificationRegistry.findFirst({
+        where: { id: body.qualification_registry_id, deleted_at: null, status: "ACTIVE" },
+      });
+      if (!registry) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification registry entry not found or not active", 400);
+      }
+      qualification_title = registry.name;
+      saqa_id = registry.saqa_id ?? "";
+      curriculum_code = registry.curriculum_code ?? "";
+      nqf_level = registry.nqf_level ?? nqf_level;
+      credits = registry.credits ?? credits;
+      occupational_category = registry.occupational_category ?? occupational_category;
+    } else {
+      qualification_title = body.qualification_title?.trim() ?? "";
+      saqa_id = body.saqa_id?.trim() ?? "";
+      curriculum_code = body.curriculum_code?.trim() ?? "";
+      if (!qualification_title || !saqa_id || !curriculum_code) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Missing required fields: qualification_title, saqa_id, curriculum_code (or provide qualification_registry_id)", 400);
+      }
     }
 
     // Check for duplicate (same institution + saqa_id + not deleted)
     const existing = await prisma.readiness.findFirst({
       where: {
         institution_id: ctx.institutionId || body.institution_id || "",
-        saqa_id: body.saqa_id,
+        saqa_id,
         deleted_at: null,
       },
     });
@@ -218,23 +250,23 @@ export async function POST(request: NextRequest) {
       changeType: "CREATE",
       fieldName: "readiness_id",
       institutionId: ctx.institutionId || null,
-      reason: `Create readiness record for qualification: ${body.qualification_title} (SAQA ID: ${body.saqa_id})`,
-      assertCan: async (tx, ctx) => {
-        // Already checked above
-      },
-      mutation: async (tx, ctx) => {
-        return await tx.readiness.create({
+      reason: `Create readiness record for qualification: ${qualification_title} (SAQA ID: ${saqa_id})`,
+      assertCan: async () => {},
+      mutation: async (tx) =>
+        tx.readiness.create({
           data: {
             institution_id: ctx.institutionId || body.institution_id || "",
-            qualification_title: body.qualification_title,
-            saqa_id: body.saqa_id,
-            nqf_level: body.nqf_level || null,
-            curriculum_code: body.curriculum_code,
+            qualification_registry_id,
+            qualification_title,
+            saqa_id,
+            nqf_level,
+            curriculum_code,
+            credits,
+            occupational_category,
             delivery_mode: body.delivery_mode,
             readiness_status: "NOT_STARTED",
           },
-        });
-      },
+        }),
     });
 
     return NextResponse.json(readiness, { status: 201 });

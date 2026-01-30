@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
             gender_code: body.gender_code,
             nationality_code: body.nationality_code,
             home_language_code: body.home_language_code ?? null,
-            disability_status: body.disability_status ?? null,
+            disability_status: body.disability_status ?? "NONE",
             popia_consent: body.popia_consent,
             consent_date: new Date(body.consent_date),
           },

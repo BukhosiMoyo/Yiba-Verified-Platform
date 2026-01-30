@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Copy, Check, ChevronDown, Download, Share2, Pencil, FilePlus, Upload } from "lucide-react";
+import { Copy, Check, ChevronDown, Download, Share2, Pencil, FilePlus, Upload, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,8 @@ export type StudentProfileHeaderProps = {
   onSharePublicLink?: () => void;
   /** Called when Share "Private link" is chosen. */
   onSharePrivateLink?: () => void;
+  /** When set, show "View live profile" button that opens this URL in a new tab. */
+  viewLiveProfileHref?: string | null;
 };
 
 function getInitials(name: string): string {
@@ -77,6 +79,7 @@ export function StudentProfileHeader({
   onDownloadCv,
   onSharePublicLink,
   onSharePrivateLink,
+  viewLiveProfileHref = null,
 }: StudentProfileHeaderProps) {
   const init = getInitials(system.name);
   const [copied, setCopied] = useState(false);
@@ -131,7 +134,7 @@ export function StudentProfileHeader({
   };
 
   return (
-    <header className="rounded-xl border border-gray-200/80 bg-white p-4 md:p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900/50">
+    <header className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {/* Left: Avatar, name, badges, chips */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
@@ -174,7 +177,7 @@ export function StudentProfileHeader({
                 copied={copied}
                 onCopy={copyStudentId}
               />
-              <span className="inline-flex items-center rounded-md border border-gray-200/80 bg-gray-50/80 px-2.5 py-1 text-xs font-medium text-gray-700 dark:border-gray-600/60 dark:bg-gray-800/60 dark:text-gray-300">
+              <span className="inline-flex items-center rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                 Institution: {institution?.name ?? "—"}
               </span>
             </div>
@@ -183,6 +186,14 @@ export function StudentProfileHeader({
 
         {/* Right: Action buttons */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {viewLiveProfileHref && (
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href={viewLiveProfileHref} target="_blank" rel="noopener noreferrer" aria-label="View live profile in new tab">
+                <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
+                View live profile
+              </a>
+            </Button>
+          )}
           <Button size="sm" className="gap-1.5">
             <Pencil className="h-4 w-4" strokeWidth={1.5} />
             Edit Profile

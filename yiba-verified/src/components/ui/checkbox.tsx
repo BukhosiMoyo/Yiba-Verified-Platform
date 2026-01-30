@@ -5,14 +5,27 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
   label?: string;
   error?: boolean;
+  /** Radix UI style change handler (for compatibility) */
+  onCheckedChange?: (checked: boolean) => void;
+  /** Standard input onChange handler */
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
 }
 
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, label, error, id, ...props }, ref) => {
+  ({ className, label, error, id, onCheckedChange, onChange, ...props }, ref) => {
     const checkboxId = id || React.useId();
+
+    // Handle both onChange and onCheckedChange patterns
+    const handleChange = React.useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange?.(e);
+        onCheckedChange?.(e.target.checked);
+      },
+      [onChange, onCheckedChange]
+    );
 
     return (
       <div className="flex items-center gap-2.5">
@@ -21,12 +34,14 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             type="checkbox"
             id={checkboxId}
             ref={ref}
+            onChange={handleChange}
             className={cn(
-              "peer h-4 w-4 shrink-0 rounded border border-gray-300 bg-white text-blue-600 transition-all duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:ring-offset-1",
+              "peer h-4 w-4 shrink-0 rounded border border-border bg-card text-primary transition-all duration-150",
+              "dark:border-border dark:bg-card",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-background",
               "disabled:cursor-not-allowed disabled:opacity-50",
-              "checked:border-blue-600 checked:bg-blue-600",
-              error && "border-red-300 focus-visible:ring-red-500/20",
+              "checked:border-primary checked:bg-primary dark:checked:border-primary dark:checked:bg-primary",
+              error && "border-red-300 dark:border-red-700 focus-visible:ring-red-500/20",
               className
             )}
             {...props}
@@ -44,8 +59,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             htmlFor={checkboxId}
             className={cn(
               "text-sm font-medium leading-none cursor-pointer select-none",
-              "text-gray-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-              error && "text-red-700"
+              "text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+              error && "text-red-700 dark:text-red-400"
             )}
           >
             {label}

@@ -51,6 +51,14 @@ export default async function PlatformAdminDashboard() {
   let submissionsToday = 0;
   let databaseStatus: "healthy" | "degraded" | "down" = "healthy";
   let recentErrors = 0;
+  let recentClientErrors: Array<{
+    id: string;
+    message: string;
+    path: string | null;
+    digest: string | null;
+    created_at: Date;
+    user?: { email: string; first_name: string; last_name: string } | null;
+  }> = [];
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -303,6 +311,23 @@ export default async function PlatformAdminDashboard() {
       databaseStatus = "down";
       recentErrors = 1;
     }
+
+    // Recent client errors (last 24h, from error boundary reports)
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      recentClientErrors = await prisma.clientErrorReport.findMany({
+        where: { created_at: { gte: oneDayAgo } },
+        take: 10,
+        orderBy: { created_at: "desc" },
+        include: {
+          user: {
+            select: { email: true, first_name: true, last_name: true },
+          },
+        },
+      });
+    } catch {
+      recentClientErrors = [];
+    }
   } catch (error) {
     // Log error but don't crash - allow page to render with default values
     console.error("Database connection error:", error);
@@ -374,6 +399,7 @@ export default async function PlatformAdminDashboard() {
       databaseStatus={databaseStatus}
       recentErrors={recentErrors}
       lastChecked={new Date().toISOString()}
+      recentClientErrors={recentClientErrors}
     />
   );
 }

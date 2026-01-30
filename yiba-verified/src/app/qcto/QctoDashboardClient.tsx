@@ -31,6 +31,13 @@ interface QctoDashboardClientProps {
   pendingSubmissions: any[];
   recentReviews: any[];
   pendingReadiness: any[];
+  canManageQueues?: boolean;
+  myAssignedReviewsCount?: number;
+  myAssignedReviews?: any[];
+  myAssignedAuditsCount?: number;
+  myAssignedAudits?: any[];
+  unassignedCount?: number;
+  unassignedReadiness?: any[];
 }
 
 /**
@@ -50,6 +57,13 @@ export function QctoDashboardClient({
   pendingSubmissions,
   recentReviews,
   pendingReadiness,
+  canManageQueues = false,
+  myAssignedReviewsCount = 0,
+  myAssignedReviews = [],
+  myAssignedAuditsCount = 0,
+  myAssignedAudits = [],
+  unassignedCount = 0,
+  unassignedReadiness = [],
 }: QctoDashboardClientProps) {
   const pendingReviewsCount = submissionsSubmitted + submissionsUnderReview;
   const pendingReadinessCount = readinessSubmitted + readinessUnderReview;
@@ -82,23 +96,23 @@ export function QctoDashboardClient({
     return formatDate(date);
   };
 
-  // Status pill with distinct colors (submissions + readiness)
+  // Status pill with distinct colors (submissions + readiness) - dark mode aware
   const getStatusBadge = (status: string) => {
     const label = status.replace(/_/g, " ");
     const base = "font-semibold";
     switch (status) {
       case "SUBMITTED":
-        return <Badge className={`bg-blue-100 text-blue-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 ${base}`}>{label}</Badge>;
       case "UNDER_REVIEW":
-        return <Badge className={`bg-purple-100 text-purple-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300 ${base}`}>{label}</Badge>;
       case "APPROVED":
-        return <Badge className={`bg-green-100 text-green-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300 ${base}`}>{label}</Badge>;
       case "REJECTED":
-        return <Badge className={`bg-red-100 text-red-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300 ${base}`}>{label}</Badge>;
       case "RETURNED_FOR_CORRECTION":
-        return <Badge className={`bg-orange-100 text-orange-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300 ${base}`}>{label}</Badge>;
       case "PENDING":
-        return <Badge className={`bg-amber-100 text-amber-800 ${base}`}>{label}</Badge>;
+        return <Badge className={`bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 ${base}`}>{label}</Badge>;
       default:
         return <Badge variant="outline" className={base}>{label}</Badge>;
     }
@@ -162,12 +176,206 @@ export function QctoDashboardClient({
         />
       </div>
 
+      {/* My Assigned Reviews - readiness assigned to me as reviewer */}
+      <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+        <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400">
+                <FileCheck className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <div>
+                <CardTitle>My Assigned Reviews</CardTitle>
+                <CardDescription>
+                  {myAssignedReviewsCount === 0
+                    ? "No readiness assigned to you as reviewer"
+                    : `${myAssignedReviewsCount} readiness record${myAssignedReviewsCount !== 1 ? "s" : ""} assigned to you`}
+                </CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link href="/qcto/readiness?assignedTo=me&assignmentRole=REVIEWER" className="gap-1.5">
+                View my reviews
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {myAssignedReviews.length === 0 ? (
+            <EmptyState
+              title="No assigned reviews"
+              description="Readiness records assigned to you as reviewer will appear here."
+              icon={<FileCheck className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
+            />
+          ) : (
+            <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Qualification</TableHead>
+                  <TableHead>Institution</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {myAssignedReviews.map((readiness: any) => (
+                  <TableRow key={readiness.readiness_id} className="hover:bg-muted/50 transition-colors duration-200">
+                    <TableCell className="font-medium">{readiness.qualification_title || "Untitled"}</TableCell>
+                    <TableCell>{readiness.institution?.trading_name || readiness.institution?.legal_name || "—"}</TableCell>
+                    <TableCell>{getStatusBadge(readiness.readiness_status)}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" asChild className="rounded-full gap-1.5">
+                        <Link href={`/qcto/readiness/${readiness.readiness_id}`}>
+                          <FileSearch className="h-3.5 w-3.5" aria-hidden />
+                          Review
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* My Assigned Audits - readiness assigned to me as auditor */}
+      <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+        <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400">
+                <ClipboardList className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <div>
+                <CardTitle>My Assigned Audits</CardTitle>
+                <CardDescription>
+                  {myAssignedAuditsCount === 0
+                    ? "No readiness assigned to you as auditor"
+                    : `${myAssignedAuditsCount} readiness record${myAssignedAuditsCount !== 1 ? "s" : ""} assigned to you`}
+                </CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link href="/qcto/readiness?assignedTo=me&assignmentRole=AUDITOR" className="gap-1.5">
+                View my audits
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {myAssignedAudits.length === 0 ? (
+            <EmptyState
+              title="No assigned audits"
+              description="Readiness records assigned to you as auditor will appear here."
+              icon={<ClipboardList className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
+            />
+          ) : (
+            <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Qualification</TableHead>
+                  <TableHead>Institution</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {myAssignedAudits.map((readiness: any) => (
+                  <TableRow key={readiness.readiness_id} className="hover:bg-muted/50 transition-colors duration-200">
+                    <TableCell className="font-medium">{readiness.qualification_title || "Untitled"}</TableCell>
+                    <TableCell>{readiness.institution?.trading_name || readiness.institution?.legal_name || "—"}</TableCell>
+                    <TableCell>{getStatusBadge(readiness.readiness_status)}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" asChild className="rounded-full gap-1.5">
+                        <Link href={`/qcto/readiness/${readiness.readiness_id}`}>
+                          <FileSearch className="h-3.5 w-3.5" aria-hidden />
+                          Review
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Unassigned / Needs Assignment - Admin/Super Admin only */}
+      {canManageQueues && (
+        <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
+          <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                  <Inbox className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <div>
+                  <CardTitle>Unassigned / Needs Assignment</CardTitle>
+                  <CardDescription>
+                    {unassignedCount === 0
+                      ? "No unassigned readiness"
+                      : `${unassignedCount} readiness record${unassignedCount !== 1 ? "s" : ""} need assignment`}
+                  </CardDescription>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild className="shrink-0">
+                <Link href="/qcto/readiness?unassigned=true" className="gap-1.5">
+                  View unassigned
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {unassignedReadiness.length === 0 ? (
+              <EmptyState
+                title="No unassigned readiness"
+                description="Readiness records that need a reviewer will appear here."
+                icon={<Inbox className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />}
+              />
+            ) : (
+              <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Qualification</TableHead>
+                    <TableHead>Institution</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unassignedReadiness.map((readiness: any) => (
+                    <TableRow key={readiness.readiness_id} className="hover:bg-muted/50 transition-colors duration-200">
+                      <TableCell className="font-medium">{readiness.qualification_title || "Untitled"}</TableCell>
+                      <TableCell>{readiness.institution?.trading_name || readiness.institution?.legal_name || "—"}</TableCell>
+                      <TableCell>{getStatusBadge(readiness.readiness_status)}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" asChild className="rounded-full gap-1.5">
+                          <Link href={`/qcto/readiness/${readiness.readiness_id}`}>
+                            <FileSearch className="h-3.5 w-3.5" aria-hidden />
+                            Assign / Review
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Reviews Table - Always visible in both modes */}
       <Card className="overflow-hidden border border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none">
         <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50/80 text-amber-700">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
                 <ClipboardList className="h-5 w-5" strokeWidth={2} />
               </span>
               <div>
@@ -207,7 +415,7 @@ export function QctoDashboardClient({
               </TableHeader>
               <TableBody>
                 {pendingSubmissions.map((submission) => (
-                  <TableRow key={submission.submission_id} className="hover:!bg-sky-50/90 transition-colors duration-200">
+                  <TableRow key={submission.submission_id} className="hover:bg-muted/50 transition-colors duration-200">
                     <TableCell className="font-medium">
                       {submission.title || `Submission ${submission.submission_id.slice(0, 8)}`}
                     </TableCell>
@@ -241,7 +449,7 @@ export function QctoDashboardClient({
         <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50/80 text-emerald-700">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
                 <FileCheck className="h-5 w-5" strokeWidth={2} />
               </span>
               <div>
@@ -307,7 +515,7 @@ export function QctoDashboardClient({
           <CardHeader className="bg-gradient-to-b from-muted/40 to-transparent pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50/80 text-cyan-700">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400">
                   <FileCheck className="h-5 w-5" strokeWidth={2} />
                 </span>
                 <div>
@@ -345,7 +553,7 @@ export function QctoDashboardClient({
                 </TableHeader>
                 <TableBody>
                   {pendingReadiness.map((readiness) => (
-                    <TableRow key={readiness.readiness_id} className="hover:!bg-sky-50/90 transition-colors duration-200">
+                    <TableRow key={readiness.readiness_id} className="hover:bg-muted/50 transition-colors duration-200">
                       <TableCell className="font-medium">
                         {readiness.qualification_title || "Untitled"}
                       </TableCell>

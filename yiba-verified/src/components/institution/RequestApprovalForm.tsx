@@ -20,6 +20,7 @@ export function RequestApprovalForm({ requestId }: RequestApprovalFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"APPROVED" | "REJECTED" | null>(null);
   const [responseNotes, setResponseNotes] = useState("");
+  const [accessValidUntil, setAccessValidUntil] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,15 +36,19 @@ export function RequestApprovalForm({ requestId }: RequestApprovalFormProps) {
     setError(null);
 
     try {
+      const payload: { status: "APPROVED" | "REJECTED"; response_notes?: string; expires_at?: string | null } = {
+        status,
+        response_notes: responseNotes.trim() || undefined,
+      };
+      if (status === "APPROVED" && accessValidUntil.trim()) {
+        payload.expires_at = new Date(accessValidUntil).toISOString();
+      }
       const response = await fetch(`/api/institutions/requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          status,
-          response_notes: responseNotes.trim() || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -96,6 +101,24 @@ export function RequestApprovalForm({ requestId }: RequestApprovalFormProps) {
             {!status && "Select whether to approve or reject this request."}
           </p>
         </div>
+
+        {status === "APPROVED" && (
+          <div>
+            <Label htmlFor="access_valid_until">Access valid until (Optional)</Label>
+            <Input
+              id="access_valid_until"
+              type="date"
+              value={accessValidUntil}
+              onChange={(e) => setAccessValidUntil(e.target.value)}
+              disabled={isSubmitting}
+              min={new Date().toISOString().slice(0, 10)}
+              className="mt-2"
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              QCTO will lose access to the requested resources after this date. Leave empty for no expiry.
+            </p>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="response_notes">Response Notes (Optional)</Label>

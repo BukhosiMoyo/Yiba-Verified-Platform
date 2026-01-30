@@ -5,6 +5,7 @@ import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { fail } from "@/lib/api/response";
 import { getStorageService } from "@/lib/storage";
+import { computeFacilitatorProfileCompleteness } from "@/lib/facilitatorProfileCompleteness";
 
 /**
  * GET /api/institutions/documents
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
         { related_entity: "LEARNER", learner: { institution_id: ctx.institutionId } },
         { related_entity: "ENROLMENT", enrolment: { institution_id: ctx.institutionId } },
         { related_entity: "READINESS", readiness: { institution_id: ctx.institutionId } },
+        { related_entity: "USER_FACILITATOR_PROFILE", related_entity_id: ctx.userId },
       ];
     }
     // PLATFORM_ADMIN can see ALL documents (no institution scoping - app owners see everything!)
@@ -233,6 +235,20 @@ export async function POST(request: NextRequest) {
         }
         entityExists = true;
         break;
+      case "USER_FACILITATOR_PROFILE":
+        if (relatedEntityId !== ctx.userId) {
+          return fail(new AppError(ERROR_CODES.FORBIDDEN, "You can only upload to your own facilitator profile", 403));
+        }
+        const ui = await prisma.userInstitution.findUnique({
+          where: {
+            user_id_institution_id: { user_id: ctx.userId, institution_id: ctx.institutionId! },
+          },
+        });
+        if (!ui?.can_facilitate) {
+          return fail(new AppError(ERROR_CODES.FORBIDDEN, "You are not a facilitator for this institution", 403));
+        }
+        entityExists = true;
+        break;
       default:
         return fail(new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid related_entity", 400));
     }
@@ -281,6 +297,18 @@ export async function POST(request: NextRequest) {
         });
       },
     });
+
+    if (relatedEntity === "USER_FACILITATOR_PROFILE" && relatedEntityId) {
+      try {
+        const { complete } = await computeFacilitatorProfileCompleteness(relatedEntityId);
+        await prisma.user.update({
+          where: { user_id: relatedEntityId },
+          data: { facilitator_profile_complete: complete },
+        });
+      } catch (e) {
+        console.error("Failed to update facilitator profile completeness after document upload:", e);
+      }
+    }
 
     return NextResponse.json(
       {

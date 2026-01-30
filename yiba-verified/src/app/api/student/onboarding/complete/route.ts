@@ -94,6 +94,11 @@ export async function POST(request: NextRequest) {
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, "ID number already registered to another learner", 400);
     }
 
+    // Learner create requires institution_id; update can keep existing or use ctx
+    if (!existingLearner && !ctx.institutionId) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Institution is required to complete onboarding", 400);
+    }
+
     // Create Learner record in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Parse birth_date (should be ISO string)
@@ -108,7 +113,7 @@ export async function POST(request: NextRequest) {
             where: { learner_id: existingLearner.learner_id },
             data: {
               user_id: ctx.userId,
-              institution_id: ctx.institutionId,
+              institution_id: ctx.institutionId ?? undefined,
               national_id: personalInfo.national_id,
               alternate_id: personalInfo.alternate_id || null,
               first_name: user.first_name,
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
         : await tx.learner.create({
             data: {
               user_id: ctx.userId,
-              institution_id: ctx.institutionId,
+              institution_id: ctx.institutionId!,
               national_id: personalInfo.national_id,
               alternate_id: personalInfo.alternate_id || null,
               first_name: user.first_name,

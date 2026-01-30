@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -59,6 +60,12 @@ function LoginContent() {
       // Clean up URL
       router.replace("/login", { scroll: false });
     }
+    // Check if email was changed
+    if (searchParams.get("emailChanged") === "true") {
+      setSuccess("Email changed successfully! Please sign in with your new email address.");
+      // Clean up URL
+      router.replace("/login", { scroll: false });
+    }
   }, [searchParams, router]);
 
   // Show loading state while checking session
@@ -68,8 +75,9 @@ function LoginContent() {
         <AuthCard
           header={
             <div className="space-y-2">
-              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
-              <p className="text-sm text-muted-foreground">Sign in to your account</p>
+              <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left dark:hidden" sizes="200px" priority loading="eager" />
+              <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left hidden dark:block" sizes="200px" priority loading="eager" />
+              <p className="text-sm text-foreground">Sign in to your account</p>
             </div>
           }
         >
@@ -88,8 +96,9 @@ function LoginContent() {
         <AuthCard
           header={
             <div className="space-y-2">
-              <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
-              <p className="text-sm text-muted-foreground">Sign in to your account</p>
+              <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left dark:hidden" sizes="200px" priority loading="eager" />
+              <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left hidden dark:block" sizes="200px" priority loading="eager" />
+              <p className="text-sm text-foreground">Sign in to your account</p>
             </div>
           }
         >
@@ -121,6 +130,18 @@ function LoginContent() {
       }
 
       if (result?.ok) {
+        // Log login activity
+        try {
+          await fetch("/api/account/activity/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ activityType: "LOGIN" }),
+          });
+        } catch (err) {
+          // Don't block login if activity logging fails
+          console.error("Failed to log activity:", err);
+        }
+
         // Fetch session to get role for redirect (ensures session is ready)
         const response = await fetch("/api/auth/session");
         const data = await response.json();
@@ -149,8 +170,9 @@ function LoginContent() {
       <AuthCard
         header={
           <div className="space-y-2">
-            <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
-            <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left dark:hidden" sizes="200px" priority loading="eager" />
+            <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left hidden dark:block" sizes="200px" priority loading="eager" />
+            <p className="text-sm text-foreground">Sign in to your account</p>
           </div>
         }
       >
@@ -243,8 +265,9 @@ export default function LoginPage() {
           <AuthCard
             header={
               <div className="space-y-2">
-                <img src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" className="h-10 object-contain object-left" />
-                <p className="text-sm text-muted-foreground">Sign in to your account</p>
+                <Image src="/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left dark:hidden" sizes="200px" priority loading="eager" />
+                <Image src="/YIBA%20VERIFIED%20DARK%20MODE%20LOGO.webp" alt="Yiba Verified" width={200} height={40} className="h-10 object-contain object-left hidden dark:block" sizes="200px" priority loading="eager" />
+                <p className="text-sm text-foreground">Sign in to your account</p>
               </div>
             }
           >

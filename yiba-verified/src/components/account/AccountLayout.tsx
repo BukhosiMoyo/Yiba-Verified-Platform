@@ -7,11 +7,14 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import type { VerificationLevel } from "@/lib/verification";
+
 type AccountLayoutProps = {
   children: ReactNode;
   currentUserRole: Role;
   userName: string;
   userEmail?: string;
+  verificationLevel?: VerificationLevel;
 };
 
 export function AccountLayout({
@@ -19,6 +22,7 @@ export function AccountLayout({
   currentUserRole,
   userName,
   userEmail,
+  verificationLevel,
 }: AccountLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -30,6 +34,7 @@ export function AccountLayout({
           userName={userName}
           userRole={currentUserRole}
           userEmail={userEmail}
+          verificationLevel={verificationLevel}
         />
       </aside>
 
@@ -50,6 +55,7 @@ export function AccountLayout({
             userName={userName}
             userRole={currentUserRole}
             userEmail={userEmail}
+            verificationLevel={verificationLevel}
           />
         </SheetContent>
       </Sheet>

@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { GenerateImpersonationLink } from "@/components/shared/GenerateImpersonationLink";
+import type { Role } from "@/lib/rbac";
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -47,6 +49,7 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [currentUser, setCurrentUser] = useState<{ userId: string; role: Role } | null>(null);
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -60,9 +63,37 @@ export default function UserDetailPage() {
     status: "",
   });
 
+  // Advisor service leads (service types this advisor receives)
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+  const [serviceTypesSaving, setServiceTypesSaving] = useState(false);
+  const SERVICE_TYPE_OPTIONS = [
+    { value: "ACCREDITATION_HELP", label: "Accreditation help" },
+    { value: "ACCOUNTING_SERVICES", label: "Accounting services" },
+    { value: "MARKETING_WEBSITES", label: "Websites & marketing" },
+    { value: "GENERAL_INQUIRY", label: "General inquiry" },
+  ];
+
   useEffect(() => {
     fetchUser();
+    fetchCurrentUser();
   }, [userId]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          setCurrentUser({
+            userId: data.user.userId || data.user.id,
+            role: data.user.role as Role,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch current user:", err);
+    }
+  };
 
   const fetchUser = async () => {
     try {
@@ -78,6 +109,16 @@ export default function UserDetailPage() {
 
       const data = await response.json();
       setUser(data.user);
+
+      if (data.user?.role === "ADVISOR") {
+        const leadsRes = await fetch(`/api/platform-admin/users/${userId}/service-leads`);
+        if (leadsRes.ok) {
+          const leadsData = await leadsRes.json();
+          setServiceTypes(leadsData.service_types || []);
+        }
+      } else {
+        setServiceTypes([]);
+      }
       
       // Pre-fill edit form
       if (data.user) {
@@ -157,6 +198,8 @@ export default function UserDetailPage() {
         return "default";
       case "QCTO_USER":
         return "default";
+      case "ADVISOR":
+        return "default";
       case "INSTITUTION_ADMIN":
         return "default";
       case "INSTITUTION_STAFF":
@@ -166,6 +209,32 @@ export default function UserDetailPage() {
       default:
         return "outline";
     }
+  };
+
+  const handleSaveServiceTypes = async () => {
+    try {
+      setServiceTypesSaving(true);
+      const response = await fetch(`/api/platform-admin/users/${userId}/service-leads`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service_types: serviceTypes }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save service types");
+      }
+      toast.success("Service types updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save service types");
+    } finally {
+      setServiceTypesSaving(false);
+    }
+  };
+
+  const toggleServiceType = (value: string) => {
+    setServiceTypes((prev) =>
+      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
+    );
   };
 
   if (loading) {
@@ -190,7 +259,7 @@ export default function UserDetailPage() {
         <EmptyState
           title="User not found"
           description={error || "The user you're looking for doesn't exist or has been deleted."}
-          icon={<User className="h-12 w-12 text-gray-400" />}
+          icon={<User className="h-12 w-12 text-muted-foreground" />}
         />
       </div>
     );
@@ -219,10 +288,10 @@ export default function UserDetailPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               {user.first_name} {user.last_name}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {isQCTOUser ? "QCTO User Profile & Activity" : "User Profile & Information"}
             </p>
           </div>
@@ -232,6 +301,13 @@ export default function UserDetailPage() {
             {user.role.replace(/_/g, " ")}
           </Badge>
           {getStatusBadge(user.status)}
+          {currentUser && currentUser.userId !== user.user_id && (
+            <GenerateImpersonationLink
+              targetUserId={user.user_id}
+              targetUserName={`${user.first_name} ${user.last_name}`}
+              targetUserRole={user.role}
+            />
+          )}
           <Button onClick={() => setEditModalOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit User
@@ -266,45 +342,45 @@ export default function UserDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-gray-500" />
+                  <User className="h-5 w-5 text-muted-foreground" />
                   Personal Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Full Name</p>
-                  <p className="text-sm text-gray-900 mt-1">
+                  <p className="text-sm font-medium text-muted-foreground">Full Name</p>
+                  <p className="text-sm text-foreground mt-1">
                     {user.first_name} {user.last_name}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
                   <a
                     href={`mailto:${user.email}`}
-                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline mt-1 block"
+                    className="text-sm text-primary hover:text-primary/80 hover:underline mt-1 block"
                   >
                     {user.email}
                   </a>
                 </div>
                 {user.phone && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Phone</p>
+                    <p className="text-sm font-medium text-muted-foreground">Phone</p>
                     <a
                       href={`tel:${user.phone}`}
-                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline mt-1 block"
+                      className="text-sm text-primary hover:text-primary/80 hover:underline mt-1 block"
                     >
                       {user.phone}
                     </a>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Role</p>
+                  <p className="text-sm font-medium text-muted-foreground">Role</p>
                   <Badge variant={getRoleBadgeVariant(user.role)} className="mt-1">
                     {user.role.replace(/_/g, " ")}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Status</p>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
                   {getStatusBadge(user.status)}
                 </div>
               </CardContent>
@@ -314,7 +390,7 @@ export default function UserDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-gray-500" />
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
                   {isQCTOUser ? "Activity Summary" : "Institution"}
                 </CardTitle>
               </CardHeader>
@@ -367,6 +443,46 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Advisor: Service request types */}
+            {user.role === "ADVISOR" && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                    Service request types
+                  </CardTitle>
+                  <CardDescription>
+                    Select which service request types this advisor receives. They will get notifications and appear in their service requests list.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-4">
+                    {SERVICE_TYPE_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={serviceTypes.includes(opt.value)}
+                          onChange={() => toggleServiceType(opt.value)}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        <span className="text-sm text-foreground">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={handleSaveServiceTypes}
+                    disabled={serviceTypesSaving}
+                  >
+                    {serviceTypesSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save service types
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -711,9 +827,15 @@ export default function UserDetailPage() {
                     required
                   >
                     <option value="PLATFORM_ADMIN">Platform Admin</option>
+                    <option value="QCTO_SUPER_ADMIN">QCTO Super Admin</option>
+                    <option value="QCTO_ADMIN">QCTO Admin</option>
+                    <option value="QCTO_USER">QCTO User</option>
+                    <option value="QCTO_REVIEWER">QCTO Reviewer</option>
+                    <option value="QCTO_AUDITOR">QCTO Auditor</option>
+                    <option value="QCTO_VIEWER">QCTO Viewer</option>
+                    <option value="ADVISOR">Advisor</option>
                     <option value="INSTITUTION_ADMIN">Institution Admin</option>
                     <option value="INSTITUTION_STAFF">Institution Staff</option>
-                    <option value="QCTO_USER">QCTO User</option>
                     <option value="STUDENT">Student</option>
                   </Select>
                 </div>
