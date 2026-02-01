@@ -22,6 +22,7 @@ const roleDashboardHref: Record<Role, string> = {
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
+  ADVISOR: "/advisor",
 };
 
 function getDashboardHref(role: string | undefined): string {
@@ -95,9 +96,8 @@ export function MarketingNav() {
                   <Link
                     key={href}
                     href={href}
-                    className={`rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-                      active ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
+                    className={`rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200 ${active ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
                   >
                     {label}
                   </Link>
@@ -168,9 +168,8 @@ export function MarketingNav() {
 
       {/* Mobile menu overlay */}
       <div
-        className={`fixed inset-0 top-16 z-40 md:hidden transition-opacity duration-200 ${
-          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 top-16 z-40 md:hidden transition-opacity duration-200 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       >
         {/* Backdrop */}
         <div
@@ -180,9 +179,8 @@ export function MarketingNav() {
 
         {/* Menu content */}
         <div
-          className={`relative bg-background border-b border-border shadow-lg transform transition-transform duration-200 ${
-            mobileMenuOpen ? "translate-y-0" : "-translate-y-4"
-          }`}
+          className={`relative bg-background border-b border-border shadow-lg transform transition-transform duration-200 ${mobileMenuOpen ? "translate-y-0" : "-translate-y-4"
+            }`}
         >
           <div className="px-4 py-6 space-y-1">
             {navLinks.map(({ href, label }) => {
@@ -191,11 +189,10 @@ export function MarketingNav() {
                 <Link
                   key={href}
                   href={href}
-                  className={`block rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 ${
-                    active
+                  className={`block rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 ${active
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted/60"
-                  }`}
+                    }`}
                 >
                   {label}
                 </Link>

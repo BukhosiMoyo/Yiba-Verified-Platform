@@ -23,6 +23,7 @@ const roleDashboardHref: Record<Role, string> = {
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
+  ADVISOR: "/advisor",
 };
 
 function getDashboardHref(role: string | undefined): string {

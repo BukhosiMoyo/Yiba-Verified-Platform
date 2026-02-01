@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { useTour } from "@/components/tour/TourProvider";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { AnnouncementLoginModal } from "@/components/shared/AnnouncementLoginModal";
 import { ViewAsUserBanner } from "@/components/shared/ViewAsUserBanner";
@@ -51,6 +52,7 @@ export function AppShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
   const [showAnnouncementsAfterWelcome, setShowAnnouncementsAfterWelcome] = useState(false);
+  const { startTour } = useTour();
 
   // Show welcome modal: once per login (session), up to 5 times total (lifetime).
   useEffect(() => {
@@ -73,9 +75,7 @@ export function AppShell({
   }, []);
 
   const handleStartTour = () => {
-    // For now, show a toast. Tour system can be implemented later
-    toast.info("Tour coming soon! We're working on an interactive guide.");
-    // Modal will close via onOpenChange, which will increment the count
+    startTour(currentUserRole);
   };
 
   const handleSkip = () => {

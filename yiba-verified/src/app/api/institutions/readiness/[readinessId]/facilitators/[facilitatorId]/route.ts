@@ -53,7 +53,7 @@ export async function PATCH(
     if ("error" in result) {
       throw new AppError(
         result.error === "Facilitator not found" ? ERROR_CODES.NOT_FOUND : result.error === "Forbidden" ? ERROR_CODES.FORBIDDEN : ERROR_CODES.NOT_FOUND,
-        result.error,
+        result.error as string,
         result.error === "Forbidden" ? 403 : 404
       );
     }
@@ -77,7 +77,7 @@ export async function PATCH(
       newValue: { ...facilitator, ...updateData },
       institutionId: readiness.institution_id,
       reason: "Update facilitator",
-      assertCan: async () => {},
+      assertCan: async () => { },
       mutation: async (tx) => {
         return await tx.facilitator.update({
           where: { facilitator_id: facilitatorId },
@@ -114,7 +114,7 @@ export async function DELETE(
     if ("error" in result) {
       throw new AppError(
         result.error === "Facilitator not found" ? ERROR_CODES.NOT_FOUND : result.error === "Forbidden" ? ERROR_CODES.FORBIDDEN : ERROR_CODES.NOT_FOUND,
-        result.error,
+        result.error as string,
         result.error === "Forbidden" ? 403 : 404
       );
     }
@@ -129,7 +129,7 @@ export async function DELETE(
       newValue: null,
       institutionId: readiness.institution_id,
       reason: "Remove facilitator from readiness",
-      assertCan: async () => {},
+      assertCan: async () => { },
       mutation: async (tx) => {
         await tx.facilitator.delete({
           where: { facilitator_id: facilitatorId },

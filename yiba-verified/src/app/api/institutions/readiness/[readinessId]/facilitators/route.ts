@@ -114,14 +114,13 @@ export async function POST(
 
       const created = await mutateWithAudit({
         entityType: "FACILITATOR",
-        entityId: () => "", // set after create
         changeType: "CREATE",
         fieldName: "facilitator",
         oldValue: null,
         newValue: { readiness_id: readinessId, user_id: body.user_id, first_name: ui.user.first_name, last_name: ui.user.last_name },
         institutionId: readiness.institution_id,
         reason: `Add facilitator from profile: ${ui.user.first_name} ${ui.user.last_name}`,
-        assertCan: async () => {},
+        assertCan: async () => { },
         mutation: async (tx) => {
           return await tx.facilitator.create({
             data: {
@@ -150,14 +149,13 @@ export async function POST(
 
     const facilitator = await mutateWithAudit({
       entityType: "FACILITATOR",
-      entityId: () => "",
       changeType: "CREATE",
       fieldName: "facilitator",
       oldValue: null,
       newValue: { readiness_id: readinessId, first_name, last_name },
       institutionId: readiness.institution_id,
       reason: `Add facilitator (manual): ${first_name} ${last_name}`,
-      assertCan: async () => {},
+      assertCan: async () => { },
       mutation: async (tx) => {
         return await tx.facilitator.create({
           data: {
@@ -170,10 +168,10 @@ export async function POST(
     });
 
     const withUser = await prisma.facilitator.findUnique({
-      where: { facilitator_id: created.facilitator_id },
+      where: { facilitator_id: facilitator.facilitator_id },
       include: { user: { select: { email: true } } },
     });
-    return ok({ facilitator: withUser ?? created });
+    return ok({ facilitator: withUser ?? facilitator });
   } catch (error) {
     if (error instanceof AppError) return fail(error);
     console.error("POST /api/institutions/readiness/[readinessId]/facilitators error:", error);

@@ -141,6 +141,14 @@ function isChildActive(
   return childVal === null ? !filterVal : filterVal === childVal;
 }
 
+const getTourId = (href: string) => {
+  if (href === "/institution" || href === "/platform-admin" || href === "/qcto" || href === "/student") return "sidebar-home";
+  if (href.includes("/readiness")) return "sidebar-readiness";
+  if (href.includes("/learners")) return "sidebar-learners";
+  if (href.includes("/facilitators")) return "sidebar-facilitators";
+  return undefined;
+};
+
 type SidebarProps = {
   items: NavItem[];
   role: Role;
@@ -523,6 +531,7 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
                 <Link
                   key={itemHref}
                   href={itemHref}
+                  id={getTourId(itemHref)}
                   onClick={onClose}
                   onMouseEnter={prefetchOnHover(itemHref)}
                   className="block relative z-10 focus:outline-none"
@@ -583,10 +592,12 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
       </ScrollArea>
 
       {/* Account Section - Bottom */}
-      <div className={cn(
-        "border-t border-border/60 px-3 py-3",
-        collapsed && !isMobile && "px-2"
-      )}>
+      <div
+        id="sidebar-account"
+        className={cn(
+          "border-t border-border/60 px-3 py-3",
+          collapsed && !isMobile && "px-2"
+        )}>
         <AccountMenu
           role={role}
           align="start"

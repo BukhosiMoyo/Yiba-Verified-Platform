@@ -7,6 +7,7 @@ import { ReactNode, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { DebugReporter } from "@/components/debug/DebugReporter";
+import { TourWrapper } from "@/components/tour/TourWrapper";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: ReactNode }) {
           <Suspense fallback={null}>
             <GlobalLoading />
           </Suspense>
-          {children}
+          <TourWrapper>
+            {children}
+          </TourWrapper>
           <Toaster />
         </ThemeProvider>
       </SWRConfig>

@@ -25,7 +25,10 @@ type InstitutionSummary = Pick<
   "institution_id" | "legal_name" | "trading_name" | "province" | "physical_address" | "delivery_modes" | "status"
 >;
 
-type Profile = InstitutionPublicProfile & { institution: InstitutionSummary };
+type Profile = Omit<InstitutionPublicProfile, "cached_rating_avg"> & {
+  cached_rating_avg: number | null;
+  institution: InstitutionSummary
+};
 type Review = Pick<InstitutionReview, "id" | "rating" | "comment" | "user_id" | "reviewer_name" | "created_at">;
 type Post = Pick<InstitutionPost, "id" | "type" | "title" | "body" | "image_url" | "video_url" | "is_verified" | "created_at">;
 

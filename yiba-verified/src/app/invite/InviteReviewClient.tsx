@@ -42,6 +42,7 @@ const roleRedirects: Record<Role, string> = {
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
+  ADVISOR: "/advisor",
 };
 
 type ViewMode = "review" | "signup";
@@ -107,7 +108,7 @@ function InviteReviewContent() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [token]);
 
   useEffect(() => {

@@ -42,6 +42,7 @@ const roleLabels: Record<Role, string> = {
   INSTITUTION_ADMIN: "Institution Admin",
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Learner",
+  ADVISOR: "Advisor",
 };
 
 // Helper to get user initials for avatar
@@ -156,38 +157,38 @@ export function AccountSidebar({
               <Link
                 key={item.href}
                 href={item.href || "#"} // Fallback to prevent undefined
-              className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out",
-                active
-                  ? "bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/25 dark:border-blue-500/30 text-blue-900 dark:text-white shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none"
-                  : "text-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {/* Active indicator bar */}
-              {active && (
-                <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 dark:bg-blue-400 transition-all duration-200 ease-out" />
-              )}
-
-              <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out flex-shrink-0",
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out",
                   active
-                    ? "bg-blue-500/20 dark:bg-blue-500/25"
-                    : "bg-muted group-hover:bg-muted/80"
+                    ? "bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/25 dark:border-blue-500/30 text-blue-900 dark:text-white shadow-[0_1px_0_rgba(0,0,0,0.03)] dark:shadow-none"
+                    : "text-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Icon
+                {/* Active indicator bar */}
+                {active && (
+                  <div className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 dark:bg-blue-400 transition-all duration-200 ease-out" />
+                )}
+
+                <div
                   className={cn(
-                    "h-4 w-4 transition-colors duration-200 ease-out",
-                    active ? "text-blue-900 dark:text-white" : "text-muted-foreground group-hover:text-foreground"
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out flex-shrink-0",
+                    active
+                      ? "bg-blue-500/20 dark:bg-blue-500/25"
+                      : "bg-muted group-hover:bg-muted/80"
                   )}
-                  strokeWidth={1.5}
-                />
-              </div>
-              <span className="truncate">{item.label}</span>
-            </Link>
-          );
-        })}
+                >
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 transition-colors duration-200 ease-out",
+                      active ? "text-blue-900 dark:text-white" : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
       </nav>
     </div>
   );

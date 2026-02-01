@@ -106,12 +106,6 @@ export function WelcomeModal({
                 <PlayCircle className="h-4 w-4" strokeWidth={2} aria-hidden />
                 Show me around
               </Button>
-              <span
-                className="rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-muted text-muted-foreground border border-border"
-                aria-hidden
-              >
-                Coming soon
-              </span>
             </div>
             <Button
               onClick={handleSkip}

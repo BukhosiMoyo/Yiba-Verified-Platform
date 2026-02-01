@@ -349,39 +349,7 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   background-clip: content-box;
 }
 
-/* Nice thin scrollbar (always visible but subtle) */
-.scrollbar-nice {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
 
-.scrollbar-nice::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-nice::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-nice::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 9999px;
-}
-
-.scrollbar-nice::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
-
-/* Invisible scrollbar - still functional but completely hidden */
-.scrollbar-invisible {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.scrollbar-invisible::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
 
 /* ==========================================================================
    Blog Content Styles

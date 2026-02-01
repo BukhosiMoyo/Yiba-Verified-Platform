@@ -21,6 +21,7 @@ const roleRedirects: Record<Role, string> = {
   INSTITUTION_ADMIN: "/institution",
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
+  ADVISOR: "/advisor",
 };
 
 function AcceptCallbackContent() {

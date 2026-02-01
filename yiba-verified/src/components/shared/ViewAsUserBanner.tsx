@@ -40,6 +40,7 @@ const roleLabels: Record<Role, string> = {
   INSTITUTION_ADMIN: "Institution Admin",
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Student",
+  ADVISOR: "Advisor",
 };
 
 /**
