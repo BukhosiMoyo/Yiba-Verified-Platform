@@ -18,7 +18,7 @@ import { Notifications } from "@/lib/notifications";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { token, name, password } = body;
+    const { token, name, password, email } = body;
 
     if (!token || typeof token !== "string") {
       throw new AppError(
@@ -69,19 +69,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine target email: provided email OR invite email
+    const targetEmail = (email || invite.email).toLowerCase().trim();
+
+    // Validate email format if changed
+    if (email && email.toLowerCase() !== invite.email.toLowerCase()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid email format", 400);
+      }
+    }
+
     const existingUser = await prisma.user.findUnique({
-      where: { email: invite.email, deleted_at: null },
+      where: { email: targetEmail, deleted_at: null },
       select: { user_id: true, institution_id: true, role: true },
     });
 
-    // Existing user path: token only, require session email === invite.email
+    // Existing user path: token only, require session email === targetEmail
     if (existingUser && (!name || !password)) {
       const session = await getServerSession();
       const sessionEmail = (session?.user?.email as string)?.toLowerCase?.();
-      if (!sessionEmail || sessionEmail !== invite.email.toLowerCase()) {
+
+      if (!sessionEmail || sessionEmail !== targetEmail) {
         throw new AppError(
           ERROR_CODES.UNAUTHENTICATED,
-          "Sign in with the invited email to accept this invitation",
+          `Sign in with ${targetEmail} to accept this invitation`,
           401
         );
       }
@@ -94,6 +105,7 @@ export async function POST(request: NextRequest) {
             used_at: now,
             accepted_at: now,
             status: "ACCEPTED",
+            accepted_email: targetEmail !== invite.email.toLowerCase() ? targetEmail : null
           },
         });
 
@@ -139,7 +151,7 @@ export async function POST(request: NextRequest) {
         existingUser: true,
         user: {
           user_id: existingUser.user_id,
-          email: invite.email,
+          email: targetEmail,
           role: existingUser.role,
         },
       });
@@ -155,9 +167,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingUser && (name || password)) {
+      // If user changed email to one that exists -> error
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
-        "User with this email already exists — sign in and accept the invite from the link",
+        `User with email ${targetEmail} already exists — sign in to accept`,
         400
       );
     }
@@ -181,7 +194,7 @@ export async function POST(request: NextRequest) {
     // Use province from invite if available, otherwise from body (for QCTO roles)
     const defaultProvince = invite.default_province || body.default_province || null;
     const assignedProvinces = body.assigned_provinces || (defaultProvince ? [defaultProvince] : []);
-    
+
     // Validate province assignment based on role
     validateProvinceAssignment(invite.role, defaultProvince, assignedProvinces);
 
@@ -194,7 +207,7 @@ export async function POST(request: NextRequest) {
       // Create user
       const user = await tx.user.create({
         data: {
-          email: invite.email.toLowerCase().trim(),
+          email: targetEmail,
           first_name: firstName,
           last_name: lastName,
           password_hash: passwordHash,
@@ -229,6 +242,7 @@ export async function POST(request: NextRequest) {
           used_at: new Date(),
           accepted_at: new Date(),
           status: "ACCEPTED",
+          accepted_email: targetEmail !== invite.email.toLowerCase() ? targetEmail : null
         },
       });
 

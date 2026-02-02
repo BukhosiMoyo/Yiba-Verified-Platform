@@ -22,7 +22,7 @@ export interface Notification {
   notification_id: string;
   notification_type: string;
   category?: string;
-  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  priority?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
   title: string;
   message: string;
   entity_type: string | null;
@@ -146,22 +146,23 @@ export const PRIORITY_CONFIG = {
     badge: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
     label: "Low",
   },
-  MEDIUM: {
+  NORMAL: {
     dot: "bg-blue-500",
     badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
-    label: "Medium",
+    label: "Normal",
   },
   HIGH: {
     dot: "bg-amber-500",
     badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
     label: "High",
   },
-  URGENT: {
+  CRITICAL: {
     dot: "bg-red-500 animate-pulse",
     badge: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
-    label: "Urgent",
+    label: "Critical",
   },
 };
+
 
 // Map notification types to categories
 export function getCategoryFromType(type: string): string {
@@ -173,54 +174,54 @@ export function getCategoryFromType(type: string): string {
     SUBMISSION_REJECTED: "submission",
     SUBMISSION_RETURNED: "submission",
     SUBMISSION_ASSIGNED: "submission",
-    
+
     // Requests
     REQUEST_RECEIVED: "request",
     REQUEST_APPROVED: "request",
     REQUEST_REJECTED: "request",
     REQUEST_EXPIRED: "request",
-    
+
     // Readiness
     READINESS_SUBMITTED: "readiness",
     READINESS_REVIEWED: "readiness",
     READINESS_RECOMMENDED: "readiness",
     READINESS_REJECTED: "readiness",
     READINESS_RETURNED: "readiness",
-    
+
     // Documents
     DOCUMENT_FLAGGED: "document",
     DOCUMENT_UNFLAGGED: "document",
     DOCUMENT_REQUIRED: "document",
-    
+
     // Evidence
     EVIDENCE_FLAGGED: "document",
     EVIDENCE_RESOLVED: "document",
-    
+
     // Invites
     INVITE_ACCEPTED: "invite",
     INVITE_EXPIRED: "invite",
     BULK_INVITE_COMPLETED: "invite",
-    
+
     // Team
     TEAM_MEMBER_JOINED: "team",
     TEAM_MEMBER_LEFT: "team",
-    
+
     // Assignments
     REVIEW_ASSIGNED: "deadline",
     AUDIT_ASSIGNED: "deadline",
     TASK_ASSIGNED: "deadline",
-    
+
     // Students
     ENROLMENT_CONFIRMED: "student",
     ASSESSMENT_RESULTS: "student",
     CERTIFICATE_READY: "student",
     ATTENDANCE_ALERT: "student",
-    
+
     // Deadlines
     DEADLINE_APPROACHING: "deadline",
     DEADLINE_PASSED: "deadline",
     EXPIRATION_WARNING: "deadline",
-    
+
     // System
     SYSTEM_ALERT: "system",
     SYSTEM_MAINTENANCE: "system",
@@ -228,7 +229,7 @@ export function getCategoryFromType(type: string): string {
     ISSUE_RESPONSE: "system",
     INSTITUTION_CREATED: "system",
   };
-  
+
   return typeToCategory[type] || "default";
 }
 
@@ -319,7 +320,7 @@ export function groupNotificationsByDate(notifications: Notification[]): Record<
   notifications.forEach((notification) => {
     const date = new Date(notification.created_at);
     const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+
     let group: string;
     if (dateOnly.getTime() === today.getTime()) {
       group = "Today";

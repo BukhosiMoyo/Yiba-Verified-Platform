@@ -61,3 +61,47 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return fail(error);
   }
 }
+
+/**
+ * DELETE /api/notifications/[notificationId]
+ * 
+ * Archive (soft-delete) a single notification.
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const ctx = await requireApiContext(request);
+    const { notificationId } = await params;
+
+    // Find notification
+    const notification = await prisma.notification.findUnique({
+      where: { notification_id: notificationId },
+      select: {
+        notification_id: true,
+        user_id: true,
+        deleted_at: true,
+      },
+    });
+
+    if (!notification) {
+      return fail(new AppError(ERROR_CODES.NOT_FOUND, "Notification not found", 404));
+    }
+
+    if (notification.user_id !== ctx.userId && ctx.role !== "PLATFORM_ADMIN") {
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Cannot archive this notification", 403));
+    }
+
+    // Soft delete
+    await prisma.notification.update({
+      where: { notification_id: notificationId },
+      data: {
+        deleted_at: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      message: "Notification archived",
+    });
+  } catch (error) {
+    return fail(error);
+  }
+}

@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { getStorageService } from "@/lib/storage";
 import { randomUUID } from "crypto";
 
 const ALLOWED_ROLES = ["PLATFORM_ADMIN", "QCTO_ADMIN", "QCTO_SUPER_ADMIN"];
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "blog");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
@@ -42,23 +40,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create upload directory if it doesn't exist
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
     // Generate unique filename
     const extension = file.name.split(".").pop() || "jpg";
     const filename = `${randomUUID()}.${extension}`;
-    const filepath = join(UPLOAD_DIR, filename);
+    const storageKey = `blog/${filename}`;
 
-    // Write file to disk
+    // Upload using StorageService
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
 
-    // Return public URL
-    const url = `/uploads/blog/${filename}`;
+    const storage = getStorageService();
+    const result = await storage.upload(buffer, storageKey, file.type);
 
-    return NextResponse.json({ url, filename }, { status: 201 });
+    return NextResponse.json({
+      url: result.url || `/api/storage/${storageKey}`, // Fallback if no URL returned?
+      filename
+    }, { status: 201 });
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json(

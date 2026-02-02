@@ -8,47 +8,53 @@ datasource db {
 }
 
 model Institution {
-  institution_id        String                 @id @default(uuid())
-  legal_name            String
-  trading_name          String?
-  institution_type      InstitutionType
-  registration_number   String
-  branch_code           String?                // Unique short code for branch/location (e.g. HQ, CPT-01). Globally unique for easy identification.
-  parent_institution_id String?                // Optional: head office when this row is a branch (Option A: multiple Institution rows per org)
-  tax_compliance_pin    String?
-  physical_address      String
-  postal_address        String?
-  province              String
-  delivery_modes        DeliveryMode[]
-  status                RecordStatus           @default(DRAFT)
-  contact_person_name   String?
-  contact_email         String?
-  contact_number        String?
+  institution_id                  String                    @id @default(uuid())
+  legal_name                      String
+  trading_name                    String?
+  institution_type                InstitutionType
+  registration_number             String
+  branch_code                     String? // Unique short code for branch/location (e.g. HQ, CPT-01). Globally unique for easy identification.
+  parent_institution_id           String? // Optional: head office when this row is a branch (Option A: multiple Institution rows per org)
+  tax_compliance_pin              String?
+  physical_address                String
+  postal_address                  String?
+  province                        String
+  delivery_modes                  DeliveryMode[]
+  status                          RecordStatus              @default(DRAFT)
+  contact_person_name             String?
+  contact_email                   String?
+  contact_number                  String?
   offers_workplace_based_learning Boolean?
   offers_web_based_learning       Boolean?
-  created_at            DateTime               @default(now())
-  updated_at            DateTime               @updatedAt
-  deleted_at            DateTime?
-  parent                Institution?           @relation("InstitutionBranches", fields: [parent_institution_id], references: [institution_id])
-  branches              Institution[]          @relation("InstitutionBranches")
-  userInstitutions      UserInstitution[]
-  auditLogs             AuditLog[]             @relation("InstitutionAuditLogs")
-  documents             Document[]             @relation("DocumentInstitution")
-  enrolments            Enrolment[]
-  learners              Learner[]
-  readinessRecords      Readiness[]
-  users                 User[]
-  submissions           Submission[]
-  qctoRequests          QCTORequest[]
-  invites               Invite[]
-  announcements         Announcement[]
-  trustScore            InstitutionTrustScore?
-  supportChats          Conversation[]         @relation("InstitutionSupportChats")
-  issueReports          IssueReport[]          @relation("InstitutionIssueReports")
-  publicProfile         InstitutionPublicProfile?
-  publicPosts           InstitutionPost[]
-  reviews               InstitutionReview[]
-  leads                 InstitutionLead[]
+  created_at                      DateTime                  @default(now())
+  updated_at                      DateTime                  @updatedAt
+  deleted_at                      DateTime?
+  parent                          Institution?              @relation("InstitutionBranches", fields: [parent_institution_id], references: [institution_id])
+  branches                        Institution[]             @relation("InstitutionBranches")
+  userInstitutions                UserInstitution[]
+  auditLogs                       AuditLog[]                @relation("InstitutionAuditLogs")
+  documents                       Document[]                @relation("DocumentInstitution")
+  enrolments                      Enrolment[]
+  learners                        Learner[]
+  readinessRecords                Readiness[]
+  users                           User[]
+  submissions                     Submission[]
+  qctoRequests                    QCTORequest[]
+  invites                         Invite[]
+  announcements                   Announcement[]
+  trustScore                      InstitutionTrustScore?
+  supportChats                    Conversation[]            @relation("InstitutionSupportChats")
+  issueReports                    IssueReport[]             @relation("InstitutionIssueReports")
+  publicProfile                   InstitutionPublicProfile?
+  publicPosts                     InstitutionPost[]
+  reviews                         InstitutionReview[]
+  leads                           InstitutionLead[]
+
+  // QCTO Compliance & detailed data extension
+  compliance             InstitutionCompliance?
+  contacts               InstitutionContact[]
+  approvedQualifications InstitutionQualification[]
+  complianceAuditLogs    ComplianceAuditLog[]
 
   @@unique([branch_code])
   @@index([registration_number])
@@ -56,46 +62,137 @@ model Institution {
   @@index([parent_institution_id])
 }
 
+/// Regulatory snapshot. Sidecar to Institution to keep main table clean.
+model InstitutionCompliance {
+  id             String      @id @default(uuid())
+  institution    Institution @relation(fields: [institution_id], references: [institution_id])
+  institution_id String      @unique
+
+  accreditation_status String // ACTIVE, PENDING, EXPIRED, WITHDRAWN
+  accreditation_number String?
+  approval_date        DateTime?
+  expiry_date          DateTime?
+  provinces_approved   String[] // Array of provinces
+  delivery_modes       String[] // e.g. ["CONTACT", "DISTANCE"]
+
+  last_synced_at DateTime?
+  updated_at     DateTime  @updatedAt
+
+  @@index([accreditation_status])
+  @@index([accreditation_number])
+}
+
+/// Explicit approval link between Institution and Qualification (Registry)
+model InstitutionQualification {
+  id             String      @id @default(uuid())
+  institution    Institution @relation(fields: [institution_id], references: [institution_id])
+  institution_id String
+
+  // Legacy or weak link
+  qualification_id String?
+
+  // Canonical link to Registry
+  registry    QualificationRegistry? @relation(fields: [registry_id], references: [id])
+  registry_id String?
+
+  approval_status    String    @default("APPROVED") // APPROVED, SUSPENDED, PENDING
+  scope_start_date   DateTime?
+  scope_end_date     DateTime?
+  learner_intake_cap Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([institution_id, registry_id])
+  @@index([institution_id])
+  @@index([registry_id])
+}
+
+/// Governance & Compliance Contacts (distinct from Users)
+model InstitutionContact {
+  id             String       @id @default(uuid())
+  institution    Institution? @relation(fields: [institution_id], references: [institution_id])
+  institution_id String?
+
+  type         String // PRIMARY, ACCREDITATION_CONTACT, ACADEMIC_HEAD, SDP_PROVIDER, FINANCE, ADMISSIONS etc.
+  first_name   String
+  last_name    String
+  email        String
+  phone_number String?
+  source       String  @default("MANUAL") // IMPORT_QCTO, MANUAL, VERIFIED
+
+  // Visibility is critical for safety
+  visibility String @default("INTERNAL_ONLY") // INTERNAL_ONLY, INSTITUTION_ONLY, PUBLIC_OPTIONAL
+
+  // Link to actual User if they have signed up
+  user    User?   @relation(fields: [user_id], references: [user_id])
+  user_id String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([email])
+  @@index([institution_id])
+  @@index([type])
+}
+
+/// Append-only log for compliance status changes
+model ComplianceAuditLog {
+  id             String   @id @default(uuid())
+  institution_id String
+  changed_by     String // User ID or SYSTEM
+  change_type    String // STATUS_CHANGE, CONTACT_UPDATE, QUALIFICATION_ADD, IMPORT_SYNC
+  previous_value Json?
+  new_value      Json?
+  reason         String?
+  created_at     DateTime @default(now())
+
+  institution Institution @relation(fields: [institution_id], references: [institution_id])
+
+  @@index([institution_id])
+  @@index([created_at])
+}
+
 model User {
-  user_id                   String                       @id @default(uuid())
-  institution_id            String?
-  qcto_id                   String?
-  role                      UserRole
-  first_name                String
-  last_name                 String
-  email                     String                       @unique
-  emailVerified             DateTime?
-  phone                     String?
-  phone_verified            Boolean                      @default(false)
-  phone_verified_at         DateTime?
-  phone_otp_code            String?                      // Temporary OTP for verification
-  phone_otp_expires         DateTime?                    // OTP expiry time
-  password_hash             String?
-  status                    String                       @default("ACTIVE")
-  image                     String?
-  onboarding_completed      Boolean                      @default(false)
-  onboarding_completed_at   DateTime?
-  default_province          String? // Required for QCTO roles (except QCTO_SUPER_ADMIN) - shows employment location
-  assigned_provinces        String[]                     @default([]) // Array of provinces user can access (multiple provinces allowed)
-  
+  user_id                 String    @id @default(uuid())
+  institution_id          String?
+  qcto_id                 String?
+  role                    UserRole
+  first_name              String
+  last_name               String
+  email                   String    @unique
+  emailVerified           DateTime?
+  phone                   String?
+  phone_verified          Boolean   @default(false)
+  phone_verified_at       DateTime?
+  phone_otp_code          String? // Temporary OTP for verification
+  phone_otp_expires       DateTime? // OTP expiry time
+  password_hash           String?
+  status                  String    @default("ACTIVE")
+  image                   String?
+  onboarding_completed    Boolean   @default(false)
+  onboarding_completed_at DateTime?
+  default_province        String? // Required for QCTO roles (except QCTO_SUPER_ADMIN) - shows employment location
+  assigned_provinces      String[]  @default([]) // Array of provinces user can access (multiple provinces allowed)
+
   // Verification Badge System
-  verification_level        VerificationLevel            @default(NONE)
-  verification_date         DateTime?                    // When badge was earned
-  verification_fast_track   Boolean                      @default(false) // Paid fast-track verification
-  profile_completeness      Int                          @default(0)  // 0-100 percentage
-  reviews_completed         Int                          @default(0)  // For QCTO Gold badge (need 3)
-  violation_count           Int                          @default(0)
-  last_violation_at         DateTime?
-  
+  verification_level      VerificationLevel @default(NONE)
+  verification_date       DateTime? // When badge was earned
+  verification_fast_track Boolean           @default(false) // Paid fast-track verification
+  profile_completeness    Int               @default(0) // 0-100 percentage
+  reviews_completed       Int               @default(0) // For QCTO Gold badge (need 3)
+  violation_count         Int               @default(0)
+  last_violation_at       DateTime?
+
   // Online Status
-  last_active_at            DateTime?    @default(now()) // Last activity timestamp for online status
-  
+  last_active_at DateTime? @default(now()) // Last activity timestamp for online status
+
   // Facilitator profile (for users who can_facilitate at an institution): QCTO-required fields + completeness
-  facilitator_id_number     String?
-  facilitator_qualifications String?     @db.Text
+  facilitator_id_number           String?
+  facilitator_qualifications      String? @db.Text
   facilitator_industry_experience String? @db.Text
-  facilitator_profile_complete Boolean   @default(false)
-  
+  facilitator_profile_complete    Boolean @default(false)
+
   created_at                DateTime                     @default(now())
   updated_at                DateTime                     @updatedAt
   deleted_at                DateTime?
@@ -108,6 +205,8 @@ model User {
   readinessRecommendations  ReadinessRecommendation[]    @relation("ReadinessRecommendedBy")
   reviewComments            ReviewComment[]              @relation("ReviewCommentsBy")
   notifications             Notification[]               @relation("UserNotifications")
+  notificationPreferences   NotificationPreference[]
+  emailQueueItems           EmailQueue[]
   announcements             Announcement[]               @relation("UserAnnouncements")
   sessions                  Session[]
   institution               Institution?                 @relation(fields: [institution_id], references: [institution_id])
@@ -120,10 +219,11 @@ model User {
   requestedQCTORequests     QCTORequest[]                @relation("QCTORequested")
   reviewedQCTORequests      QCTORequest[]                @relation("InstitutionReviewed")
   createdInvites            Invite[]                     @relation("UserCreatedInvites")
+  createdCampaigns          InviteCampaign[]             @relation("UserCreatedCampaigns")
   createdQctoInvites        QCTOInvite[]                 @relation("QCTOInviteInvitedBy")
   attendanceMarkedBy        AttendanceRecord[]           @relation("UserAttendanceMarkedBy")
-  assessedResults            AssessmentResult[]            @relation("UserAssessed")
-  verifiedFacilitators       Facilitator[]                 @relation("UserVerifiedFacilitator")
+  assessedResults           AssessmentResult[]           @relation("UserAssessed")
+  verifiedFacilitators      Facilitator[]                @relation("UserVerifiedFacilitator")
   onboardingProgress        OnboardingProgress?
   reviewAssignments         ReviewAssignment[]           @relation("ReviewAssignments")
   reviewAssignmentsBy       ReviewAssignment[]           @relation("ReviewAssignmentsBy")
@@ -134,27 +234,28 @@ model User {
   documentFlags             DocumentFlag[]
   emailChangeRequests       EmailChangeRequest[]
   blogPosts                 BlogPost[]                   @relation("BlogPostAuthor")
-  
+
   // Chat & Messaging
-  createdConversations      Conversation[]               @relation("ConversationCreator")
-  conversationMemberships   ConversationMember[]         @relation("UserConversations")
-  sentMessages              Message[]                    @relation("UserMessages")
-  messageReactions          MessageReaction[]            @relation("UserReactions")
-  
+  createdConversations    Conversation[]       @relation("ConversationCreator")
+  conversationMemberships ConversationMember[] @relation("UserConversations")
+  sentMessages            Message[]            @relation("UserMessages")
+  messageReactions        MessageReaction[]    @relation("UserReactions")
+
   // Issue Reporting
-  issueReports              IssueReport[]                @relation("UserIssueReports")
-  assignedIssues            IssueReport[]                @relation("UserAssignedIssues")
-  qualificationRegistryCreated QualificationRegistry[]  @relation("QualificationRegistryCreatedBy")
-  qualificationRegistryUpdated QualificationRegistry[]   @relation("QualificationRegistryUpdatedBy")
-  clientErrorReports            ClientErrorReport[]
-  qctoAssignmentsAssignedTo    QctoAssignment[]          @relation("QctoAssignmentsAssignedTo")
-  qctoAssignmentsAssignedBy    QctoAssignment[]          @relation("QctoAssignmentsAssignedBy")
+  issueReports                 IssueReport[]           @relation("UserIssueReports")
+  assignedIssues               IssueReport[]           @relation("UserAssignedIssues")
+  qualificationRegistryCreated QualificationRegistry[] @relation("QualificationRegistryCreatedBy")
+  qualificationRegistryUpdated QualificationRegistry[] @relation("QualificationRegistryUpdatedBy")
+  clientErrorReports           ClientErrorReport[]
+  qctoAssignmentsAssignedTo    QctoAssignment[]        @relation("QctoAssignmentsAssignedTo")
+  qctoAssignmentsAssignedBy    QctoAssignment[]        @relation("QctoAssignmentsAssignedBy")
   institutionPostFlags         InstitutionPostFlag[]
-  institutionReviews          InstitutionReview[]
-  serviceRequestsAssigned     ServiceRequest[]          @relation("ServiceRequestsAssigned")
-  userServiceLeads            UserServiceLead[]
-  facilitatorProfileDocuments Document[]                @relation("UserFacilitatorProfileDocuments")
-  readinessFacilitatorLinks   Facilitator[]             @relation("FacilitatorLinkedUser")
+  institutionReviews           InstitutionReview[]
+  serviceRequestsAssigned      ServiceRequest[]        @relation("ServiceRequestsAssigned")
+  userServiceLeads             UserServiceLead[]
+  facilitatorProfileDocuments  Document[]              @relation("UserFacilitatorProfileDocuments")
+  readinessFacilitatorLinks    Facilitator[]           @relation("FacilitatorLinkedUser")
+  institutionContacts          InstitutionContact[]
 
   @@index([institution_id])
   @@index([qcto_id])
@@ -165,17 +266,17 @@ model User {
 /// Many-to-many: user can belong to multiple institutions (e.g. branches). Role within the institution (ADMIN/STAFF).
 /// can_facilitate/can_assess/can_moderate: when true, user can be selected as facilitator/assessor/moderator in Form 5.
 model UserInstitution {
-  user_id         String
-  institution_id  String
-  role            UserInstitutionRole  @default(ADMIN) // ADMIN or STAFF within this institution
-  is_primary      Boolean              @default(false)  // Primary institution for this user (e.g. for default context)
-  can_facilitate  Boolean              @default(false)
-  can_assess      Boolean              @default(false)
-  can_moderate    Boolean              @default(false)
-  created_at      DateTime             @default(now())
+  user_id        String
+  institution_id String
+  role           UserInstitutionRole @default(ADMIN) // ADMIN or STAFF within this institution
+  is_primary     Boolean             @default(false) // Primary institution for this user (e.g. for default context)
+  can_facilitate Boolean             @default(false)
+  can_assess     Boolean             @default(false)
+  can_moderate   Boolean             @default(false)
+  created_at     DateTime            @default(now())
 
-  user         User         @relation("UserInstitutions", fields: [user_id], references: [user_id], onDelete: Cascade)
-  institution   Institution  @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
+  user        User        @relation("UserInstitutions", fields: [user_id], references: [user_id], onDelete: Cascade)
+  institution Institution @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
 
   @@id([user_id, institution_id])
   @@index([user_id])
@@ -393,55 +494,56 @@ model Qualification {
 
 /// Canonical qualification list (SAQA/NQF/curriculum) — single source of truth for Form 5 readiness.
 model QualificationRegistry {
-  id                   String               @id @default(cuid())
-  name                 String
-  code                 String?
-  saqa_id              String?              @unique
-  curriculum_code      String?              @unique
-  nqf_level            Int?
-  credits              Int?
+  id                    String              @id @default(cuid())
+  name                  String
+  code                  String?
+  saqa_id               String?             @unique
+  curriculum_code       String?             @unique
+  nqf_level             Int?
+  credits               Int?
   occupational_category String?
-  description          String?              @db.Text
-  status               QualificationStatus  @default(ACTIVE)
-  effective_from       DateTime?
-  effective_to         DateTime?
-  created_by_id        String?
-  updated_by_id        String?
-  created_at           DateTime             @default(now())
-  updated_at           DateTime             @updatedAt
-  deleted_at           DateTime?
+  description           String?             @db.Text
+  status                QualificationStatus @default(ACTIVE)
+  effective_from        DateTime?
+  effective_to          DateTime?
+  created_by_id         String?
+  updated_by_id         String?
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  deleted_at            DateTime?
 
-  readiness_records    Readiness[]
-  aliases              QualificationAlias[]
-  versions             QualificationVersion[]
-  createdBy            User?                @relation("QualificationRegistryCreatedBy", fields: [created_by_id], references: [user_id])
-  updatedBy            User?                @relation("QualificationRegistryUpdatedBy", fields: [updated_by_id], references: [user_id])
+  readiness_records         Readiness[]
+  aliases                   QualificationAlias[]
+  versions                  QualificationVersion[]
+  institutionQualifications InstitutionQualification[]
+  createdBy                 User?                      @relation("QualificationRegistryCreatedBy", fields: [created_by_id], references: [user_id])
+  updatedBy                 User?                      @relation("QualificationRegistryUpdatedBy", fields: [updated_by_id], references: [user_id])
 
   @@index([status])
   @@index([name])
 }
 
 model QualificationAlias {
-  id          String           @id @default(cuid())
+  id          String      @id @default(cuid())
   registry_id String
   alias       String
-  source      AliasSource      @default(QCTO)
-  created_at  DateTime         @default(now())
+  source      AliasSource @default(QCTO)
+  created_at  DateTime    @default(now())
 
-  registry    QualificationRegistry @relation(fields: [registry_id], references: [id], onDelete: Cascade)
+  registry QualificationRegistry @relation(fields: [registry_id], references: [id], onDelete: Cascade)
 
   @@unique([registry_id, alias])
   @@index([alias])
 }
 
 model QualificationVersion {
-  id            String               @id @default(cuid())
+  id            String   @id @default(cuid())
   registry_id   String
   version_label String
   snapshot_json Json
-  created_at    DateTime             @default(now())
+  created_at    DateTime @default(now())
 
-  registry      QualificationRegistry @relation(fields: [registry_id], references: [id], onDelete: Cascade)
+  registry QualificationRegistry @relation(fields: [registry_id], references: [id], onDelete: Cascade)
 
   @@index([registry_id])
 }
@@ -469,7 +571,7 @@ model Enrolment {
   qualification            Qualification?     @relation(fields: [qualification_id], references: [qualification_id])
   attendanceRecords        AttendanceRecord[]
   assessments              Assessment[]
-  moduleCompletions       ModuleCompletion[]
+  moduleCompletions        ModuleCompletion[]
 
   @@index([institution_id])
   @@index([learner_id])
@@ -525,20 +627,20 @@ model SickNote {
  * Tracks assessments/exams for enrolments (knowledge tests, practical assessments, etc.)
  */
 model Assessment {
-  assessment_id        String   @id @default(uuid())
-  enrolment_id         String
-  assessment_type      String   // "KNOWLEDGE", "PRACTICAL", "PORTFOLIO", "FINAL_EXAM"
-  assessment_name      String
-  assessment_date      DateTime
-  total_marks          Int?     // Total possible marks
-  passing_marks        Int?     // Minimum marks to pass
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
-  deleted_at           DateTime?
-  
-  enrolment            Enrolment @relation(fields: [enrolment_id], references: [enrolment_id])
-  results              AssessmentResult[]
-  
+  assessment_id   String    @id @default(uuid())
+  enrolment_id    String
+  assessment_type String // "KNOWLEDGE", "PRACTICAL", "PORTFOLIO", "FINAL_EXAM"
+  assessment_name String
+  assessment_date DateTime
+  total_marks     Int? // Total possible marks
+  passing_marks   Int? // Minimum marks to pass
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  deleted_at      DateTime?
+
+  enrolment Enrolment          @relation(fields: [enrolment_id], references: [enrolment_id])
+  results   AssessmentResult[]
+
   @@index([enrolment_id])
   @@index([assessment_date])
   @@index([assessment_type])
@@ -549,22 +651,22 @@ model Assessment {
  * Stores individual assessment results (marks, grades, pass/fail)
  */
 model AssessmentResult {
-  result_id            String   @id @default(uuid())
-  assessment_id        String
-  module_name          String?  // Optional: specific module/unit
-  marks_obtained       Int?     // Actual marks obtained
-  percentage           Decimal? @db.Decimal(5, 2) // Percentage score
-  grade                String?  // Letter grade (A, B, C, D, F, etc.)
-  passed               Boolean? // Pass/fail status
-  remarks              String?  @db.Text
-  assessed_by          String?  // Facilitator/assessor user_id
-  assessed_at          DateTime?
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
-  
-  assessment           Assessment @relation(fields: [assessment_id], references: [assessment_id], onDelete: Cascade)
-  assessedByUser       User?      @relation("UserAssessed", fields: [assessed_by], references: [user_id])
-  
+  result_id      String    @id @default(uuid())
+  assessment_id  String
+  module_name    String? // Optional: specific module/unit
+  marks_obtained Int? // Actual marks obtained
+  percentage     Decimal?  @db.Decimal(5, 2) // Percentage score
+  grade          String? // Letter grade (A, B, C, D, F, etc.)
+  passed         Boolean? // Pass/fail status
+  remarks        String?   @db.Text
+  assessed_by    String? // Facilitator/assessor user_id
+  assessed_at    DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  assessment     Assessment @relation(fields: [assessment_id], references: [assessment_id], onDelete: Cascade)
+  assessedByUser User?      @relation("UserAssessed", fields: [assessed_by], references: [user_id])
+
   @@index([assessment_id])
   @@index([assessed_by])
   @@index([module_name])
@@ -575,24 +677,24 @@ model AssessmentResult {
  * Tracks completion of curriculum modules/units with grades
  */
 model ModuleCompletion {
-  completion_id        String   @id @default(uuid())
-  enrolment_id         String
-  module_name          String
-  module_code          String?
-  module_type          String   // "KNOWLEDGE", "PRACTICAL", "WBL"
-  completion_date      DateTime?
-  status               String   // "NOT_STARTED", "IN_PROGRESS", "COMPLETED", "FAILED"
-  final_grade          String?  // Overall grade for the module
-  marks_obtained       Int?
-  percentage           Decimal? @db.Decimal(5, 2)
-  facilitator_id       String?  // Facilitator who assessed
-  notes                String?  @db.Text
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
-  
-  enrolment            Enrolment @relation(fields: [enrolment_id], references: [enrolment_id])
-  facilitator          Facilitator? @relation(fields: [facilitator_id], references: [facilitator_id])
-  
+  completion_id   String    @id @default(uuid())
+  enrolment_id    String
+  module_name     String
+  module_code     String?
+  module_type     String // "KNOWLEDGE", "PRACTICAL", "WBL"
+  completion_date DateTime?
+  status          String // "NOT_STARTED", "IN_PROGRESS", "COMPLETED", "FAILED"
+  final_grade     String? // Overall grade for the module
+  marks_obtained  Int?
+  percentage      Decimal?  @db.Decimal(5, 2)
+  facilitator_id  String? // Facilitator who assessed
+  notes           String?   @db.Text
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  enrolment   Enrolment    @relation(fields: [enrolment_id], references: [enrolment_id])
+  facilitator Facilitator? @relation(fields: [facilitator_id], references: [facilitator_id])
+
   @@index([enrolment_id])
   @@index([facilitator_id])
   @@index([status])
@@ -600,30 +702,30 @@ model ModuleCompletion {
 }
 
 model Document {
-  document_id        String                @id @default(uuid())
-  related_entity     DocumentRelatedEntity
-  related_entity_id  String
-  document_type      String
-  file_name          String
-  version            Int
-  status             DocumentStatus        @default(UPLOADED)
-  uploaded_by        String
-  uploaded_at        DateTime              @default(now())
-  storage_key        String?
-  mime_type          String?
-  file_size_bytes    Int?
-  uploadedByUser     User                  @relation("UserUploadedDocuments", fields: [uploaded_by], references: [user_id])
-  enrolment          Enrolment?            @relation("DocumentEnrolment", fields: [related_entity_id], references: [enrolment_id], map: "fk_doc_enrolment")
-  institution        Institution?          @relation("DocumentInstitution", fields: [related_entity_id], references: [institution_id], map: "fk_doc_institution")
-  learner            Learner?              @relation("DocumentLearner", fields: [related_entity_id], references: [learner_id], map: "fk_doc_learner")
-  readiness          Readiness?            @relation("DocumentReadiness", fields: [related_entity_id], references: [readiness_id], map: "fk_doc_readiness")
-  facilitator        Facilitator?          @relation("DocumentFacilitator", fields: [related_entity_id], references: [facilitator_id], map: "fk_doc_facilitator")
-  userFacilitatorProfile User?             @relation("UserFacilitatorProfileDocuments", fields: [related_entity_id], references: [user_id], map: "fk_doc_user_facilitator_profile")
-  certification      FacilitatorCertification? @relation("CertificationDocument")
-  flags              EvidenceFlag[]
-  documentFlags      DocumentFlag[]
-  sickNoteAttachment SickNote?             @relation("SickNoteDocument")
-  pastQualification  PastQualification?    @relation("PastQualificationDocument")
+  document_id            String                    @id @default(uuid())
+  related_entity         DocumentRelatedEntity
+  related_entity_id      String
+  document_type          String
+  file_name              String
+  version                Int
+  status                 DocumentStatus            @default(UPLOADED)
+  uploaded_by            String
+  uploaded_at            DateTime                  @default(now())
+  storage_key            String?
+  mime_type              String?
+  file_size_bytes        Int?
+  uploadedByUser         User                      @relation("UserUploadedDocuments", fields: [uploaded_by], references: [user_id])
+  enrolment              Enrolment?                @relation("DocumentEnrolment", fields: [related_entity_id], references: [enrolment_id], map: "fk_doc_enrolment")
+  institution            Institution?              @relation("DocumentInstitution", fields: [related_entity_id], references: [institution_id], map: "fk_doc_institution")
+  learner                Learner?                  @relation("DocumentLearner", fields: [related_entity_id], references: [learner_id], map: "fk_doc_learner")
+  readiness              Readiness?                @relation("DocumentReadiness", fields: [related_entity_id], references: [readiness_id], map: "fk_doc_readiness")
+  facilitator            Facilitator?              @relation("DocumentFacilitator", fields: [related_entity_id], references: [facilitator_id], map: "fk_doc_facilitator")
+  userFacilitatorProfile User?                     @relation("UserFacilitatorProfileDocuments", fields: [related_entity_id], references: [user_id], map: "fk_doc_user_facilitator_profile")
+  certification          FacilitatorCertification? @relation("CertificationDocument")
+  flags                  EvidenceFlag[]
+  documentFlags          DocumentFlag[]
+  sickNoteAttachment     SickNote?                 @relation("SickNoteDocument")
+  pastQualification      PastQualification?        @relation("PastQualificationDocument")
 
   @@index([related_entity, related_entity_id])
   @@index([uploaded_by])
@@ -771,15 +873,15 @@ model DocumentFlag {
 }
 
 model Facilitator {
-  facilitator_id       String   @id @default(uuid())
+  facilitator_id       String    @id @default(uuid())
   readiness_id         String
-  user_id              String?  // When set, this row links to a User's facilitator profile (select-from-institution)
+  user_id              String? // When set, this row links to a User's facilitator profile (select-from-institution)
   first_name           String
   last_name            String
   id_number            String? // ID / Passport
-  qualifications       String?  @db.Text
-  industry_experience  String?  @db.Text
-  is_non_sa            Boolean  @default(false)
+  qualifications       String?   @db.Text
+  industry_experience  String?   @db.Text
+  is_non_sa            Boolean   @default(false)
   saqa_evaluation_id   String? // If non-SA facilitator
   work_permit_number   String? // If non-SA facilitator
   visa_passport_number String? // If non-SA facilitator
@@ -787,19 +889,19 @@ model Facilitator {
   cv_document_id       String? // Link to CV document
   qualification_doc_id String? // Link to qualification document
   id_document_id       String? // Link to ID/Passport document
-  verification_status  String?  @default("PENDING") // "PENDING", "VERIFIED", "REJECTED", "EXPIRED"
+  verification_status  String?   @default("PENDING") // "PENDING", "VERIFIED", "REJECTED", "EXPIRED"
   verified_by          String? // QCTO user who verified
-  verified_at           DateTime? // Date of verification
-  verification_notes    String?  @db.Text // Notes from QCTO reviewer
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  verified_at          DateTime? // Date of verification
+  verification_notes   String?   @db.Text // Notes from QCTO reviewer
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
 
-  readiness Readiness @relation(fields: [readiness_id], references: [readiness_id])
-  user      User?     @relation("FacilitatorLinkedUser", fields: [user_id], references: [user_id], onDelete: SetNull)
-  documents Document[] @relation("DocumentFacilitator")
+  readiness         Readiness                  @relation(fields: [readiness_id], references: [readiness_id])
+  user              User?                      @relation("FacilitatorLinkedUser", fields: [user_id], references: [user_id], onDelete: SetNull)
+  documents         Document[]                 @relation("DocumentFacilitator")
   moduleCompletions ModuleCompletion[]
-  certifications FacilitatorCertification[]
-  verifiedByUser User? @relation("UserVerifiedFacilitator", fields: [verified_by], references: [user_id])
+  certifications    FacilitatorCertification[]
+  verifiedByUser    User?                      @relation("UserVerifiedFacilitator", fields: [verified_by], references: [user_id])
 
   @@index([readiness_id])
   @@index([user_id])
@@ -812,21 +914,21 @@ model Facilitator {
  * Tracks certifications, licenses, and professional qualifications for facilitators
  */
 model FacilitatorCertification {
-  certification_id     String   @id @default(uuid())
-  facilitator_id       String
-  certification_type   String   // "PROFESSIONAL", "INDUSTRY", "SAQA", "WORK_PERMIT", "VISA", "OTHER"
-  certification_name   String   // Name of certification/license
-  issuing_authority    String?  // Organization that issued it
-  certificate_number   String?  // Certificate/license number
-  issue_date           DateTime? // When it was issued
-  expiry_date          DateTime? // When it expires (null = no expiry)
-  document_id          String?  // Link to certificate document
-  verified             Boolean  @default(false) // QCTO verified this certification
-  verified_by          String?  // QCTO user who verified
-  verified_at          DateTime? // Date of verification
-  notes                String?  @db.Text
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  certification_id   String    @id @default(uuid())
+  facilitator_id     String
+  certification_type String // "PROFESSIONAL", "INDUSTRY", "SAQA", "WORK_PERMIT", "VISA", "OTHER"
+  certification_name String // Name of certification/license
+  issuing_authority  String? // Organization that issued it
+  certificate_number String? // Certificate/license number
+  issue_date         DateTime? // When it was issued
+  expiry_date        DateTime? // When it expires (null = no expiry)
+  document_id        String? // Link to certificate document
+  verified           Boolean   @default(false) // QCTO verified this certification
+  verified_by        String? // QCTO user who verified
+  verified_at        DateTime? // Date of verification
+  notes              String?   @db.Text
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
 
   facilitator Facilitator @relation(fields: [facilitator_id], references: [facilitator_id], onDelete: Cascade)
   document    Document?   @relation("CertificationDocument", fields: [document_id], references: [document_id], onDelete: SetNull)
@@ -931,22 +1033,22 @@ model SubmissionReviewAttachment {
  * - If approved, QCTO can access requested resources
  */
 model QCTORequest {
-  request_id     String            @id @default(uuid())
-  institution_id String
-  requested_by   String // QCTO user who requested
-  request_type   String? // e.g., "READINESS_REVIEW", "COMPLIANCE_CHECK", "DATA_EXPORT"
-  title          String
-  description    String?
-  status         QCTORequestStatus @default(PENDING)
-  requested_at     DateTime          @default(now())
+  request_id        String            @id @default(uuid())
+  institution_id    String
+  requested_by      String // QCTO user who requested
+  request_type      String? // e.g., "READINESS_REVIEW", "COMPLIANCE_CHECK", "DATA_EXPORT"
+  title             String
+  description       String?
+  status            QCTORequestStatus @default(PENDING)
+  requested_at      DateTime          @default(now())
   response_deadline DateTime? // Optional: institution should respond by this date (for PENDING)
-  reviewed_at    DateTime? // When institution reviewed the request
-  reviewed_by    String? // Institution user who reviewed
-  response_notes String?
-  expires_at     DateTime? // Optional: QCTO access expires after this date (for APPROVED)
-  created_at     DateTime          @default(now())
-  updated_at     DateTime          @updatedAt
-  deleted_at     DateTime?
+  reviewed_at       DateTime? // When institution reviewed the request
+  reviewed_by       String? // Institution user who reviewed
+  response_notes    String?
+  expires_at        DateTime? // Optional: QCTO access expires after this date (for APPROVED)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  deleted_at        DateTime?
 
   // Relations
   institution      Institution           @relation(fields: [institution_id], references: [institution_id])
@@ -1012,17 +1114,17 @@ enum ServiceRequestStatus {
 }
 
 model ServiceRequest {
-  id              String              @id @default(uuid())
-  service_type    ServiceRequestType
-  full_name       String
-  email           String
-  organization    String?
-  phone           String?
-  message         String?             @db.Text
-  status          ServiceRequestStatus @default(NEW)
-  assigned_to     String?
-  created_at      DateTime            @default(now())
-  updated_at      DateTime            @updatedAt
+  id           String               @id @default(uuid())
+  service_type ServiceRequestType
+  full_name    String
+  email        String
+  organization String?
+  phone        String?
+  message      String?              @db.Text
+  status       ServiceRequestStatus @default(NEW)
+  assigned_to  String?
+  created_at   DateTime             @default(now())
+  updated_at   DateTime             @updatedAt
 
   assignedToUser User? @relation("ServiceRequestsAssigned", fields: [assigned_to], references: [user_id], onDelete: SetNull)
 
@@ -1034,10 +1136,11 @@ model ServiceRequest {
 
 /// Which user(s) receive notifications for which service type (e.g. sister → accreditation, brother → accounting)
 model UserServiceLead {
-  user_id       String
-  service_type  ServiceRequestType
+  user_id      String
+  service_type ServiceRequestType
 
-  user   User             @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
   @@id([user_id, service_type])
   @@index([user_id])
   @@index([service_type])
@@ -1045,8 +1148,8 @@ model UserServiceLead {
 
 /// Role within an institution when user has multiple institutions (UserInstitution).
 enum UserInstitutionRole {
-  ADMIN  // Institution admin for this institution
-  STAFF  // Staff for this institution
+  ADMIN // Institution admin for this institution
+  STAFF // Staff for this institution
 }
 
 enum QCTOInviteStatus {
@@ -1112,12 +1215,75 @@ enum EmailTemplateType {
   AUTH_EMAIL_VERIFY
 }
 
+model InviteCampaign {
+  campaign_id   String @id @default(uuid())
+  name          String
+  status        String @default("DRAFT") // DRAFT, SENDING, PAUSED, COMPLETED, ARCHIVED
+  audience_type String // INSTITUTION_ADMIN, STUDENT, etc.
+
+  // Content
+  template_id String?
+  subject     String?
+
+  // Sending configuration
+  send_settings Json? // { batch_size, min_delay, jitter, max_per_hour, per_domain_limit }
+
+  // Stats cache (denormalized for speed)
+  sent_count     Int @default(0)
+  opened_count   Int @default(0)
+  clicked_count  Int @default(0)
+  accepted_count Int @default(0)
+  failed_count   Int @default(0)
+
+  created_by_user_id String
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  // Relations
+  createdBy User           @relation("UserCreatedCampaigns", fields: [created_by_user_id], references: [user_id])
+  template  EmailTemplate? @relation(fields: [template_id], references: [id])
+  invites   Invite[]
+  events    InviteEvent[]
+
+  @@index([status])
+  @@index([created_by_user_id])
+}
+
+model InviteEvent {
+  event_id    String   @id @default(uuid())
+  invite_id   String
+  campaign_id String?
+  type        String // SENT, OPENED, CLICKED, ACCEPTED, FAILED, BOUNCED, COMPLAINED
+  metadata    Json? // { url, ip, user_agent, error, provider_id }
+  created_at  DateTime @default(now())
+
+  // Relations
+  invite   Invite          @relation(fields: [invite_id], references: [invite_id], onDelete: Cascade)
+  campaign InviteCampaign? @relation(fields: [campaign_id], references: [campaign_id])
+
+  @@index([invite_id])
+  @@index([campaign_id])
+  @@index([type])
+  @@index([created_at])
+}
+
 model Invite {
-  invite_id          String    @id @default(uuid())
-  email              String
-  role               UserRole
-  institution_id     String?
-  default_province   String? // Province for QCTO roles (QCTO_USER, QCTO_REVIEWER, QCTO_AUDITOR, QCTO_VIEWER)
+  invite_id        String   @id @default(uuid())
+  campaign_id      String?
+  email            String
+  role             UserRole
+  institution_id   String?
+  default_province String? // Province for QCTO roles
+
+  // Recipient details (from CSV or manual entry)
+  first_name         String?
+  last_name          String?
+  organization_label String? // Organization name from CSV
+  domain             String? // Extracted domain for grouping/rate-limiting
+  phone_number       String? // Contact number from CSV
+  token_raw          String? // Raw token for sending email (since hash is one-way)
+  accepted_email     String? // If user changed email during acceptance
+
   token_hash         String    @unique
   expires_at         DateTime
   used_at            DateTime?
@@ -1145,14 +1311,16 @@ model Invite {
   custom_message       String?   @db.Text
   template_id          String?
   declined_at          DateTime?
-  decline_reason       String?   // e.g. already_using_other_platform | not_responsible | not_interested | other
+  decline_reason       String? // e.g. already_using_other_platform | not_responsible | not_interested | other
   decline_reason_other String?   @db.Text
   viewed_at            DateTime?
 
   // Relations
-  createdBy   User          @relation("UserCreatedInvites", fields: [created_by_user_id], references: [user_id])
-  institution Institution?  @relation(fields: [institution_id], references: [institution_id])
-  template    EmailTemplate? @relation(fields: [template_id], references: [id])
+  campaign    InviteCampaign? @relation(fields: [campaign_id], references: [campaign_id])
+  createdBy   User            @relation("UserCreatedInvites", fields: [created_by_user_id], references: [user_id])
+  institution Institution?    @relation(fields: [institution_id], references: [institution_id])
+  template    EmailTemplate?  @relation(fields: [template_id], references: [id])
+  events      InviteEvent[]
 
   @@index([email])
   @@index([institution_id])
@@ -1163,6 +1331,8 @@ model Invite {
   @@index([batch_id])
   @@index([next_retry_at])
   @@index([template_id])
+  @@index([campaign_id])
+  @@index([domain])
 }
 
 model EmailTemplate {
@@ -1171,14 +1341,15 @@ model EmailTemplate {
   name          String
   subject       String            @db.Text
   header_html   String?           @db.Text
-  body_sections Json?             // Array of editable blocks or single body HTML
+  body_sections Json? // Array of editable blocks or single body HTML
   cta_text      String?
   footer_html   String?           @db.Text
   is_active     Boolean           @default(true)
   created_at    DateTime          @default(now())
   updated_at    DateTime          @updatedAt
 
-  invites Invite[]
+  invites   Invite[]
+  campaigns InviteCampaign[]
 
   @@index([type])
 }
@@ -1227,51 +1398,6 @@ enum AliasSource {
   SAQA
   INSTITUTION
   OTHER
-}
-
-/**
- * Notification
- * User notifications for system events and status changes.
- * Supports notification types: submission_reviewed, request_approved, readiness_reviewed, etc.
- */
-model Notification {
-  notification_id   String           @id @default(uuid())
-  user_id           String
-  notification_type NotificationType
-  title             String
-  message           String           @db.Text
-  entity_type       String? // e.g., "SUBMISSION", "QCTO_REQUEST", "READINESS"
-  entity_id         String?
-  is_read           Boolean          @default(false)
-  read_at           DateTime?
-  created_at        DateTime         @default(now())
-  user              User             @relation("UserNotifications", fields: [user_id], references: [user_id])
-
-  @@index([user_id])
-  @@index([is_read])
-  @@index([created_at])
-  @@index([notification_type])
-}
-
-enum NotificationType {
-  SUBMISSION_REVIEWED
-  SUBMISSION_APPROVED
-  SUBMISSION_REJECTED
-  REQUEST_APPROVED
-  REQUEST_REJECTED
-  READINESS_REVIEWED
-  READINESS_RECOMMENDED
-  READINESS_REJECTED
-  DOCUMENT_FLAGGED
-  SYSTEM_ALERT
-  ISSUE_RESPONSE
-  INVITE_ACCEPTED
-  READINESS_SUBMITTED
-  REVIEW_ASSIGNED
-  BULK_INVITE_COMPLETED
-  INSTITUTION_CREATED
-  NEW_LEAD
-  SERVICE_REQUEST
 }
 
 /**
@@ -1390,11 +1516,11 @@ enum SubmissionResourceType {
 }
 
 enum VerificationLevel {
-  NONE    // No verification badge
-  BLUE    // Standard verified (Students, Staff)
-  GREEN   // Accredited institution (Institution Admins)
-  GOLD    // Government/Official (QCTO Staff after 3 reviews)
-  BLACK   // Platform Admin
+  NONE // No verification badge
+  BLUE // Standard verified (Students, Staff)
+  GREEN // Accredited institution (Institution Admins)
+  GOLD // Government/Official (QCTO Staff after 3 reviews)
+  BLACK // Platform Admin
 }
 
 /**
@@ -1475,7 +1601,7 @@ model ReviewAssignment {
   review_type     String // "READINESS", "SUBMISSION", etc.
   review_id       String // ID of the review (readiness_id, submission_id, etc.)
   assigned_to     String // User ID of the reviewer or auditor
-  assignment_role String   @default("REVIEWER") // "REVIEWER" or "AUDITOR"
+  assignment_role String    @default("REVIEWER") // "REVIEWER" or "AUDITOR"
   assigned_by     String // User ID who made the assignment (QCTO_ADMIN or PLATFORM_ADMIN)
   assigned_at     DateTime  @default(now())
   status          String    @default("ASSIGNED") // ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
@@ -1505,15 +1631,15 @@ enum QctoAssignmentStatus {
 }
 
 model QctoAssignment {
-  id                   String               @id @default(uuid())
-  resource_type        String               // e.g. "READINESS", "SUBMISSION"
-  resource_id          String
-  assigned_to_user_id  String
-  assigned_by_user_id  String
-  assignment_role      QctoAssignmentRole   @default(REVIEWER)
-  status               QctoAssignmentStatus @default(ACTIVE)
-  created_at           DateTime             @default(now())
-  updated_at           DateTime             @updatedAt
+  id                  String               @id @default(uuid())
+  resource_type       String // e.g. "READINESS", "SUBMISSION"
+  resource_id         String
+  assigned_to_user_id String
+  assigned_by_user_id String
+  assignment_role     QctoAssignmentRole   @default(REVIEWER)
+  status              QctoAssignmentStatus @default(ACTIVE)
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
 
   assignedTo User @relation("QctoAssignmentsAssignedTo", fields: [assigned_to_user_id], references: [user_id], onDelete: Cascade)
   assignedBy User @relation("QctoAssignmentsAssignedBy", fields: [assigned_by_user_id], references: [user_id], onDelete: Cascade)
@@ -1573,30 +1699,30 @@ enum LeadStatus {
 }
 
 model InstitutionPublicProfile {
-  id                    String                         @id @default(uuid())
-  institution_id        String                         @unique
-  slug                  String                         @unique
-  is_public             Boolean                        @default(false)
-  tagline               String?
-  about                 String?                        @db.Text
-  logo_url              String?
-  banner_url            String?
-  contact_email         String?
-  contact_phone         String?
-  contact_visibility    ContactVisibility?             @default(HIDDEN)
-  apply_mode            ApplyMode?                     @default(INTERNAL)
-  apply_url             String?
-  featured_until        DateTime?
-  featured_priority     Int                            @default(0)
-  verification_status   PublicProfileVerificationStatus @default(UNVERIFIED)
-  verified_at           DateTime?
-  verified_by_user_id   String?
-  cached_rating_avg    Decimal?                        @db.Decimal(3, 2) // 1.00–5.00; updated when reviews change
-  cached_review_count   Int                            @default(0)
-  latitude              Float?                         // Geocoded from physical_address + province (for map & distance sort)
-  longitude             Float?
-  created_at            DateTime                       @default(now())
-  updated_at            DateTime                       @updatedAt
+  id                  String                          @id @default(uuid())
+  institution_id      String                          @unique
+  slug                String                          @unique
+  is_public           Boolean                         @default(false)
+  tagline             String?
+  about               String?                         @db.Text
+  logo_url            String?
+  banner_url          String?
+  contact_email       String?
+  contact_phone       String?
+  contact_visibility  ContactVisibility?              @default(HIDDEN)
+  apply_mode          ApplyMode?                      @default(INTERNAL)
+  apply_url           String?
+  featured_until      DateTime?
+  featured_priority   Int                             @default(0)
+  verification_status PublicProfileVerificationStatus @default(UNVERIFIED)
+  verified_at         DateTime?
+  verified_by_user_id String?
+  cached_rating_avg   Decimal?                        @db.Decimal(3, 2) // 1.00–5.00; updated when reviews change
+  cached_review_count Int                             @default(0)
+  latitude            Float? // Geocoded from physical_address + province (for map & distance sort)
+  longitude           Float?
+  created_at          DateTime                        @default(now())
+  updated_at          DateTime                        @updatedAt
 
   institution Institution @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
 
@@ -1607,31 +1733,31 @@ model InstitutionPublicProfile {
 }
 
 model InstitutionPost {
-  id              String              @id @default(uuid())
-  institution_id  String
-  type            InstitutionPostType
-  title           String
-  body            String              @db.Text
-  image_url       String?
-  video_url       String?
-  is_verified     Boolean             @default(false)
-  created_at      DateTime            @default(now())
-  updated_at      DateTime            @updatedAt
+  id             String              @id @default(uuid())
+  institution_id String
+  type           InstitutionPostType
+  title          String
+  body           String              @db.Text
+  image_url      String?
+  video_url      String?
+  is_verified    Boolean             @default(false)
+  created_at     DateTime            @default(now())
+  updated_at     DateTime            @updatedAt
 
-  institution Institution        @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
-  flags        InstitutionPostFlag[]
+  institution Institution           @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
+  flags       InstitutionPostFlag[]
 
   @@index([institution_id])
   @@index([created_at])
 }
 
 model InstitutionPostFlag {
-  id        String         @id @default(uuid())
-  post_id   String
-  user_id   String
-  reason    PostFlagReason
-  details   String?        @db.Text
-  created_at DateTime      @default(now())
+  id         String         @id @default(uuid())
+  post_id    String
+  user_id    String
+  reason     PostFlagReason
+  details    String?        @db.Text
+  created_at DateTime       @default(now())
 
   post InstitutionPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
   user User            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
@@ -1642,18 +1768,18 @@ model InstitutionPostFlag {
 }
 
 model InstitutionReview {
-  id             String                 @id @default(uuid())
+  id             String                  @id @default(uuid())
   institution_id String
   user_id        String?
   reviewer_name  String?
   reviewer_email String?
-  rating         Int                    // 1..5
-  comment        String?                @db.Text
+  rating         Int // 1..5
+  comment        String?                 @db.Text
   status         InstitutionReviewStatus @default(PUBLISHED)
-  created_at     DateTime               @default(now())
+  created_at     DateTime                @default(now())
 
   institution Institution @relation(fields: [institution_id], references: [institution_id], onDelete: Cascade)
-  user         User?      @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
+  user        User?       @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
 
   @@index([institution_id])
   @@index([status])
@@ -1729,18 +1855,18 @@ model UserActivityLog {
  * Implements double verification: verify new email + notify old email.
  */
 model EmailChangeRequest {
-  id            String             @id @default(uuid()) @map("email_change_id")
+  id            String            @id @default(uuid()) @map("email_change_id")
   user_id       String
   current_email String
   new_email     String
   token_hash    String // Hashed verification token (never store plain)
-  status        EmailChangeStatus  @default(PENDING)
+  status        EmailChangeStatus @default(PENDING)
   expires_at    DateTime
   verified_at   DateTime?
   cancelled_at  DateTime?
   ip_address    String?
   user_agent    String?
-  created_at    DateTime           @default(now())
+  created_at    DateTime          @default(now())
 
   user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
@@ -1767,38 +1893,38 @@ enum EmailChangeStatus {
  * Supports SEO fields, featured images, categories, and tags.
  */
 model BlogPost {
-  id              String       @id @default(cuid())
-  title           String
-  slug            String       @unique
-  excerpt         String       @db.Text
-  content         String       @db.Text // Rich text / HTML content
-  
+  id      String @id @default(cuid())
+  title   String
+  slug    String @unique
+  excerpt String @db.Text
+  content String @db.Text // Rich text / HTML content
+
   // Images
-  featuredImage   String?      // URL to featured image
-  featuredImageAlt String?     // Alt text for SEO
-  
+  featuredImage    String? // URL to featured image
+  featuredImageAlt String? // Alt text for SEO
+
   // SEO fields
-  metaTitle       String?      // Custom meta title (defaults to title)
-  metaDescription String?      @db.Text // Custom meta description (defaults to excerpt)
-  
+  metaTitle       String? // Custom meta title (defaults to title)
+  metaDescription String? @db.Text // Custom meta description (defaults to excerpt)
+
   // Status
-  status          BlogStatus   @default(DRAFT)
-  publishedAt     DateTime?
-  
+  status      BlogStatus @default(DRAFT)
+  publishedAt DateTime?
+
   // Metadata
-  readingTime     Int?         // Estimated reading time in minutes
-  
+  readingTime Int? // Estimated reading time in minutes
+
   // Author
-  authorId        String
-  author          User         @relation("BlogPostAuthor", fields: [authorId], references: [user_id])
-  
+  authorId String
+  author   User   @relation("BlogPostAuthor", fields: [authorId], references: [user_id])
+
   // Relationships
-  categories      BlogPostCategory[]
-  tags            BlogPostTag[]
-  
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  
+  categories BlogPostCategory[]
+  tags       BlogPostTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([slug])
   @@index([status])
   @@index([publishedAt])
@@ -1820,10 +1946,10 @@ model BlogCategory {
   slug        String             @unique
   description String?            @db.Text
   posts       BlogPostCategory[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([slug])
 }
 
@@ -1832,14 +1958,14 @@ model BlogCategory {
  * Tags for blog posts (more granular than categories).
  */
 model BlogTag {
-  id    String          @id @default(cuid())
+  id    String        @id @default(cuid())
   name  String
-  slug  String          @unique
+  slug  String        @unique
   posts BlogPostTag[]
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([slug])
 }
 
@@ -1852,7 +1978,7 @@ model BlogPostCategory {
   categoryId String
   post       BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
   category   BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
+
   @@id([postId, categoryId])
   @@index([postId])
   @@index([categoryId])
@@ -1867,7 +1993,7 @@ model BlogPostTag {
   tagId  String
   post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag    BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+
   @@id([postId, tagId])
   @@index([postId])
   @@index([tagId])
@@ -1882,27 +2008,27 @@ model BlogPostTag {
  * Represents a chat conversation (DM, group, or support thread).
  */
 model Conversation {
-  id              String             @id @default(cuid())
-  type            ConversationType   @default(DIRECT)
-  name            String?            // For group chats
-  description     String?            @db.Text
-  avatarUrl       String?            // Group avatar
-  createdBy       String             // User who created the conversation
-  institutionId   String?            // If support chat, link to institution
-  isSupport       Boolean            @default(false) // Support thread marker
-  lastMessageAt   DateTime?          // For sorting conversations
-  lastMessageText String?            // Preview text
-  pinnedMessageId String?            // ID of pinned message (if any)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  
+  id              String           @id @default(cuid())
+  type            ConversationType @default(DIRECT)
+  name            String? // For group chats
+  description     String?          @db.Text
+  avatarUrl       String? // Group avatar
+  createdBy       String // User who created the conversation
+  institutionId   String? // If support chat, link to institution
+  isSupport       Boolean          @default(false) // Support thread marker
+  lastMessageAt   DateTime? // For sorting conversations
+  lastMessageText String? // Preview text
+  pinnedMessageId String? // ID of pinned message (if any)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
   // Relations
-  creator         User               @relation("ConversationCreator", fields: [createdBy], references: [user_id])
-  institution     Institution?       @relation("InstitutionSupportChats", fields: [institutionId], references: [institution_id])
-  members         ConversationMember[]
-  messages        Message[]
-  pinnedMessage   Message?           @relation("PinnedMessage", fields: [pinnedMessageId], references: [id])
-  
+  creator       User                 @relation("ConversationCreator", fields: [createdBy], references: [user_id])
+  institution   Institution?         @relation("InstitutionSupportChats", fields: [institutionId], references: [institution_id])
+  members       ConversationMember[]
+  messages      Message[]
+  pinnedMessage Message?             @relation("PinnedMessage", fields: [pinnedMessageId], references: [id])
+
   @@index([createdBy])
   @@index([institutionId])
   @@index([type])
@@ -1911,8 +2037,8 @@ model Conversation {
 }
 
 enum ConversationType {
-  DIRECT  // 1:1 DM
-  GROUP   // Multi-user group chat
+  DIRECT // 1:1 DM
+  GROUP // Multi-user group chat
   SUPPORT // Support thread (institution <-> platform admin)
 }
 
@@ -1921,23 +2047,23 @@ enum ConversationType {
  * Tracks membership in conversations with read status.
  */
 model ConversationMember {
-  id             String            @id @default(cuid())
+  id             String           @id @default(cuid())
   conversationId String
   userId         String
-  role           ConversationRole  @default(MEMBER)
-  joinedAt       DateTime          @default(now())
-  lastReadAt     DateTime?         // Last time user read messages
-  lastReadMsgId  String?           // Last message ID user has read
-  isMuted        Boolean           @default(false)
-  isArchived     Boolean           @default(false)
-  isPinned       Boolean           @default(false) // User pins conversation to top of list
-  leftAt         DateTime?         // If user left the conversation
-  deletedAt      DateTime?         // Soft delete: user deleted chat; hidden from list; admin can still access
-  
+  role           ConversationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+  lastReadAt     DateTime? // Last time user read messages
+  lastReadMsgId  String? // Last message ID user has read
+  isMuted        Boolean          @default(false)
+  isArchived     Boolean          @default(false)
+  isPinned       Boolean          @default(false) // User pins conversation to top of list
+  leftAt         DateTime? // If user left the conversation
+  deletedAt      DateTime? // Soft delete: user deleted chat; hidden from list; admin can still access
+
   // Relations
-  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User              @relation("UserConversations", fields: [userId], references: [user_id], onDelete: Cascade)
-  
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserConversations", fields: [userId], references: [user_id], onDelete: Cascade)
+
   @@unique([conversationId, userId])
   @@index([conversationId])
   @@index([userId])
@@ -1946,8 +2072,8 @@ model ConversationMember {
 
 enum ConversationRole {
   MEMBER
-  ADMIN   // Can manage members, change settings
-  OWNER   // Creator, full control
+  ADMIN // Can manage members, change settings
+  OWNER // Creator, full control
 }
 
 /**
@@ -1955,28 +2081,28 @@ enum ConversationRole {
  * Individual chat messages within a conversation.
  */
 model Message {
-  id             String           @id @default(cuid())
+  id             String        @id @default(cuid())
   conversationId String
   senderId       String
-  content        String           @db.Text
-  messageType    MessageType      @default(TEXT)
-  status         MessageStatus    @default(SENT)
-  isAdminMessage Boolean          @default(false) // Admin badge for admin messages
-  replyToId      String?          // If replying to another message
-  metadata       Json?            // For attachments, reactions, etc.
+  content        String        @db.Text
+  messageType    MessageType   @default(TEXT)
+  status         MessageStatus @default(SENT)
+  isAdminMessage Boolean       @default(false) // Admin badge for admin messages
+  replyToId      String? // If replying to another message
+  metadata       Json? // For attachments, reactions, etc.
   editedAt       DateTime?
   deletedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  
+  createdAt      DateTime      @default(now())
+
   // Relations
-  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User             @relation("UserMessages", fields: [senderId], references: [user_id])
-  replyTo        Message?         @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies        Message[]        @relation("MessageReplies")
-  attachments    MessageAttachment[]
-  reactions      MessageReaction[]
-  pinnedIn       Conversation[]   @relation("PinnedMessage")
-  
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                @relation("UserMessages", fields: [senderId], references: [user_id])
+  replyTo      Message?            @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]           @relation("MessageReplies")
+  attachments  MessageAttachment[]
+  reactions    MessageReaction[]
+  pinnedIn     Conversation[]      @relation("PinnedMessage")
+
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
@@ -1987,7 +2113,7 @@ enum MessageType {
   TEXT
   IMAGE
   FILE
-  SYSTEM  // System messages (user joined, left, etc.)
+  SYSTEM // System messages (user joined, left, etc.)
 }
 
 enum MessageStatus {
@@ -2003,18 +2129,18 @@ enum MessageStatus {
  * Files attached to messages.
  */
 model MessageAttachment {
-  id            String   @id @default(cuid())
-  messageId     String
-  fileName      String
-  fileType      String   // MIME type
-  fileSize      Int      // Bytes
-  storageKey    String   // S3/storage key
-  thumbnailKey  String?  // For images
-  createdAt     DateTime @default(now())
-  
+  id           String   @id @default(cuid())
+  messageId    String
+  fileName     String
+  fileType     String // MIME type
+  fileSize     Int // Bytes
+  storageKey   String // S3/storage key
+  thumbnailKey String? // For images
+  createdAt    DateTime @default(now())
+
   // Relations
-  message       Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
   @@index([messageId])
 }
 
@@ -2026,13 +2152,13 @@ model MessageReaction {
   id        String   @id @default(cuid())
   messageId String
   userId    String
-  emoji     String   // Emoji character or code
+  emoji     String // Emoji character or code
   createdAt DateTime @default(now())
-  
+
   // Relations
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User     @relation("UserReactions", fields: [userId], references: [user_id], onDelete: Cascade)
-  
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation("UserReactions", fields: [userId], references: [user_id], onDelete: Cascade)
+
   @@unique([messageId, userId, emoji])
   @@index([messageId])
   @@index([userId])
@@ -2047,28 +2173,28 @@ model MessageReaction {
  * Bug reports and issue tracking submitted by users.
  */
 model IssueReport {
-  id             String        @id @default(cuid())
-  reportedBy     String
-  institutionId  String?       // If user belongs to an institution
-  category       IssueCategory
-  title          String
-  description    String        @db.Text
-  pageUrl        String?       // URL where issue was reported
-  status         IssueStatus   @default(OPEN)
-  priority       IssuePriority @default(MEDIUM)
-  assignedTo     String?       // Platform admin handling the issue
-  internalNotes  String?       @db.Text // Admin-only notes
-  resolution     String?       @db.Text // How it was resolved
-  resolvedAt     DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  
+  id            String        @id @default(cuid())
+  reportedBy    String
+  institutionId String? // If user belongs to an institution
+  category      IssueCategory
+  title         String
+  description   String        @db.Text
+  pageUrl       String? // URL where issue was reported
+  status        IssueStatus   @default(OPEN)
+  priority      IssuePriority @default(MEDIUM)
+  assignedTo    String? // Platform admin handling the issue
+  internalNotes String?       @db.Text // Admin-only notes
+  resolution    String?       @db.Text // How it was resolved
+  resolvedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
   // Relations
-  reporter       User          @relation("UserIssueReports", fields: [reportedBy], references: [user_id])
-  institution    Institution?  @relation("InstitutionIssueReports", fields: [institutionId], references: [institution_id])
-  assignee       User?         @relation("UserAssignedIssues", fields: [assignedTo], references: [user_id])
-  attachments    IssueAttachment[]
-  
+  reporter    User              @relation("UserIssueReports", fields: [reportedBy], references: [user_id])
+  institution Institution?      @relation("InstitutionIssueReports", fields: [institutionId], references: [institution_id])
+  assignee    User?             @relation("UserAssignedIssues", fields: [assignedTo], references: [user_id])
+  attachments IssueAttachment[]
+
   @@index([reportedBy])
   @@index([institutionId])
   @@index([status])
@@ -2105,17 +2231,17 @@ enum IssuePriority {
  * Screenshots and files attached to issue reports.
  */
 model IssueAttachment {
-  id          String   @id @default(cuid())
-  issueId     String
-  fileName    String
-  fileType    String   // MIME type
-  fileSize    Int      // Bytes
-  storageKey  String   // S3/storage key
-  createdAt   DateTime @default(now())
-  
+  id         String   @id @default(cuid())
+  issueId    String
+  fileName   String
+  fileType   String // MIME type
+  fileSize   Int // Bytes
+  storageKey String // S3/storage key
+  createdAt  DateTime @default(now())
+
   // Relations
-  issue       IssueReport @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  
+  issue IssueReport @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
   @@index([issueId])
 }
 
@@ -2124,15 +2250,113 @@ model IssueAttachment {
  * Client-side / application errors reported by the error boundary for platform admin visibility.
  */
 model ClientErrorReport {
-  id        String   @id @default(uuid())
-  message   String   // Error message (cap length in API to avoid abuse)
-  digest    String?  // Next.js error digest
-  path      String?  // window.location.pathname when error occurred
-  user_id   String?  // Authenticated user who hit the error (optional)
+  id         String   @id @default(uuid())
+  message    String // Error message (cap length in API to avoid abuse)
+  digest     String? // Next.js error digest
+  path       String? // window.location.pathname when error occurred
+  user_id    String? // Authenticated user who hit the error (optional)
   created_at DateTime @default(now())
 
   user User? @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
 
   @@index([created_at])
+  @@index([user_id])
+}
+
+model Notification {
+  notification_id   String @id @default(uuid())
+  user_id           String
+  notification_type String // e.g. SUBMISSION_REVIEWED
+  title             String
+  message           String
+
+  // Categorization & Context
+  category String? // e.g. "ACADEMIC", "COMPLIANCE", "SYSTEM"
+  priority String   @default("NORMAL") // LOW, NORMAL, HIGH, CRITICAL
+  channels String[] @default(["IN_APP"]) // IN_APP, EMAIL, SMS
+
+  // Source/Resource links
+  resource_type String? // e.g. SUBMISSION, INSTITUTION
+  resource_id   String?
+  // Legacy entity fields (to be deprecated or mapped to resource_*)
+  entity_type   String?
+  entity_id     String?
+
+  // Recipient Context (Snapshot at creation)
+  recipient_role String? // Role of user when notified (RBAC safety)
+  institution_id String? // If scoped to an institution context
+
+  is_read Boolean   @default(false)
+  read_at DateTime?
+
+  action_link String? // Optional direct link
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+
+  // Relations
+  user User @relation("UserNotifications", fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+  @@index([created_at])
+}
+
+model NotificationPreference {
+  id      String @id @default(uuid())
+  user_id String
+
+  // Categories to control
+  category String // e.g. "COMPLIANCE", "ASSIGNMENTS", "MARKETING"
+
+  // Channels
+  email_enabled  Boolean @default(true)
+  in_app_enabled Boolean @default(true)
+  sms_enabled    Boolean @default(false)
+
+  // Frequency
+  frequency String @default("IMMEDIATE") // IMMEDIATE, DIGEST, OFF
+
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([user_id, category])
+}
+
+model EmailQueue {
+  id String @id @default(uuid())
+
+  // Recipient
+  to_email String
+  user_id  String? // Optional relation for tracking
+
+  // Content
+  template_id String? // Code for template used
+  subject     String
+  body_html   String? @db.Text
+  body_text   String? @db.Text
+
+  // Status tracking
+  status          String    @default("PENDING") // PENDING, PROCESSING, SENT, FAILED
+  attempts        Int       @default(0)
+  last_attempt_at DateTime?
+  next_attempt_at DateTime?
+  sent_at         DateTime?
+
+  error_message String? @db.Text
+
+  // Scheduling
+  priority      String    @default("NORMAL") // HIGH sends faster
+  scheduled_for DateTime? // Future send
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User? @relation(fields: [user_id], references: [user_id])
+
+  @@index([status])
+  @@index([next_attempt_at])
   @@index([user_id])
 }

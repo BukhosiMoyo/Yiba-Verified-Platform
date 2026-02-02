@@ -30,7 +30,7 @@ async function getProfile(slug: string) {
   });
   if (!profile) return null;
 
-  const [reviews, posts, qualifications, avgRating, reviewCount] = await Promise.all([
+  const [reviews, posts, qualifications, avgRating, reviewCount, compliance, contacts] = await Promise.all([
     prisma.institutionReview.findMany({
       where: { institution_id: profile.institution_id, status: "PUBLISHED" },
       select: { id: true, rating: true, comment: true, user_id: true, reviewer_name: true, created_at: true },
@@ -52,6 +52,14 @@ async function getProfile(slug: string) {
       _count: true,
     }),
     prisma.institutionReview.count({ where: { institution_id: profile.institution_id, status: "PUBLISHED" } }),
+    prisma.institutionCompliance.findUnique({
+      where: { institution_id: profile.institution_id },
+      select: { accreditation_status: true, accreditation_number: true, expiry_date: true }
+    }),
+    prisma.institutionContact.findMany({
+      where: { institution_id: profile.institution_id, visibility: "PUBLIC_OPTIONAL" },
+      select: { first_name: true, last_name: true, email: true, phone_number: true, type: true }
+    }),
   ]);
 
   return {
@@ -65,6 +73,8 @@ async function getProfile(slug: string) {
     })),
     rating: avgRating._avg.rating ? Math.round(avgRating._avg.rating * 10) / 10 : null,
     review_count: reviewCount,
+    compliance,
+    contacts,
   };
 }
 
@@ -96,7 +106,7 @@ export default async function InstitutionProfilePage({ params }: Props) {
   const data = await getProfile(slug);
   if (!data) notFound();
 
-  const { profile, institution, reviews, posts, qualifications, rating, review_count } = data;
+  const { profile, institution, reviews, posts, qualifications, rating, review_count, compliance, contacts } = data;
   const profileForClient = {
     ...profile,
     cached_rating_avg: profile.cached_rating_avg != null ? Number(profile.cached_rating_avg) : null,
@@ -122,6 +132,8 @@ export default async function InstitutionProfilePage({ params }: Props) {
       applyExternal={applyExternal}
       applyInternal={applyInternal}
       applyUrl={profile.apply_url}
+      compliance={compliance}
+      contacts={contacts}
     />
   );
 }

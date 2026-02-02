@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/api/context";
 import { randomBytes } from "crypto";
-import { writeFile, mkdir } from "fs/promises";
+import { getStorageService } from "@/lib/storage";
 import path from "path";
 
 // Max file size: 10MB
@@ -76,12 +76,9 @@ export async function POST(req: NextRequest) {
 
     // For development, save to local file system
     // In production, you would upload to S3/GCS/etc.
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "issues", issueId);
-    await mkdir(uploadsDir, { recursive: true });
-
-    const filePath = path.join(uploadsDir, `${randomBytes(16).toString("hex")}${ext}`);
+    const storage = getStorageService();
     const arrayBuffer = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(arrayBuffer));
+    const uploadResult = await storage.upload(Buffer.from(arrayBuffer), storageKey, file.type);
 
     // Create attachment record
     const attachment = await prisma.issueAttachment.create({
@@ -90,7 +87,7 @@ export async function POST(req: NextRequest) {
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        storageKey: filePath.replace(path.join(process.cwd(), "public"), ""),
+        storageKey: uploadResult.storageKey,
       },
     });
 

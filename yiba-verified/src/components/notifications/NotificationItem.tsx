@@ -10,12 +10,14 @@ import {
   getNotificationLink,
   formatTimeAgo,
 } from "./types";
+import { Archive } from "lucide-react";
 
 interface NotificationItemProps {
   notification: Notification;
   index?: number;
   onMarkRead?: (id: string) => void;
   onNavigate?: (url: string) => void;
+  onArchive?: (id: string) => void;
   /** Viewer role for role-aware links (QCTO vs institution paths) */
   viewerRole?: string | null;
 }
@@ -25,22 +27,31 @@ export function NotificationItem({
   index = 0,
   onMarkRead,
   onNavigate,
+  onArchive,
   viewerRole,
 }: NotificationItemProps) {
   const category = notification.category || getCategoryFromType(notification.notification_type);
   const config = NOTIFICATION_CATEGORIES[category] || NOTIFICATION_CATEGORIES.default;
-  const priority = notification.priority || "MEDIUM";
+  const priority = notification.priority || "NORMAL";
   const priorityConfig = PRIORITY_CONFIG[priority];
   const Icon = config.icon;
   const link = getNotificationLink(notification, viewerRole);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent navigation if clicking archive button
+    if ((e.target as HTMLElement).closest('button')) return;
+
     if (!notification.is_read && onMarkRead) {
       onMarkRead(notification.notification_id);
     }
     if (link && onNavigate) {
       onNavigate(link);
     }
+  };
+
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onArchive?.(notification.notification_id);
   };
 
   return (
@@ -74,8 +85,8 @@ export function NotificationItem({
             <div className="flex items-center gap-2 min-w-0">
               <h4 className={cn(
                 "text-sm font-semibold leading-tight truncate",
-                notification.is_read 
-                  ? "text-foreground/80" 
+                notification.is_read
+                  ? "text-foreground/80"
                   : "text-foreground"
               )}>
                 {notification.title}
@@ -84,7 +95,7 @@ export function NotificationItem({
               {!notification.is_read && (
                 <span className={cn(
                   "h-2 w-2 rounded-full shrink-0",
-                  priority === "URGENT" ? "bg-red-500 animate-pulse" : "bg-primary"
+                  priority === "CRITICAL" ? "bg-red-500 animate-pulse" : "bg-primary"
                 )} />
               )}
             </div>
@@ -93,8 +104,8 @@ export function NotificationItem({
           {/* Message */}
           <p className={cn(
             "text-sm leading-relaxed line-clamp-2 mb-2",
-            notification.is_read 
-              ? "text-muted-foreground/80" 
+            notification.is_read
+              ? "text-muted-foreground/80"
               : "text-muted-foreground"
           )}>
             {notification.message}
@@ -115,8 +126,8 @@ export function NotificationItem({
               {config.label}
             </Badge>
 
-            {/* Priority badge (only for HIGH/URGENT) */}
-            {(priority === "HIGH" || priority === "URGENT") && (
+            {/* Priority badge (only for HIGH/CRITICAL) */}
+            {(priority === "HIGH" || priority === "CRITICAL") && (
               <Badge
                 variant="outline"
                 className={cn(
@@ -136,11 +147,22 @@ export function NotificationItem({
         </div>
 
         {/* Hover action hint */}
-        {link && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-muted-foreground self-center">
-            View →
-          </div>
-        )}
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 self-center">
+          {onArchive && (
+            <button
+              onClick={handleArchive}
+              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors"
+              title="Archive"
+            >
+              <Archive className="h-4 w-4" />
+            </button>
+          )}
+          {link && (
+            <div className="text-xs text-muted-foreground mr-1">
+              View →
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

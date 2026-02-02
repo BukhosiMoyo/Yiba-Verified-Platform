@@ -40,27 +40,33 @@ export function NotificationPanel({
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 20;
 
   // Fetch data when panel opens
   useEffect(() => {
     if (!open) return;
 
     const loadData = async () => {
-      setIsLoading(true);
+      if (page === 0) setIsLoading(true);
       try {
         const [notifRes, annRes] = await Promise.all([
-          fetch("/api/notifications?limit=20"),
-          fetch("/api/announcements"),
+          fetch(`/api/notifications?limit=${LIMIT}&offset=${page * LIMIT}`),
+          page === 0 ? fetch("/api/announcements") : Promise.resolve(null),
         ]);
 
         if (notifRes.ok) {
           const data = await notifRes.json();
-          setNotifications(data.items || []);
+          const newItems = data.items || [];
+
+          setNotifications(prev => page === 0 ? newItems : [...prev, ...newItems]);
+          setHasMore(newItems.length === LIMIT);
           setUnreadCount(data.unread_count || 0);
           onUnreadCountChange?.(data.unread_count || 0);
         }
 
-        if (annRes.ok) {
+        if (annRes && annRes.ok) {
           const data = await annRes.json();
           setAnnouncements(data.items || []);
         }
@@ -72,7 +78,13 @@ export function NotificationPanel({
     };
 
     loadData();
-  }, [open, onUnreadCountChange]);
+  }, [open, page, onUnreadCountChange]);
+
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  }, [isLoading, hasMore]);
 
   // Calculate category counts
   const categoryCounts = useMemo(() => {
@@ -138,11 +150,45 @@ export function NotificationPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mark_all_read: true }),
       });
-      if (!res.ok) {
-        console.error("Failed to mark all as read");
-      }
     } catch (error) {
       console.error("Failed to mark all as read:", error);
+    }
+  }, [onUnreadCountChange]);
+
+  // Archive single
+  const handleArchive = useCallback(async (notificationId: string) => {
+    // Optimistic remove
+    setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
+
+    // Check if it was unread
+    const wasUnread = notifications.find(n => n.notification_id === notificationId && !n.is_read);
+    if (wasUnread) {
+      setUnreadCount(prev => {
+        const newCount = Math.max(0, prev - 1);
+        onUnreadCountChange?.(newCount);
+        return newCount;
+      });
+    }
+
+    try {
+      await fetch(`/api/notifications/${notificationId}`, { method: "DELETE" });
+    } catch (error) {
+      console.error("Failed to archive notification", error);
+    }
+  }, [notifications, onUnreadCountChange]);
+
+  // Archive all
+  const handleArchiveAll = useCallback(async () => {
+    if (!confirm("Are you sure you want to archive all notifications?")) return;
+
+    setNotifications([]);
+    setUnreadCount(0);
+    onUnreadCountChange?.(0);
+
+    try {
+      await fetch("/api/notifications", { method: "DELETE" });
+    } catch (error) {
+      console.error("Failed to archive all", error);
     }
   }, [onUnreadCountChange]);
 
@@ -299,11 +345,21 @@ export function NotificationPanel({
                       index={index}
                       onMarkRead={handleMarkRead}
                       onNavigate={handleNavigate}
+                      onArchive={handleArchive}
                       viewerRole={viewerRole}
                     />
                   ))}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Load More Trigger */}
+          {hasMore && !isLoading && notifications.length > 0 && (
+            <div className="p-4 text-center">
+              <Button variant="ghost" size="sm" onClick={loadMore} disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load older notifications"}
+              </Button>
             </div>
           )}
         </div>
@@ -316,9 +372,7 @@ export function NotificationPanel({
                 variant="outline"
                 size="sm"
                 className="flex-1 h-8 text-xs"
-                onClick={() => {
-                  // TODO: Implement archive all
-                }}
+                onClick={handleArchiveAll}
               >
                 <Archive className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.5} />
                 Archive all

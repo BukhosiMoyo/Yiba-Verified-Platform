@@ -10,8 +10,8 @@ export const TOUR_STEPS: TourConfig = {
         {
             element: "#sidebar-home",
             popover: {
-                title: "Welcome to Yiba Verified",
-                description: "This is your institution's dashboard. Here you can see a high-level overview of your accreditation status and recent activities.",
+                title: "Institution Dashboard",
+                description: "Your central hub for accreditation status, recent notifications, and quick actions.",
                 side: "right",
                 align: "start",
             },
@@ -20,7 +20,7 @@ export const TOUR_STEPS: TourConfig = {
             element: "#sidebar-readiness",
             popover: {
                 title: "Readiness Application",
-                description: "This is the most important section. Build your Form 5 application here, section by section. You can track your completion progress as you go.",
+                description: "This is where you build and submit your Form 5 application. Track progress section by section.",
                 side: "right",
                 align: "start",
             },
@@ -28,8 +28,8 @@ export const TOUR_STEPS: TourConfig = {
         {
             element: "#sidebar-learners",
             popover: {
-                title: "Manage Learners",
-                description: "Add and manage your student database here. You'll need to link learners to your enrolments.",
+                title: "Learner Management",
+                description: "Add and manage your student database. Enrol learners into qualifications here.",
                 side: "right",
                 align: "start",
             },
@@ -37,8 +37,55 @@ export const TOUR_STEPS: TourConfig = {
         {
             element: "#sidebar-facilitators",
             popover: {
-                title: "Facilitators & Assessors",
-                description: "Upload profiles for your staff. QCTO requires verified facilitators for your programmes.",
+                title: "Facilitators",
+                description: "Upload and verify your academic staff. QCTO requires linked facilitators for all programmes.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-requests",
+            popover: {
+                title: "QCTO Requests",
+                description: "Submit and track service requests directly with the QCTO.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-account",
+            popover: {
+                title: "Profile & Settings",
+                description: "Manage your institution details, users, and account settings.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    INSTITUTION_STAFF: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "Staff Dashboard",
+                description: "Overview of your assigned tasks and institution status.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-readiness",
+            popover: {
+                title: "Readiness Input",
+                description: "Contribute to the Form 5 application sections assigned to you.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-learners",
+            popover: {
+                title: "Learner Records",
+                description: "View and update learner profiles and enrolment data.",
                 side: "right",
                 align: "start",
             },
@@ -47,7 +94,7 @@ export const TOUR_STEPS: TourConfig = {
             element: "#sidebar-account",
             popover: {
                 title: "Your Account",
-                description: "Manage your profile settings and log out from here.",
+                description: "Update your personal details and logout.",
                 side: "right",
                 align: "start",
             },
@@ -64,15 +111,136 @@ export const TOUR_STEPS: TourConfig = {
             }
         },
         {
+            element: "#sidebar-requests",
+            popover: {
+                title: "Service Requests",
+                description: "Manage incoming support and service tickets from institutions.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
             element: "#sidebar-account",
             popover: {
                 title: "Admin Tools",
-                description: "Access system-wide settings and logs.",
+                description: "Access system-wide settings, user management, and audit logs.",
                 side: "right",
                 align: "start",
             },
         }
     ],
-    QCTO_ADMIN: [],
-    STUDENT: [],
+    QCTO_ADMIN: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "QCTO Dashboard",
+                description: "View pending accreditation requests and assignee workloads.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-requests",
+            popover: {
+                title: "Requests & Submissions",
+                description: "Review and process incoming accreditation and service requests.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-account",
+            popover: {
+                title: "QCTO Management",
+                description: "Manage internal staff and regional settings.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    QCTO_SUPER_ADMIN: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "QCTO Dashboard",
+                description: "View pending accreditation requests and assignee workloads.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-account",
+            popover: {
+                title: "System Management",
+                description: "Full control over QCTO configuration and staff access.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    QCTO_REVIEWER: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "Reviewer Dashboard",
+                description: "See your assigned applications and upcoming site visits.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    QCTO_USER: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "QCTO Dashboard",
+                description: "Access your QCTO tools and views.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    QCTO_AUDITOR: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "Auditor Access",
+                description: "Review compliance and audit logs.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    QCTO_VIEWER: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "Viewer Access",
+                description: "Read-only access to institution data.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
+    ADVISOR: [],
+    STUDENT: [
+        {
+            element: "#sidebar-home",
+            popover: {
+                title: "Learner Portal",
+                description: "View your current enrolments and progress.",
+                side: "right",
+                align: "start",
+            },
+        },
+        {
+            element: "#sidebar-account",
+            popover: {
+                title: "My Profile",
+                description: "Update your personal details and qualifications.",
+                side: "right",
+                align: "start",
+            },
+        },
+    ],
 };

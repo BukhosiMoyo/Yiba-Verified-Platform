@@ -42,6 +42,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { InstitutionLearnersTable } from "@/components/platform-admin/InstitutionLearnersTable";
+import { ComplianceTab } from "./_components/ComplianceTab";
 
 export default function InstitutionDetailPage() {
   const params = useParams();
@@ -51,7 +52,7 @@ export default function InstitutionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -80,7 +81,7 @@ export default function InstitutionDetailPage() {
       setError(null);
 
       const response = await fetch(`/api/platform-admin/institutions/${institutionId}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch institution");
@@ -88,7 +89,7 @@ export default function InstitutionDetailPage() {
 
       const data = await response.json();
       setInstitution(data.institution);
-      
+
       // Pre-fill edit form
       if (data.institution) {
         setEditFormData({
@@ -239,14 +240,20 @@ export default function InstitutionDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
           <TabsTrigger value="learners">Learners ({institution._count?.learners || 0})</TabsTrigger>
           <TabsTrigger value="accreditation">Accreditation ({institution._count?.readinessRecords || 0})</TabsTrigger>
           <TabsTrigger value="qcto">QCTO ({institution._count?.qctoRequests || 0})</TabsTrigger>
           <TabsTrigger value="submissions">Submissions ({institution._count?.submissions || 0})</TabsTrigger>
           <TabsTrigger value="users">Users ({institution._count?.users || 0})</TabsTrigger>
         </TabsList>
+
+        {/* Compliance Tab */}
+        <TabsContent value="compliance">
+          <ComplianceTab institutionId={institutionId} />
+        </TabsContent>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">

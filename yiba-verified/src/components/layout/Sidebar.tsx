@@ -146,6 +146,7 @@ const getTourId = (href: string) => {
   if (href.includes("/readiness")) return "sidebar-readiness";
   if (href.includes("/learners")) return "sidebar-learners";
   if (href.includes("/facilitators")) return "sidebar-facilitators";
+  if (href.includes("/requests") || href.includes("/service-requests")) return "sidebar-requests";
   return undefined;
 };
 

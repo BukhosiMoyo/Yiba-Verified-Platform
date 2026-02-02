@@ -60,7 +60,7 @@ export function AppShell({
 
     const welcomeCount = parseInt(localStorage.getItem("yv_welcome_count") || "0", 10);
     const shownThisSession = sessionStorage.getItem("yv_welcome_shown_this_session") === "1";
-    const maxShows = 5;
+    const maxShows = 1;
 
     if (welcomeCount < maxShows && !shownThisSession) {
       const timer = setTimeout(() => {

@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // Build where clause - always scope to current user (never from input; prevents cross-account leakage)
-    const where: { user_id: string; is_read?: boolean } = {
+    const where: { user_id: string; is_read?: boolean; deleted_at: null } = {
       user_id: ctx.userId,
+      deleted_at: null,
     };
 
     // Filter by read status if provided
@@ -170,6 +171,34 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       message: "All notifications marked as read",
+    });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * DELETE /api/notifications
+ * 
+ * Archive (soft-delete) all notifications for the current user.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const ctx = await requireApiContext(request);
+
+    // Soft delete all notifications for the user
+    await prisma.notification.updateMany({
+      where: {
+        user_id: ctx.userId,
+        deleted_at: null
+      },
+      data: {
+        deleted_at: new Date()
+      },
+    });
+
+    return NextResponse.json({
+      message: "All notifications archived",
     });
   } catch (error) {
     return fail(error);

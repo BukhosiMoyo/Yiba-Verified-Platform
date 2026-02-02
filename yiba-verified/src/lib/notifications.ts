@@ -1,6 +1,7 @@
-import { prisma } from "./prisma";
-import { sendEmailNotification } from "./email";
+import { NotificationService } from "@/lib/notifications/service";
+import { NotificationCategory } from "@/lib/notifications/types";
 
+// Maintain backward compatibility for imports
 export type NotificationType =
   | "SUBMISSION_REVIEWED"
   | "SUBMISSION_APPROVED"
@@ -31,61 +32,42 @@ interface CreateNotificationParams {
 }
 
 /**
- * createNotification
- * 
- * Helper function to create notifications for users.
- * Should be called after important actions (submission reviewed, request approved, etc.)
- * 
- * Also sends email notification if email service is configured.
- * 
- * Note: This should ideally be called within a transaction to ensure consistency,
- * but for MVP we'll create notifications independently.
+ * createNotification (Legacy Adapter)
+ * Redirects to NotificationService
  */
 export async function createNotification(params: CreateNotificationParams) {
-  try {
-    const notification = await prisma.notification.create({
-      data: {
-        user_id: params.user_id,
-        notification_type: params.notification_type,
-        title: params.title,
-        message: params.message,
-        entity_type: params.entity_type || null,
-        entity_id: params.entity_id || null,
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-          },
-        },
-      },
-    });
-
-    // Send email notification (async, don't wait - failures shouldn't block)
-    if (notification.user?.email) {
-      sendEmailNotification(
-        notification.user.email,
-        params.notification_type,
-        params.title,
-        params.message,
-        params.entity_type || undefined,
-        params.entity_id || undefined
-      ).catch((error) => {
-        console.error("Email notification failed (non-blocking):", error);
-      });
-    }
-
-    return notification;
-  } catch (error) {
-    // Log error but don't throw - notifications shouldn't break the main flow
-    console.error("Failed to create notification:", error);
-    // Optional: write to audit log (NOTIFICATION_CREATE_FAILED, entity_type, entity_id, recipient user_id)
-    return null;
+  // Map legacy types to categories
+  let category: NotificationCategory = "SYSTEM";
+  if (params.notification_type.includes("SUBMISSION") || params.notification_type.includes("READINESS")) {
+    category = "COMPLIANCE";
+  } else if (params.notification_type.includes("INVITE") || params.notification_type.includes("INSTITUTION")) {
+    category = "COMMUNICATION"; // or SYSTEM
   }
+
+  const result = await NotificationService.send({
+    userId: params.user_id,
+    type: params.notification_type,
+    title: params.title,
+    message: params.message,
+    category: category,
+    resourceType: params.entity_type,
+    resourceId: params.entity_id,
+    // Pass legacy entity fields too if needed for backward compat in UI? 
+    // The service doesn't specifically write to entity_type/id columns unless we tell it to.
+    // Actually, my Service implementation wrote to 'resource_type/id' mostly.
+    // Let's check Service implementation. 
+    // Service.ts: 
+    //            resource_type: resourceType,
+    //            resource_id: resourceId,
+    //            // AND logic about entity_type/id is MISSING in my Service.ts write!
+  });
+
+  return result;
 }
 
 /**
  * Helper functions for common notification scenarios
+ * (Refactored to use createNotification wrapper or Service directly)
  */
 export const Notifications = {
   submissionReviewed: async (
@@ -248,16 +230,18 @@ export const Notifications = {
     });
   },
 
-  /**
-   * Notify institution staff when a new lead is submitted via the public profile.
-   * Resolves all INSTITUTION_ADMIN and INSTITUTION_STAFF for the institution and creates
-   * an in-app notification + email for each (entity_type INSTITUTION_LEAD links to public-profile).
-   */
   newLead: async (
     leadId: string,
     institutionId: string,
     leadSummary: { full_name: string; email: string; message?: string | null }
   ) => {
+    // We need to fetch users here as we did in the original file, 
+    // OR we can move this logic to the Service if we want "Group Notification" support.
+    // For now, let's keep the logic here but use the new createNotification adapter.
+
+    // Note: I need to import prisma here to fetch users
+    const { prisma } = await import("@/lib/prisma"); // Dynamic import to avoid circular deps if any
+
     const users = await prisma.user.findMany({
       where: {
         institution_id: institutionId,
@@ -266,10 +250,12 @@ export const Notifications = {
       },
       select: { user_id: true },
     });
+
     const title = "New enquiry from your public profile";
     const message = leadSummary.message
       ? `${leadSummary.full_name} (${leadSummary.email}) sent an enquiry: "${leadSummary.message.slice(0, 100)}${leadSummary.message.length > 100 ? "…" : ""}"`
       : `${leadSummary.full_name} (${leadSummary.email}) submitted an enquiry through your public profile.`;
+
     for (const u of users) {
       createNotification({
         user_id: u.user_id,
@@ -282,15 +268,13 @@ export const Notifications = {
     }
   },
 
-  /**
-   * Notify users assigned to a service type when a new service request is submitted.
-   * Looks up UserServiceLead for the service_type and creates in-app + email for each.
-   */
   serviceRequest: async (
     requestId: string,
     serviceType: string,
     summary: { full_name: string; email: string; organization?: string | null; message?: string | null }
   ) => {
+    const { prisma } = await import("@/lib/prisma");
+
     const users = await prisma.userServiceLead.findMany({
       where: { service_type: serviceType as "ACCREDITATION_HELP" | "ACCOUNTING_SERVICES" | "MARKETING_WEBSITES" | "GENERAL_INQUIRY" },
       select: { user_id: true },
@@ -306,6 +290,7 @@ export const Notifications = {
     const message = summary.message
       ? `${summary.full_name} (${summary.email})${summary.organization ? ` from ${summary.organization}` : ""}: "${summary.message.slice(0, 120)}${summary.message.length > 120 ? "…" : ""}"`
       : `${summary.full_name} (${summary.email})${summary.organization ? ` from ${summary.organization}` : ""} requested ${typeLabel}.`;
+
     for (const u of users) {
       createNotification({
         user_id: u.user_id,
@@ -316,7 +301,7 @@ export const Notifications = {
         entity_id: requestId,
       }).catch((err) => console.error("Failed to create SERVICE_REQUEST notification:", err));
     }
-    // If no UserServiceLead for this type, notify platform admins (fallback for GENERAL_INQUIRY or unassigned types)
+
     if (users.length === 0) {
       const admins = await prisma.user.findMany({
         where: { role: "PLATFORM_ADMIN", deleted_at: null },

@@ -21,9 +21,9 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
 
-  /* Gradient stops (for hero, panel, CTA) */
-  --bg-gradient-hero-start: #fafaf9;
-  --bg-gradient-hero-mid: #f4f4f5;
+  /* Premium Gradient stops */
+  --bg-gradient-hero-start: #f8fafc;
+  --bg-gradient-hero-mid: #eff6ff;
   --bg-gradient-hero-end: #ffffff;
   --bg-gradient-panel-start: #fafaf9;
   --bg-gradient-panel-end: #eef2ff;
@@ -36,13 +36,18 @@
   --pattern-dot: #3b82f6;
 
   /* Shadows */
-  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-float: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-soft: 0 2px 4px -1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-float: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 
   /* Border colors (use with border border-border-subtle) */
   --border-subtle: rgb(228 228 231 / 0.8);
   --border-strong: rgb(161 161 170);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
 }
 
 .dark {
@@ -57,9 +62,9 @@
   --accent: #27272a;
   --accent-foreground: #fafafa;
 
-  --bg-gradient-hero-start: #0c0c0d;
-  --bg-gradient-hero-mid: #0f0f11;
-  --bg-gradient-hero-end: #18181b;
+  --bg-gradient-hero-start: #020617;
+  --bg-gradient-hero-mid: #0f172a;
+  --bg-gradient-hero-end: #1e293b;
   --bg-gradient-panel-start: #0c0c0d;
   --bg-gradient-panel-end: #0f172a;
   --bg-gradient-cta-start: #18181b;
@@ -71,9 +76,14 @@
   --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.25);
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
   --shadow-float: 0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.25);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 
   --border-subtle: rgb(39 39 42 / 0.9);
   --border-strong: rgb(63 63 70);
+
+  /* Glassmorphism Dark */
+  --glass-bg: rgba(24, 24, 27, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
@@ -90,11 +100,12 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
 
-  --color-primary: #2563eb;
+  --color-primary: #3b82f6;
+  /* More vibrant blue */
   --color-primary-foreground: #ffffff;
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  --color-ring: #3b82f6;
+  --color-ring: #60a5fa;
 
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
@@ -110,7 +121,9 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -122,10 +135,12 @@
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     transition: box-shadow 0.2s ease, filter 0.2s ease;
   }
+
   .btn-primary-premium:hover {
     box-shadow: 0 4px 12px -2px rgb(37 99 235 / 0.35), 0 2px 4px -2px rgb(37 99 235 / 0.2);
     filter: brightness(1.05);
   }
+
   .dark .btn-primary-premium:hover {
     box-shadow: 0 4px 12px -2px rgb(37 99 235 / 0.4), 0 2px 4px -2px rgb(37 99 235 / 0.25);
   }
@@ -193,6 +208,7 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
 .qcto-metrics-pattern {
   position: relative;
 }
+
 .qcto-metrics-pattern::before {
   content: "";
   position: absolute;
@@ -210,6 +226,7 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   position: relative;
   overflow: hidden;
 }
+
 .welcome-modal-pattern::before {
   content: "";
   position: absolute;
@@ -262,6 +279,7 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   position: relative;
   overflow: hidden;
 }
+
 .institution-status-pattern::before {
   content: "";
   position: absolute;
@@ -273,21 +291,27 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
 }
+
 .institution-status-pattern--approved::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23059669' fill-opacity='0.14'/%3E%3C/svg%3E");
 }
+
 .institution-status-pattern--pending::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23d97706' fill-opacity='0.14'/%3E%3C/svg%3E");
 }
+
 .institution-status-pattern--rejected::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23dc2626' fill-opacity='0.14'/%3E%3C/svg%3E");
 }
+
 .institution-status-pattern--draft::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%2364748b' fill-opacity='0.12'/%3E%3C/svg%3E");
 }
+
 .institution-status-pattern--suspended::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23ea580c' fill-opacity='0.14'/%3E%3C/svg%3E");
 }
+
 .institution-status-pattern--default::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%2364748b' fill-opacity='0.10'/%3E%3C/svg%3E");
 }
@@ -424,7 +448,7 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
 }
 
 /* First heading - no top margin */
-.blog-content > .prose > h2:first-child {
+.blog-content>.prose>h2:first-child {
   margin-top: 0;
 }
 
@@ -551,9 +575,9 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
 }
 
 /* First paragraph after heading - tighter spacing */
-.blog-content h2 + p,
-.blog-content h3 + p,
-.blog-content h4 + p {
+.blog-content h2+p,
+.blog-content h3+p,
+.blog-content h4+p {
   margin-top: 0;
 }
 
@@ -562,15 +586,15 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
   .blog-content p {
     font-size: 1.1875rem;
   }
-  
+
   .blog-content h2 {
     font-size: 2rem;
   }
-  
+
   .blog-content h3 {
     font-size: 1.5rem;
   }
-  
+
   .blog-content h4 {
     font-size: 1.25rem;
   }

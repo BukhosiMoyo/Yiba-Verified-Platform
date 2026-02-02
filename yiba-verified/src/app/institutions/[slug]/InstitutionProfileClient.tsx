@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, MapPin, Star, Mail, Phone, ExternalLink, Send, BookOpen, GraduationCap, Trophy, Contact } from "lucide-react";
+import { Building2, MapPin, Star, Mail, Phone, ExternalLink, Send, BookOpen, GraduationCap, Trophy, Contact, ShieldCheck } from "lucide-react";
 import type { InstitutionPublicProfile, Institution, InstitutionReview, InstitutionPost } from "@prisma/client";
 
 /** Subset of Institution fields used by the public profile page (matches getProfile select). */
@@ -47,6 +47,8 @@ type Props = {
   applyExternal: boolean;
   applyInternal: boolean;
   applyUrl: string | null;
+  compliance: { accreditation_status: string; accreditation_number: string | null; expiry_date: Date | null } | null;
+  contacts: { first_name: string; last_name: string; email: string; phone_number: string | null; type: string }[];
 };
 
 function formatDate(d: Date) {
@@ -68,6 +70,8 @@ export function InstitutionProfileClient({
   applyExternal,
   applyInternal,
   applyUrl,
+  compliance,
+  contacts,
 }: Props) {
   const [leadOpen, setLeadOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -164,7 +168,15 @@ export function InstitutionProfileClient({
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{name}</h1>
               {profile.verification_status === "VERIFIED" && (
-                <Badge variant="secondary" className="mt-2">Verified</Badge>
+                <Badge variant="secondary" className="mt-2 text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-200 border-blue-200 dark:border-blue-800">
+                  <ShieldCheck className="w-3 h-3 mr-1" />
+                  Verified Institution
+                </Badge>
+              )}
+              {compliance?.accreditation_status === "ACTIVE" && (
+                <Badge variant="outline" className="mt-2 ml-2 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                  QCTO Accredited
+                </Badge>
               )}
               <p className="mt-2 flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4 shrink-0" />
@@ -480,16 +492,33 @@ export function InstitutionProfileClient({
                   Contact
                 </h2>
               </CardHeader>
-              <CardContent className="flex flex-wrap gap-4">
-                {contactEmail && (
-                  <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-primary hover:underline transition-colors duration-200" aria-label={`Email ${contactEmail}`}>
-                    <Mail className="h-4 w-4 shrink-0" /> {contactEmail}
-                  </a>
-                )}
-                {contactPhone && (
-                  <a href={`tel:${contactPhone}`} className="flex items-center gap-2 text-primary hover:underline transition-colors duration-200" aria-label={`Call ${contactPhone}`}>
-                    <Phone className="h-4 w-4 shrink-0" /> {contactPhone}
-                  </a>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-4">
+                  {contactEmail && (
+                    <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-primary hover:underline transition-colors duration-200" aria-label={`Email ${contactEmail}`}>
+                      <Mail className="h-4 w-4 shrink-0" /> {contactEmail}
+                    </a>
+                  )}
+                  {contactPhone && (
+                    <a href={`tel:${contactPhone}`} className="flex items-center gap-2 text-primary hover:underline transition-colors duration-200" aria-label={`Call ${contactPhone}`}>
+                      <Phone className="h-4 w-4 shrink-0" /> {contactPhone}
+                    </a>
+                  )}
+                </div>
+                {/* Governance Contacts */}
+                {contacts && contacts.length > 0 && (
+                  <div className="pt-4 border-t border-border">
+                    <h3 className="text-sm font-medium mb-3">Key Stakeholders</h3>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {contacts.map((contact, i) => (
+                        <div key={i} className="flex flex-col text-sm">
+                          <span className="font-medium text-foreground">{contact.first_name} {contact.last_name}</span>
+                          <span className="text-xs text-muted-foreground uppercase">{contact.type.replace(/_/g, " ")}</span>
+                          {contact.email && <a href={`mailto:${contact.email}`} className="text-xs text-primary hover:underline mt-0.5">{contact.email}</a>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

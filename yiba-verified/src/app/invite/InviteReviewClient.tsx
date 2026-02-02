@@ -72,12 +72,18 @@ function InviteReviewContent() {
   // Signup form state (when viewMode === "signup")
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  useEffect(() => {
+    if (invite?.email && !email) setEmail(invite.email);
+  }, [invite, email]);
 
   const institutionName =
     invite?.institution?.trading_name || invite?.institution?.legal_name || "the institution";
@@ -101,6 +107,7 @@ function InviteReviewContent() {
       return;
     }
     setInvite(data.invite);
+    if (data.invite?.email) setEmail(data.invite.email); // Init email
     setExistingUser(!!data.existing_user);
     setLoading(false);
     // Track view (fire-and-forget)
@@ -182,13 +189,13 @@ function InviteReviewContent() {
       const response = await fetch("/api/invites/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name: name.trim(), password }),
+        body: JSON.stringify({ token, name: name.trim(), password, email: email.trim() }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to accept invite");
 
       const signInResult = await signIn("credentials", {
-        email: invite?.email,
+        email: email.trim(), // User signed in with potentially NEW email
         password,
         redirect: false,
       });
@@ -262,15 +269,42 @@ function InviteReviewContent() {
         >
           <form onSubmit={handleSignupSubmit} className="space-y-4">
             <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Email</p>
-              <p className="text-sm font-medium text-foreground">{invite?.email}</p>
-              <p className="text-xs font-medium text-muted-foreground">Role</p>
-              <p className="text-sm text-foreground">{invite?.role?.replace(/_/g, " ") ?? "—"}</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
+                  {!isEditingEmail ? (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{email}</p>
+                      <button type="button" onClick={() => setIsEditingEmail(true)} className="text-xs text-primary hover:underline">Change</button>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-8 text-sm"
+                        required
+                      />
+                      {invite?.email !== email && (
+                        <p className="text-xs text-muted-foreground mt-1">Invited as: {invite?.email}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <p className="text-xs font-medium text-muted-foreground">Role</p>
+                <p className="text-sm text-foreground">{invite?.role?.replace(/_/g, " ") ?? "—"}</p>
+              </div>
+
               {institutionName && (
-                <>
+                <div className="mt-2">
                   <p className="text-xs font-medium text-muted-foreground">Institution</p>
                   <p className="text-sm text-foreground">{institutionName}</p>
-                </>
+                </div>
               )}
             </div>
             <div className="space-y-2">
