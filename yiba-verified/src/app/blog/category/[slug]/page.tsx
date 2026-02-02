@@ -69,13 +69,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
-  const categories = await prisma.blogCategory.findMany({
-    select: { slug: true },
-  });
+  try {
+    const categories = await prisma.blogCategory.findMany({
+      select: { slug: true },
+    });
 
-  return categories.map((cat) => ({
-    slug: cat.slug,
-  }));
+    return categories.map((cat) => ({
+      slug: cat.slug,
+    }));
+  } catch (error) {
+    console.warn("Could not fetch blog categories for static generation (likely DB connection issue). Skipping pre-generation.", error);
+    return [];
+  }
 }
 
 export const revalidate = 3600; // Revalidate every hour
@@ -147,20 +152,18 @@ export default async function CategoryPage({ params }: Props) {
                 <Link
                   key={cat.slug}
                   href={`/blog/category/${cat.slug}`}
-                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    cat.slug === slug
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${cat.slug === slug
                       ? "bg-primary text-primary-foreground"
                       : "bg-background border border-border hover:bg-accent"
-                  }`}
+                    }`}
                 >
                   {cat.name}
                   {cat._count.posts > 0 && (
                     <span
-                      className={`ml-1.5 ${
-                        cat.slug === slug
+                      className={`ml-1.5 ${cat.slug === slug
                           ? "text-primary-foreground/80"
                           : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       ({cat._count.posts})
                     </span>

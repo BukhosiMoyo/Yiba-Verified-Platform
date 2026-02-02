@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 3600; // Revalidate every hour
+export const dynamic = "force-dynamic";
 
 async function getBlogData() {
   const [featuredPost, latestPosts, categories] = await Promise.all([

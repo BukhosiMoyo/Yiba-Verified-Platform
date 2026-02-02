@@ -59,11 +59,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       modifiedTime: post.updatedAt.toISOString(),
       images: post.featuredImage
         ? [
-            {
-              url: post.featuredImage,
-              alt: post.featuredImageAlt || post.title,
-            },
-          ]
+          {
+            url: post.featuredImage,
+            alt: post.featuredImageAlt || post.title,
+          },
+        ]
         : undefined,
       url: `${baseUrl}/blog/${post.slug}`,
     },
@@ -77,14 +77,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true },
-  });
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { status: "PUBLISHED" },
+      select: { slug: true },
+    });
 
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
+    return posts.map((post) => ({
+      slug: post.slug,
+    }));
+  } catch (error) {
+    console.warn("Could not fetch blog posts for static generation (likely DB connection issue). Skipping pre-generation.", error);
+    return [];
+  }
 }
 
 export const revalidate = 3600; // Revalidate every hour
