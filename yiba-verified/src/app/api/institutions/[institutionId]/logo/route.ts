@@ -10,9 +10,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 type Props = {
-    params: {
+    params: Promise<{
         institutionId: string;
-    };
+    }>;
 };
 
 function slugify(text: string): string {
@@ -26,7 +26,7 @@ function slugify(text: string): string {
 export async function POST(request: NextRequest, { params }: Props) {
     try {
         const { ctx } = await requireAuth(request);
-        const { institutionId } = params;
+        const { institutionId } = await params;
 
         // Verify user has access to edit this institution
         // We check if user has a UserInstitution record with ADMIN role
