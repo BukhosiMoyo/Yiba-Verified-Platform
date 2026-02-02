@@ -79,6 +79,7 @@ You will need to gather the following secrets to give to Vercel later.
 | `AWS_BUCKET_NAME` | The name of your S3 bucket. |
 | `RESEND_API_KEY` | From **Resend** Dashboard -> API Keys. |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | From **Google Cloud Console**. |
+| `STORAGE_PROVIDER` | Set to `s3` for production (requires AWS vars above). Defaults to `local`. |
 
 ### Step 3: Deploy to Vercel
 1.  Go to the [Vercel Dashboard](https://vercel.com/dashboard).
