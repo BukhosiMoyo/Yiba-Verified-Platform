@@ -14,6 +14,7 @@ type AccountLayoutProps = {
   currentUserRole: Role;
   userName: string;
   userEmail?: string;
+  userImage?: string | null;
   verificationLevel?: VerificationLevel;
 };
 
@@ -22,6 +23,7 @@ export function AccountLayout({
   currentUserRole,
   userName,
   userEmail,
+  userImage,
   verificationLevel,
 }: AccountLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,6 +36,7 @@ export function AccountLayout({
           userName={userName}
           userRole={currentUserRole}
           userEmail={userEmail}
+          userImage={userImage}
           verificationLevel={verificationLevel}
         />
       </aside>
@@ -55,6 +58,7 @@ export function AccountLayout({
             userName={userName}
             userRole={currentUserRole}
             userEmail={userEmail}
+            userImage={userImage}
             verificationLevel={verificationLevel}
           />
         </SheetContent>

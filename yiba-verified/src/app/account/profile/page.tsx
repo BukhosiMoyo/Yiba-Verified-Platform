@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { user_id: session.user.userId, deleted_at: null },
-    select: { first_name: true, last_name: true, email: true, emailVerified: true },
+    select: { first_name: true, last_name: true, email: true, emailVerified: true, image: true },
   });
 
   if (!user) {
@@ -34,6 +34,7 @@ export default async function ProfilePage() {
           lastName={user.last_name}
           email={user.email}
           emailVerified={user.emailVerified}
+          image={user.image}
         />
       </AccountSection>
     </AccountPage>

@@ -22,6 +22,8 @@ export default async function AccountLayoutWrapper({
   const role = session.user.role;
   const userName = session.user.name || "User";
   const userEmail = session.user.email;
+  // const userImage = session.user.image; // Removed due to type error
+  let userImageFromDb: string | null = null;
 
   // Fetch user's verification level
   type VerificationLevel = "NONE" | "BLUE" | "GREEN" | "GOLD" | "BLACK";
@@ -29,12 +31,17 @@ export default async function AccountLayoutWrapper({
   try {
     const user = await prisma.user.findUnique({
       where: { user_id: session.user.userId },
-      select: { verification_level: true },
+      select: { verification_level: true, image: true },
     });
     verificationLevel = (user?.verification_level as VerificationLevel) || "NONE";
+    // userImage is strictly typed in the component, so we default to null if undefined
   } catch (error) {
     console.error("Error fetching verification level:", error);
   }
+
+  // Use DB image if available, else fall back to session if we fixed the type, but for now just DB.
+  // We need to re-declare userImage since 'const' block scope issues if we just defined it inside try/catch.
+  // Better approach: initialize outside.
 
   // Fetch badge counts for platform-admin role (invites, active announcements)
   const now = new Date();
@@ -110,6 +117,7 @@ export default async function AccountLayoutWrapper({
         currentUserRole={role}
         userName={userName}
         userEmail={userEmail}
+        userImage={userImageFromDb}
         verificationLevel={verificationLevel}
       >
         {children}

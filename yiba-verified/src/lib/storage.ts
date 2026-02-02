@@ -48,9 +48,9 @@ export class StorageService {
         region: config.region,
         credentials: config.accessKeyId && config.secretAccessKey
           ? {
-              accessKeyId: config.accessKeyId,
-              secretAccessKey: config.secretAccessKey,
-            }
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+          }
           : undefined, // Will use IAM role if not provided
       });
     } else if (config.provider === "local") {
@@ -266,10 +266,10 @@ export function getStorageService(): StorageService {
   };
 
   if (provider === "s3") {
-    config.bucket = process.env.S3_BUCKET;
-    config.region = process.env.S3_REGION || "us-east-1";
-    config.accessKeyId = process.env.S3_ACCESS_KEY_ID;
-    config.secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+    config.bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET_NAME;
+    config.region = process.env.S3_REGION || process.env.AWS_REGION || "us-east-1";
+    config.accessKeyId = process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    config.secretAccessKey = process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
   } else {
     // Local storage - use ./storage/uploads directory
     config.localPath = process.env.STORAGE_LOCAL_PATH || path.join(process.cwd(), "storage", "uploads");

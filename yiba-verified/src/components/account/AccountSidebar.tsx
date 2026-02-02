@@ -28,6 +28,7 @@ type AccountSidebarProps = {
   userName: string;
   userRole: Role;
   userEmail?: string;
+  userImage?: string | null;
   verificationLevel?: VerificationLevel;
 };
 
@@ -59,6 +60,7 @@ export function AccountSidebar({
   userName,
   userRole,
   userEmail,
+  userImage,
   verificationLevel = "NONE",
 }: AccountSidebarProps) {
   const pathname = usePathname();
@@ -121,8 +123,12 @@ export function AccountSidebar({
       <div className="p-6 border-b border-border/60">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-semibold text-white shadow-sm">
-              {getInitials(userName)}
+            <div className="h-12 w-12 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-semibold text-white shadow-sm overflow-hidden border-2 border-white dark:border-gray-800">
+              {userImage ? (
+                <img src={userImage} alt={userName} className="h-full w-full object-cover" />
+              ) : (
+                getInitials(userName)
+              )}
             </div>
             <AvatarBadgeOverlay level={verificationLevel} size="md" />
           </div>

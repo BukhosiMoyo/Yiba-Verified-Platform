@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Clock, X, CheckCircle } from "lucide-react";
+import { Mail, Clock, X, CheckCircle, Camera, Loader2, User } from "lucide-react";
 import { ChangeEmailModal } from "./ChangeEmailModal";
+import { cn } from "@/lib/utils";
 
 type ProfileFormProps = {
   firstName: string;
   lastName: string;
   email: string;
   emailVerified: Date | null;
+  image?: string | null;
 };
 
-export function ProfileForm({ firstName, lastName, email, emailVerified }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, email, emailVerified, image }: ProfileFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [pendingEmailChange, setPendingEmailChange] = useState<{
@@ -27,6 +30,8 @@ export function ProfileForm({ firstName, lastName, email, emailVerified }: Profi
     expiresAt: string;
     requestId: string;
   } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check for error query param
   useEffect(() => {
@@ -91,6 +96,51 @@ export function ProfileForm({ firstName, lastName, email, emailVerified }: Profi
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "Please select an image file." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Image size must be less than 5MB." });
+      return;
+    }
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/account/profile/image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to upload image");
+      }
+
+      router.refresh();
+      setMessage({ type: "success", text: "Profile picture updated!" });
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ type: "error", text: err.message || "Failed to upload image." });
+    } finally {
+      setUploading(false);
+      // Reset input so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
@@ -125,8 +175,50 @@ export function ProfileForm({ firstName, lastName, email, emailVerified }: Profi
     }
   }
 
+  const initials = `${firstName[0]}${lastName[0]}`.toUpperCase();
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center gap-6">
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/*"
+          onChange={handleFileChange}
+        />
+        <div className="relative group">
+          {image ? (
+            <img
+              src={image}
+              alt="Profile"
+              className="h-20 w-20 rounded-full object-cover border-2 border-border"
+            />
+          ) : (
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center border-2 border-border text-2xl font-semibold text-muted-foreground">
+              {initials}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className={cn(
+              "absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md transition-transform hover:scale-105",
+              uploading && "opacity-70 cursor-not-allowed"
+            )}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          </button>
+        </div>
+        <div>
+          <h3 className="text-lg font-medium">Profile Picture</h3>
+          <p className="text-sm text-muted-foreground">
+            Click the camera icon to upload. Max 5MB.
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="firstName">First Name</Label>
@@ -218,11 +310,10 @@ export function ProfileForm({ firstName, lastName, email, emailVerified }: Profi
       />
       {message && (
         <p
-          className={`text-sm ${
-            message.type === "success"
+          className={`text-sm ${message.type === "success"
               ? "text-green-600 dark:text-green-400"
               : "text-red-600 dark:text-red-400"
-          }`}
+            }`}
         >
           {message.text}
         </p>

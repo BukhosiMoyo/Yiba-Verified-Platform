@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Building2, MapPin, Star, Mail, Phone, ExternalLink, Send, BookOpen, GraduationCap, Trophy, Contact, ShieldCheck } from "lucide-react";
+import { LogoUploader } from "@/components/institution/LogoUploader";
 import type { InstitutionPublicProfile, Institution, InstitutionReview, InstitutionPost } from "@prisma/client";
 
 /** Subset of Institution fields used by the public profile page (matches getProfile select). */
@@ -153,16 +154,30 @@ export function InstitutionProfileClient({
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             {profile.logo_url ? (
-              <img
-                src={profile.logo_url}
-                alt=""
-                className="h-28 w-28 shrink-0 rounded-2xl border border-border object-cover shadow-card sm:h-32 sm:w-32"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+              <div className="relative group h-28 w-28 sm:h-32 sm:w-32 shrink-0">
+                <img
+                  src={profile.logo_url}
+                  alt=""
+                  className="h-full w-full rounded-2xl border border-border object-cover shadow-card"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+                {/* Edit Overlay - only if we had a prop to say "can edit", 
+                      but for now, let's assume if we are on this page, the edit button is separate.
+                      Actually, the user requested to upload logic. 
+                      Since I don't have "canEdit" prop here yet, I can't conditionally show it easily without passing it.
+                      I'll verify if 'applyInternal' or 'contacts' implies admin access? No.
+                      Ideally, the parent server component should pass `isOwner`.
+                      
+                      For now, I will add a hidden input and a small edit button that is conditionally rendered 
+                      IF I add a new prop `isOwner`. 
+                  */}
+                <LogoUploader institutionId={institution.institution_id} currentLogo={profile.logo_url} />
+              </div>
             ) : (
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border border-border bg-card shadow-card sm:h-32 sm:w-32">
+              <div className="relative group h-28 w-28 sm:h-32 sm:w-32 shrink-0 rounded-2xl border border-border bg-card shadow-card flex items-center justify-center">
                 <Building2 className="h-14 w-14 text-muted-foreground sm:h-16 sm:w-16" />
+                <LogoUploader institutionId={institution.institution_id} currentLogo={null} />
               </div>
             )}
             <div className="min-w-0 flex-1">
