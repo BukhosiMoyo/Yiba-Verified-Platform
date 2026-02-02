@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useActionState, useState } from "react";
+// import { useFormState } from "react-dom"; // removed
 import { createAdminUser } from "@/actions/admin-setup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+// import { CheckCircle2, AlertCircle } from "lucide-react"; // removed
 
 const initialState = {
     success: false,
@@ -30,7 +30,7 @@ const initialState = {
 };
 
 export default function SecretSetupPage() {
-    const [state, formAction] = useFormState(createAdminUser, initialState);
+    const [state, formAction, isPending] = useActionState(createAdminUser, initialState);
     const [role, setRole] = useState("PLATFORM_ADMIN");
 
     return (
@@ -47,15 +47,11 @@ export default function SecretSetupPage() {
                 <CardContent>
                     <form action={formAction} className="space-y-4">
                         {state.message && (
-                            <Alert variant={state.success ? "default" : "destructive"}>
-                                {state.success ? (
-                                    <CheckCircle2 className="h-4 w-4" />
-                                ) : (
-                                    <AlertCircle className="h-4 w-4" />
-                                )}
-                                <AlertTitle>{state.success ? "Success" : "Error"}</AlertTitle>
-                                <AlertDescription>{state.message}</AlertDescription>
-                            </Alert>
+                            <Alert
+                                variant={state.success ? "success" : "error"}
+                                title={state.success ? "Success" : "Error"}
+                                description={state.message}
+                            />
                         )}
 
                         <div className="space-y-2">
@@ -137,8 +133,8 @@ export default function SecretSetupPage() {
                             </p>
                         </div>
 
-                        <Button type="submit" className="w-full mt-4">
-                            Create User
+                        <Button type="submit" className="w-full mt-4" disabled={isPending}>
+                            {isPending ? "Creating..." : "Create User"}
                         </Button>
                     </form>
                 </CardContent>
