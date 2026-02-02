@@ -1,20 +1,3 @@
 {
-    "crons": [
-        {
-            "path": "/api/cron/email-queue",
-            "schedule": "* * * * *"
-        },
-        {
-            "path": "/api/cron/triggers/compliance",
-            "schedule": "0 8 * * *"
-        },
-        {
-            "path": "/api/cron/triggers/inactivity",
-            "schedule": "0 9 * * *"
-        },
-        {
-            "path": "/api/cron/triggers/profile",
-            "schedule": "0 10 * * *"
-        }
-    ]
+    "crons": []
 }

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const preferences = await getUserPreferences(session.user.user_id);
+        const preferences = await getUserPreferences(session.user.userId);
         return NextResponse.json({ items: preferences });
     } catch (error) {
         console.error("Failed to fetch preferences:", error);
@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const updated = await updatePreference(
-            session.user.user_id,
+            session.user.userId,
             category as NotificationCategory,
             {
                 email: email_enabled,

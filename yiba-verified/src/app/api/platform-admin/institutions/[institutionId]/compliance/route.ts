@@ -6,10 +6,10 @@ import { canAccessQctoData } from "@/lib/rbac";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ institutionId: string }> }
 ) {
     try {
-        const { id } = await params;
+        const { institutionId: id } = await params;
         const session = await getServerSession(authOptions);
 
         if (!session || !session.user) {
