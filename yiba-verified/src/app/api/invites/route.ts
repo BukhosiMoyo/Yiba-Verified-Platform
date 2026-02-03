@@ -203,27 +203,27 @@ export async function POST(request: NextRequest) {
     try {
       const { getEmailService } = await import("@/lib/email");
       const { EmailType } = await import("@/lib/email/types");
+      const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
       const emailService = getEmailService();
 
-      // Generate simplified HTML locally or delegate to a template helper
-      // Ideally we use a helper, but for now let's inline a simple one or check for existing helpers.
-      // We know campaign-sender uses it.
       const htmlBody = `
-            <h2>Welcome to Yiba Verified</h2>
-            <p>You have been invited to join Yiba Verified as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
-            <p>Click the button below to accept your invitation and set up your account:</p>
-            <p>
-                <a href="${inviteLink}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Accept Invitation</a>
-            </p>
-            <p>Or paste this link in your browser: <br/> ${inviteLink}</p>
-            <p>This link expires in 7 days.</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">You have been invited to join <strong>Yiba Verified</strong> as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
+            <p style="font-size: 16px;">To get started, please accept your invitation by clicking the button below. This link will expire in 7 days.</p>
         `;
+
+      const emailHtml = buildBaseEmailHtml({
+        subject: "You've been invited to Yiba Verified",
+        bodyHtml: htmlBody,
+        actionLabel: "Accept Invitation",
+        actionUrl: inviteLink,
+        heading: "Welcome to Yiba Verified"
+      });
 
       await emailService.send({
         to: email,
         type: EmailType.INVITE,
         subject: "You've been invited to Yiba Verified",
-        html: htmlBody,
+        html: emailHtml,
         text: `You have been invited to Yiba Verified. Click here to accept: ${inviteLink}`,
       });
 

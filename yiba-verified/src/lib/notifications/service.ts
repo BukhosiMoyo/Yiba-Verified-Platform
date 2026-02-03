@@ -105,19 +105,31 @@ export class NotificationService {
                     let sentImmediately = false;
                     let errorMsg = null;
 
+                    // Default fallback HTML
+                    let finalBodyHtml = `<p>${message}</p>${actionLink ? `<br><a href="${actionLink}">View Details</a>` : ''}`;
+
                     try {
                         const { getEmailService } = await import("@/lib/email");
                         const { EmailType } = await import("@/lib/email/types");
+                        const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
                         const emailService = getEmailService();
 
-                        const htmlBody = `<p>${message}</p>${actionLink ? `<br><a href="${actionLink}">View Details</a>` : ''}`;
+                        // Build branded HTML
+                        const bodyContent = `<p style="font-size: 16px;">${message}</p>`;
+                        finalBodyHtml = buildBaseEmailHtml({
+                            subject: title,
+                            bodyHtml: bodyContent,
+                            actionLabel: actionLink ? "View Details" : undefined,
+                            actionUrl: actionLink,
+                            heading: "Notification"
+                        });
 
                         const res = await emailService.send({
                             to: user.email,
                             type: EmailType.NOTIFICATION,
                             subject: title,
                             text: message,
-                            html: htmlBody
+                            html: finalBodyHtml
                         });
 
                         if (res.success) {
@@ -138,7 +150,7 @@ export class NotificationService {
                             to_email: user.email,
                             subject: title,
                             body_text: message,
-                            body_html: `<p>${message}</p>${actionLink ? `<br><a href="${actionLink}">View Details</a>` : ''}`,
+                            body_html: finalBodyHtml, // Use the branded HTML
                             status: sentImmediately ? "SENT" : "PENDING", // PENDING means worker will retry
                             sent_at: sentImmediately ? new Date() : null,
                             priority: queuePriority,
