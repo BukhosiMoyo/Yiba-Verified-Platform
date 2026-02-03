@@ -71,7 +71,43 @@ export class StorageService {
     }
   }
 
-  // ... (download method)
+  /**
+   * Download a file from storage
+   */
+  async download(storageKey: string): Promise<DownloadResult> {
+    if (this.config.provider === "s3") {
+      return await this.downloadFromS3(storageKey);
+    } else {
+      return await this.downloadFromLocal(storageKey);
+    }
+  }
+
+  /**
+   * Delete a file from storage
+   */
+  async delete(storageKey: string): Promise<void> {
+    if (this.config.provider === "s3") {
+      await this.deleteFromS3(storageKey);
+    } else {
+      await this.deleteFromLocal(storageKey);
+    }
+  }
+
+  /**
+   * Generate a presigned URL for temporary access (S3 only)
+   */
+  async getPresignedUrl(storageKey: string, expiresIn: number = 3600): Promise<string | null> {
+    if (this.config.provider !== "s3" || !this.s3Client || !this.config.bucket) {
+      return null;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: this.config.bucket,
+      Key: storageKey,
+    });
+
+    return await getSignedUrl(this.s3Client, command, { expiresIn });
+  }
 
   // S3 implementation
   private async uploadToS3(buffer: Buffer, storageKey: string, contentType?: string, isPublic: boolean = false): Promise<UploadResult> {
