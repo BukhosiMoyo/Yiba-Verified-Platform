@@ -1,13 +1,13 @@
 // Email service
 // Handles sending emails for notifications and system alerts
 import { Resend } from "resend";
+import { EmailType, getEmailHeaders } from "./email/types";
 import type { NotificationType } from "./notifications";
 
 export interface EmailConfig {
   provider: "resend" | "smtp" | "console"; // console for development
   apiKey?: string; // For Resend
-  fromEmail?: string;
-  fromName?: string;
+  // fromEmail/fromName removed in favor of EmailType config
   smtpHost?: string; // For SMTP
   smtpPort?: number;
   smtpUser?: string;
@@ -17,6 +17,7 @@ export interface EmailConfig {
 
 export interface EmailOptions {
   to: string;
+  type: EmailType; // STRICT: Must specify purpose
   subject: string;
   html: string;
   text?: string;
@@ -38,10 +39,25 @@ class EmailService {
    * Send an email
    */
   async send(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
+    const { from, replyTo } = getEmailHeaders(options.type);
+
+    // DEV OVERRIDE: If using Resend "onboarding" domain, From must be 'onboarding@resend.dev'
+    // We check if the configured domain is legit or we are in a mode that needs this overriding.
+    // For simplicity, if EMAIL_FROM env var is set to onboarding@resend.dev, we respect it 
+    // BUT we should really rely on the type.
+    // Let's implement robust handling:
+    let finalFrom = from;
+    if (process.env.EMAIL_FROM === "onboarding@resend.dev") {
+      finalFrom = "onboarding@resend.dev";
+    }
+
     try {
       if (this.config.provider === "console") {
         // Development mode: log to console
         console.log("\n📧 EMAIL (Console Mode):");
+        console.log(`Type: ${options.type}`);
+        console.log(`From: ${finalFrom}`);
+        console.log(`Reply-To: ${replyTo || "(None)"}`);
         console.log(`To: ${options.to}`);
         console.log(`Subject: ${options.subject}`);
         console.log(`Body:\n${options.text || options.html}\n`);
@@ -50,8 +66,9 @@ class EmailService {
 
       if (this.config.provider === "resend" && this.resendClient) {
         await this.resendClient.emails.send({
-          from: `${this.config.fromName || "Yiba Verified"} <${this.config.fromEmail || "noreply@yiba.co.za"}>`,
+          from: finalFrom,
           to: options.to,
+          replyTo: replyTo,
           subject: options.subject,
           html: options.html,
           text: options.text,
@@ -82,12 +99,10 @@ export function getEmailService(): EmailService {
     return emailServiceInstance;
   }
 
-  const provider = (process.env.EMAIL_PROVIDER || "console") as "resend" | "smtp" | "console";
+  const provider = (process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? "resend" : "console")) as "resend" | "smtp" | "console";
 
   const config: EmailConfig = {
     provider,
-    fromEmail: process.env.EMAIL_FROM || "noreply@yiba.co.za",
-    fromName: process.env.EMAIL_FROM_NAME || "Yiba Verified",
     baseUrl: process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
   };
 
@@ -214,7 +229,7 @@ export async function sendEmailNotification(
   try {
     const emailService = getEmailService();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
-    
+
     const template = getEmailTemplate(
       notificationType,
       title,
@@ -226,6 +241,7 @@ export async function sendEmailNotification(
 
     const result = await emailService.send({
       to: userEmail,
+      type: EmailType.NOTIFICATION,
       subject: template.subject,
       html: template.html,
       text: template.text,

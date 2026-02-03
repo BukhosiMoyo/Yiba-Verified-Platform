@@ -4,6 +4,7 @@
 import type { EmailTemplateType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 import { getRawToken } from "./token-store";
 import { getTemplateTypeForInviteRole, buildInviteEmailFromTemplate } from "@/lib/email/templates/inviteTemplates";
 
@@ -126,13 +127,13 @@ export async function processInvite(
     // For now, we'll generate a new token hash lookup
     // In production, you might want to store the raw token temporarily
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    
+
     // Get raw token from store
     const rawToken = getRawToken(invite.token_hash);
     if (!rawToken) {
       throw new Error("Raw token not found - invite may have expired or been processed");
     }
-    
+
     // Get institution name and inviter name (if not already on invite)
     let institutionName: string | undefined;
     if (invite.institution_id) {
@@ -213,6 +214,7 @@ export async function processInvite(
     const emailService = getEmailService();
     const result = await emailService.send({
       to: invite.email,
+      type: EmailType.INVITE,
       subject,
       html,
       text,
@@ -231,7 +233,7 @@ export async function processInvite(
     } else {
       // Handle failure
       const shouldRetry = invite.attempts < config.maxAttempts;
-      
+
       await prisma.invite.update({
         where: { invite_id: invite.invite_id },
         data: {
@@ -243,13 +245,13 @@ export async function processInvite(
             : null,
         },
       });
-      
+
       return { success: false, error: result.error };
     }
   } catch (error: any) {
     // Handle exception
     const shouldRetry = invite.attempts < config.maxAttempts;
-    
+
     await prisma.invite.update({
       where: { invite_id: invite.invite_id },
       data: {
@@ -261,7 +263,7 @@ export async function processInvite(
           : null,
       },
     });
-    
+
     return { success: false, error: error.message };
   }
 }
@@ -273,7 +275,7 @@ export async function processInviteBatch(
   batchSize: number = DEFAULT_CONFIG.batchSize
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
   const config = DEFAULT_CONFIG;
-  
+
   // Get next batch of QUEUED invites (oldest first), with createdBy for template context
   const queuedInvites = await prisma.invite.findMany({
     where: {
@@ -304,7 +306,7 @@ export async function processInviteBatch(
   });
 
   const invitesToProcess = [...queuedInvites, ...retryInvites].slice(0, batchSize);
-  
+
   if (invitesToProcess.length === 0) {
     return { processed: 0, succeeded: 0, failed: 0 };
   }
@@ -320,7 +322,7 @@ export async function processInviteBatch(
     } else {
       failed++;
     }
-    
+
     // Small delay between individual sends (100ms)
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
@@ -340,17 +342,17 @@ export async function startQueueProcessor(
   config: QueueConfig = DEFAULT_CONFIG
 ): Promise<void> {
   console.log("Starting invite queue processor...");
-  
+
   while (true) {
     try {
       const result = await processInviteBatch(config.batchSize);
-      
+
       if (result.processed > 0) {
         console.log(
           `Processed ${result.processed} invites: ${result.succeeded} succeeded, ${result.failed} failed`
         );
       }
-      
+
       // Wait before next batch
       await new Promise((resolve) => setTimeout(resolve, config.batchDelayMs));
     } catch (error) {
