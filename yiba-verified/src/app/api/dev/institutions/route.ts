@@ -7,7 +7,7 @@
 //   ?limit=number - Limit results (default: 50, max: 100)
 //
 // Example:
-//   curl -sS http://localhost:3000/api/dev/institutions \
+//   curl -sS https://yibaverified.co.za/api/dev/institutions \
 //     -H "X-DEV-TOKEN: <PASTE_DEV_TOKEN_HERE>" | jq
 
 import { NextRequest } from "next/server";
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV !== "development") {
       return new Response(null, { status: 404 });
     }
-    
+
     return fail(error);
   }
 }

@@ -1,7 +1,7 @@
 // GET /api/platform-admin/institutions/[institutionId] - Get institution details (PLATFORM_ADMIN only)
 //
 // Example:
-//   curl -sS http://localhost:3000/api/platform-admin/institutions/<ID> | jq
+//   curl -sS https://yibaverified.co.za/api/platform-admin/institutions/<ID> | jq
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";

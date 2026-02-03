@@ -167,7 +167,7 @@ export async function POST(request: Request) {
 
     // Send emails
     const emailService = getEmailService();
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
     const verificationUrl = `${baseUrl}/api/account/email/verify?token=${token}`;
     const userName = `${user.first_name} ${user.last_name}`;
     const requestedAt = new Date().toLocaleString("en-ZA", {

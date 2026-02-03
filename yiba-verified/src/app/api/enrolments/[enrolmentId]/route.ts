@@ -2,7 +2,7 @@
 //
 // Test commands (ready-to-copy):
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3001"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/enrolments/<ENROLMENT_ID>" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -165,7 +165,7 @@ export async function GET(
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     return NextResponse.json(enrolmentResponse, { headers });
   } catch (error) {
     return fail(error);

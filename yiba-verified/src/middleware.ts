@@ -67,7 +67,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 function applyCORSHeaders(response: NextResponse, request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) {
     const origin = request.headers.get("origin");
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:3000"];
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["https://yibaverified.co.za"];
 
     if (origin && allowedOrigins.includes(origin)) {
       response.headers.set("Access-Control-Allow-Origin", origin);
@@ -107,7 +107,7 @@ export async function middleware(req: NextRequest) {
     response = applySecurityHeaders(response);
     return response;
   }
-  
+
   // Other auth routes (logout, unauthorized, check-email, etc.) get noindex
   const otherAuthRoutes = [
     "/logout",
@@ -149,7 +149,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const area = getAreaFromPath(pathname);
-  
+
   // If it's not a protected area route, but still needs noindex (like /api routes)
   if (!area) {
     if (shouldNoIndex) {
@@ -168,7 +168,7 @@ export async function middleware(req: NextRequest) {
   // Protected area routes - apply RBAC, then add noindex header
   // Cache token lookup per request using a simple in-memory cache (per request only)
   // Note: getToken already has internal caching, but we can optimize further
-  const token = await getToken({ 
+  const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
   });
@@ -221,11 +221,11 @@ export async function middleware(req: NextRequest) {
 
   // Check for View As User state in cookies (deprecated - old system)
   const viewingAsRole = req.cookies.get("viewing_as_role")?.value as Role | undefined;
-  
+
   // Allow access if either the original role OR the viewing-as role can access the area
   const originalCanAccess = canAccessArea(role, area);
   const viewingAsCanAccess = viewingAsRole ? canAccessArea(viewingAsRole, area) : false;
-  
+
   if (!originalCanAccess && !viewingAsCanAccess) {
     const url = req.nextUrl.clone();
     url.pathname = "/unauthorized";

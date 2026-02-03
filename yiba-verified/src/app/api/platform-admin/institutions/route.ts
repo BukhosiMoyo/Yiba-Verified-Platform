@@ -6,7 +6,7 @@
 //   ?offset=number - Offset for pagination
 //
 // Example:
-//   curl -sS http://localhost:3000/api/platform-admin/institutions \
+//   curl -sS https://yibaverified.co.za/api/platform-admin/institutions \
 //     -H "X-DEV-TOKEN: <DEV_TOKEN>" | jq
 
 import { NextRequest } from "next/server";
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("q") || "";
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
-    
+
     const limit = Math.min(
       limitParam ? parseInt(limitParam, 10) : 50,
       200 // Cap at 200

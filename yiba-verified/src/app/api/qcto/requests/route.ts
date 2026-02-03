@@ -3,7 +3,7 @@
 //
 // GET Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3001"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/qcto/requests?limit=20" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body: CreateQCTORequestBody = await request.json();
-    
+
     if (!body.institution_id) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       oldValue: null,
       institutionId: body.institution_id,
       reason: `Create QCTO request: ${body.title}`,
-      
+
       assertCan: async (tx, ctx) => {
         if (!QCTO_DATA_ACCESS_ROLES.includes(ctx.role)) {
           throw new AppError(
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
           );
         }
       },
-      
+
       // Mutation: Create QCTO request with resources (if provided)
       mutation: async (tx, ctx) => {
         // Note: Verify the Prisma client model name after migration
@@ -205,23 +205,23 @@ export async function POST(request: NextRequest) {
             response_deadline: responseDeadline,
             requestResources: body.resources
               ? {
-                  create: body.resources.map((r) => {
-                    // Store link_to_profile in notes as JSON if provided
-                    let notesValue = r.notes || null;
-                    if (r.link_to_profile) {
-                      const linkInfo = JSON.stringify({
-                        link_to_profile: r.link_to_profile,
-                        original_notes: r.notes || null,
-                      });
-                      notesValue = linkInfo;
-                    }
-                    return {
-                      resource_type: r.resource_type,
-                      resource_id_value: r.resource_id_value,
-                      notes: notesValue,
-                    };
-                  }),
-                }
+                create: body.resources.map((r) => {
+                  // Store link_to_profile in notes as JSON if provided
+                  let notesValue = r.notes || null;
+                  if (r.link_to_profile) {
+                    const linkInfo = JSON.stringify({
+                      link_to_profile: r.link_to_profile,
+                      original_notes: r.notes || null,
+                    });
+                    notesValue = linkInfo;
+                  }
+                  return {
+                    resource_type: r.resource_type,
+                    resource_id_value: r.resource_id_value,
+                    notes: notesValue,
+                  };
+                }),
+              }
               : undefined,
           },
           include: {
@@ -252,18 +252,18 @@ export async function POST(request: NextRequest) {
             },
           },
         });
-        
+
         return created;
       },
     });
-    
+
     // Add debug header in development
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
-    return NextResponse.json(qctoRequest, { 
+
+    return NextResponse.json(qctoRequest, {
       status: 201,
       headers,
     });
@@ -301,7 +301,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,

@@ -27,7 +27,7 @@ const DEBUG_LOG_PATH = "/Users/maxx/Projects/Yiba Verified/.cursor/debug.log";
 function debugLog(payload: Record<string, unknown>) {
   try {
     appendFileSync(DEBUG_LOG_PATH, JSON.stringify({ ...payload, timestamp: Date.now() }) + "\n");
-  } catch (_) {}
+  } catch (_) { }
 }
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
@@ -143,9 +143,9 @@ export async function POST(request: NextRequest) {
     const impersonatorUserId = ctx.originalUserId || ctx.userId;
 
     // Get IP address and user agent for audit trail
-    const ipAddress = request.headers.get("x-forwarded-for") || 
-                     request.headers.get("x-real-ip") || 
-                     "unknown";
+    const ipAddress = request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
     // Create impersonation session
@@ -157,9 +157,9 @@ export async function POST(request: NextRequest) {
     );
 
     // Build the impersonation link
-    const baseUrl = process.env.NEXTAUTH_URL || 
-                   request.headers.get("origin") || 
-                   "http://localhost:3000";
+    const baseUrl = process.env.NEXTAUTH_URL ||
+      request.headers.get("origin") ||
+      "https://yibaverified.co.za";
     const link = `/view-as/${session.token}`;
     const fullUrl = `${baseUrl}${link}`;
 

@@ -2,7 +2,7 @@
 //
 // GET Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3000"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/institutions/requests?status=PENDING&limit=20" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can list requests
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(

@@ -2,7 +2,7 @@
 //
 // PATCH Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3000"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -X PATCH "$BASE_URL/api/institutions/requests/<REQUEST_ID>" \
 //     -H "Content-Type: application/json" \
@@ -72,7 +72,7 @@ export async function PATCH(
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can approve/reject requests
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -87,7 +87,7 @@ export async function PATCH(
 
     // Parse and validate request body
     const body: UpdateRequestBody = await request.json();
-    
+
     if (!body.status) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
@@ -189,7 +189,7 @@ export async function PATCH(
       newValue: body.status,
       institutionId: qctoRequest.institution_id,
       reason: body.reason ?? `Approve/reject QCTO request: ${qctoRequest.title}`,
-      
+
       // RBAC: Only INSTITUTION_* roles and PLATFORM_ADMIN can approve/reject
       assertCan: async (tx, ctx) => {
         const allowedRoles: Role[] = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "PLATFORM_ADMIN"];
@@ -212,7 +212,7 @@ export async function PATCH(
           }
         }
       },
-      
+
       // Mutation: Update request status and review fields, and link documents if approved
       mutation: async (tx, ctx) => {
         // First, get the request with resources to check for document linking
@@ -328,18 +328,18 @@ export async function PATCH(
             }
           }
         }
-        
+
         return updated;
       },
     });
-    
+
     // Add debug header in development
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
-    return NextResponse.json(updatedRequest, { 
+
+    return NextResponse.json(updatedRequest, {
       status: 200,
       headers,
     });
@@ -371,7 +371,7 @@ export async function GET(
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can view requests
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(

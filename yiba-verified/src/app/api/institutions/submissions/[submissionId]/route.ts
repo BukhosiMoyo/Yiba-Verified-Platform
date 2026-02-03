@@ -3,7 +3,7 @@
 //
 // GET Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3000"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/institutions/submissions/<SUBMISSION_ID>" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -66,10 +66,10 @@ export async function GET(
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Apply rate limiting
     const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can view submissions
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -207,13 +207,13 @@ export async function PATCH(
   try {
     // Enforce request size limit
     await enforceRequestSizeLimit(request);
-    
+
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Apply rate limiting
     const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can update submissions
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -337,7 +337,7 @@ export async function PATCH(
       newValue,
       institutionId: submission.institution_id,
       reason: body.reason ?? (body.status === "SUBMITTED" ? `Submit submission: ${submission.title || submissionId}` : `Update submission: ${submission.title || submissionId}`),
-      
+
       // RBAC: Only INSTITUTION_* roles and PLATFORM_ADMIN can update submissions
       assertCan: async (tx, ctx) => {
         const allowedRoles: Role[] = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "PLATFORM_ADMIN"];
@@ -360,7 +360,7 @@ export async function PATCH(
           }
         }
       },
-      
+
       // Mutation: Update submission
       mutation: async (tx, ctx) => {
         const updated = await tx.submission.update({
@@ -412,11 +412,11 @@ export async function PATCH(
             },
           },
         });
-        
+
         return updated;
       },
     });
-    
+
     // Auto-assign to eligible reviewers when submission is submitted
     if (body.status === "SUBMITTED" && submission.status !== "SUBMITTED") {
       try {
@@ -433,14 +433,14 @@ export async function PATCH(
         );
       }
     }
-    
+
     // Add debug header in development
     const headers: Record<string, string> = { ...rateLimitHeaders };
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
-    return NextResponse.json(updatedSubmission, { 
+
+    return NextResponse.json(updatedSubmission, {
       status: 200,
       headers,
     });

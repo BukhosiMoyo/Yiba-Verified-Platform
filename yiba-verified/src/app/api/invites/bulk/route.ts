@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     // Process invites
     const processedInvites: any[] = [];
     const errors: Array<{ email: string; error: string }> = [];
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length,
       invites: processedInvites.map((inv) => ({
         ...inv,
-        invite_link: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/invite?token=${inv.raw_token}`,
+        invite_link: `${process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za"}/invite?token=${inv.raw_token}`,
       })),
       error_details: errors,
     });

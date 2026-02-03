@@ -3,11 +3,11 @@
 //
 // Test commands (ready-to-copy):
 //   # With dev token (development only):
-//   curl -sS http://localhost:3000/api/learners/<LEARNER_ID> \
+//   curl -sS https://yibaverified.co.za/api/learners/<LEARNER_ID> \
 //     -H "X-DEV-TOKEN: <PASTE_DEV_TOKEN_HERE>" | jq
 //
 //   # With NextAuth session:
-//   curl -sS http://localhost:3000/api/learners/<LEARNER_ID> \
+//   curl -sS https://yibaverified.co.za/api/learners/<LEARNER_ID> \
 //     -H "Cookie: next-auth.session-token=<SESSION_TOKEN>" | jq
 
 import { NextRequest, NextResponse } from "next/server";
@@ -150,7 +150,7 @@ export async function GET(
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     return NextResponse.json(learnerResponse, { headers });
   } catch (error) {
     return fail(error);

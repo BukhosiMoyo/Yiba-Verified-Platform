@@ -10,11 +10,11 @@
 //   { "name": string, "code"?: string }
 //
 // Example GET:
-//   curl -sS http://localhost:3000/api/platform-admin/qualifications \
+//   curl -sS https://yibaverified.co.za/api/platform-admin/qualifications \
 //     -H "X-DEV-TOKEN: <DEV_TOKEN>" | jq
 //
 // Example POST:
-//   curl -X POST http://localhost:3000/api/platform-admin/qualifications \
+//   curl -X POST https://yibaverified.co.za/api/platform-admin/qualifications \
 //     -H "Content-Type: application/json" \
 //     -H "X-DEV-TOKEN: <DEV_TOKEN>" \
 //     -d '{"name":"Diploma in IT","code":"DIT001"}'
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("q") || "";
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
-    
+
     const limit = Math.min(
       limitParam ? parseInt(limitParam, 10) : 50,
       200 // Cap at 200
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       entityType: "QUALIFICATION",
       changeType: "CREATE",
       fieldName: "qualification_id",
-      assertCan: async () => {},
+      assertCan: async () => { },
       mutation: async (tx) =>
         tx.qualification.create({
           data: {

@@ -10,7 +10,7 @@
 //   ?offset=number - Offset for pagination
 //
 // Example:
-//   curl -sS "http://localhost:3000/api/platform-admin/users?role=INSTITUTION_ADMIN" | jq
+//   curl -sS "https://yibaverified.co.za/api/platform-admin/users?role=INSTITUTION_ADMIN" | jq
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const institutionId = searchParams.get("institution_id") || "";
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
-    
+
     const limit = Math.min(
       limitParam ? parseInt(limitParam, 10) : 50,
       200 // Cap at 200
@@ -258,19 +258,19 @@ export async function PATCH(request: NextRequest) {
       const auditEntries = [];
       for (const [field, newValue] of Object.entries(updateData)) {
         if (field === "updated_at") continue; // Skip timestamp
-        
+
         const oldValue = existingUser[field as keyof typeof existingUser];
-        
+
         // Normalize values for comparison - handle null, undefined, empty string, and whitespace
         const normalize = (val: any): string => {
           if (val === null || val === undefined) return "";
           if (typeof val === "string") return val.trim();
           return String(val).trim();
         };
-        
+
         const normalizedOld = normalize(oldValue);
         const normalizedNew = normalize(newValue);
-        
+
         // Only create audit log if values actually changed
         if (normalizedOld !== normalizedNew) {
           auditEntries.push({

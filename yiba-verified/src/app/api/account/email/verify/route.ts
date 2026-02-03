@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
 
     if (!token) {
       return NextResponse.redirect(
@@ -160,7 +160,7 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     console.error("Email verification error:", error);
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
     return NextResponse.redirect(
       `${baseUrl}/account/profile?error=verification_failed`
     );

@@ -2,7 +2,7 @@
 //
 // GET Test commands:
 //   # With dev token (development only, requires QCTO_USER or PLATFORM_ADMIN):
-//   export BASE_URL="http://localhost:3001"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/qcto/submissions?limit=20" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     // Get province filter based on user's assigned provinces
     const provinceFilter = await getProvinceFilterForQCTO(ctx);
-    
+
     // Apply province filtering to institution
     if (provinceFilter !== null) {
       // User has assigned provinces - filter institutions to those provinces

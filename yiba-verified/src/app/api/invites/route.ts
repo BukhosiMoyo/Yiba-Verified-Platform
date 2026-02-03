@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate invite link
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
     const inviteLink = `${baseUrl}/invite?token=${rawToken}`;
 
     // Send email immediately

@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const base = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
     const acceptUrl = `${base}/auth/qcto/accept-invite?token=${encodeURIComponent(rawToken)}`;
 
     return Response.json({

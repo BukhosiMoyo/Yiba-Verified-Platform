@@ -3,18 +3,18 @@
 //
 // POST Test commands (ready-to-copy):
 //   # Without auth (should return 401):
-//   curl -X POST http://localhost:3000/api/learners \
+//   curl -X POST https://yibaverified.co.za/api/learners \
 //     -H "Content-Type: application/json" \
 //     -d '{"national_id":"1234567890123","first_name":"John","last_name":"Doe"}'
 //
 //   # With NextAuth session (should return 201):
-//   curl -X POST http://localhost:3000/api/learners \
+//   curl -X POST https://yibaverified.co.za/api/learners \
 //     -H "Content-Type: application/json" \
 //     -H "Cookie: next-auth.session-token=YOUR_SESSION_TOKEN" \
 //     -d '{"national_id":"1234567890123","first_name":"John","last_name":"Doe","birth_date":"2000-01-01","gender_code":"M","nationality_code":"ZA","popia_consent":true,"consent_date":"2024-01-01","institution_id":"<INSTITUTION_ID>"}'
 //
 //   # With dev token (development only, should return 201):
-//   curl -X POST http://localhost:3000/api/learners \
+//   curl -X POST https://yibaverified.co.za/api/learners \
 //     -H "Content-Type: application/json" \
 //     -H "X-DEV-TOKEN: <PASTE_DEV_TOKEN_HERE>" \
 //     -d '{"national_id":"9001015009088","first_name":"Jane","last_name":"Doe","birth_date":"1990-01-01","gender_code":"F","nationality_code":"ZA","popia_consent":true,"consent_date":"2024-01-01","institution_id":"<INSTITUTION_ID>"}'
@@ -22,11 +22,11 @@
 // GET Test commands:
 //   # With dev token (development only):
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
-//   INSTITUTION_ID=$(curl -sS http://localhost:3000/api/dev/institutions -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq -r '.items[0].institution_id')
-//   curl -sS "http://localhost:3000/api/learners?institution_id=$INSTITUTION_ID&limit=20" -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
+//   INSTITUTION_ID=$(curl -sS https://yibaverified.co.za/api/dev/institutions -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq -r '.items[0].institution_id')
+//   curl -sS "https://yibaverified.co.za/api/learners?institution_id=$INSTITUTION_ID&limit=20" -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
 //
 //   # Search learners:
-//   curl -sS "http://localhost:3000/api/learners?institution_id=$INSTITUTION_ID&q=900101" -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
+//   curl -sS "https://yibaverified.co.za/api/learners?institution_id=$INSTITUTION_ID&q=900101" -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Dev token authentication requires PLATFORM_ADMIN role
     if (authMode === "devtoken" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
         403
       );
     }
-    
+
     // Parse and validate request body
     const body: CreateLearnerBody = await request.json();
-    
+
     // Validate required fields
     if (!body.national_id || !body.first_name || !body.last_name || !body.birth_date || !body.gender_code || !body.nationality_code) {
       throw new AppError(
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       oldValue: null,
       institutionId: institutionId, // Set before mutation for scoping check
       reason: body.reason ?? null,
-      
+
       // RBAC: Only PLATFORM_ADMIN, INSTITUTION_ADMIN, INSTITUTION_STAFF can create learners
       assertCan: async (tx, ctx) => {
         const allowedRoles: Role[] = ["PLATFORM_ADMIN", "INSTITUTION_ADMIN", "INSTITUTION_STAFF"];
@@ -151,14 +151,14 @@ export async function POST(request: NextRequest) {
           );
         }
       },
-      
+
       // Mutation: Create learner
       mutation: async (tx, ctx) => {
         // Check if national_id already exists
         const existing = await tx.learner.findUnique({
           where: { national_id: body.national_id },
         });
-        
+
         if (existing) {
           throw new AppError(
             ERROR_CODES.VALIDATION_ERROR,
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
             400
           );
         }
-        
+
         // Create learner
         const created = await tx.learner.create({
           data: {
@@ -184,18 +184,18 @@ export async function POST(request: NextRequest) {
             consent_date: new Date(body.consent_date),
           },
         });
-        
+
         return created;
       },
     });
-    
+
     // Add debug header in development (shows which auth method was used)
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
-    return NextResponse.json(learner, { 
+
+    return NextResponse.json(learner, {
       status: 201,
       headers,
     });
@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Dev token authentication requires PLATFORM_ADMIN role
     if (authMode === "devtoken" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -404,7 +404,7 @@ export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     return NextResponse.json({
       count: learners.length,
       items: learners,

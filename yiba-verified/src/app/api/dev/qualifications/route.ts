@@ -7,7 +7,7 @@
 //   ?limit=number - Limit results (default: 50, max: 100)
 //
 // Example:
-//   export BASE_URL="http://localhost:3001"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/dev/qualifications" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV !== "development") {
       return new Response(null, { status: 404 });
     }
-    
+
     return fail(error);
   }
 }

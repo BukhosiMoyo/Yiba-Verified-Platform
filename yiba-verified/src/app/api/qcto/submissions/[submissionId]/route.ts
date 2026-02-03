@@ -3,7 +3,7 @@
 //
 // GET Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3000"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -sS "$BASE_URL/api/qcto/submissions/<SUBMISSION_ID>" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN" | jq
@@ -71,13 +71,13 @@ export async function GET(
   try {
     // Apply rate limiting (use user ID for authenticated users)
     let rateLimitHeaders: Record<string, string> = {};
-    
+
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Apply rate limiting with user context
     rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
-    
+
     if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
@@ -196,13 +196,13 @@ export async function PATCH(
   try {
     // Enforce request size limit
     await enforceRequestSizeLimit(request);
-    
+
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Apply rate limiting with user context
     const rateLimitHeaders = applyRateLimit(request, RATE_LIMITS.STANDARD, ctx.userId);
-    
+
     if (!canAccessQctoData(ctx.role)) {
       throw new AppError(
         ERROR_CODES.FORBIDDEN,
@@ -310,7 +310,7 @@ export async function PATCH(
       newValue,
       institutionId: submission.institution_id,
       reason: body.reason ?? `Review submission: ${submission.title || submissionId} - Status: ${body.status || "Review notes updated"}`,
-      
+
       assertCan: async (tx, ctx) => {
         if (!QCTO_DATA_ACCESS_ROLES.includes(ctx.role)) {
           throw new AppError(
@@ -320,7 +320,7 @@ export async function PATCH(
           );
         }
       },
-      
+
       // Mutation: Update submission review fields
       mutation: async (tx, ctx) => {
         const updated = await tx.submission.update({
@@ -372,17 +372,17 @@ export async function PATCH(
             },
           },
         });
-        
+
         return updated;
       },
     });
-    
+
     // Add debug header in development
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     // Create notification for submission owner if status changed
     if (body.status && submission.status !== body.status) {
       // Find the user who submitted this submission
@@ -403,7 +403,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(updatedSubmission, { 
+    return NextResponse.json(updatedSubmission, {
       status: 200,
       headers,
     });

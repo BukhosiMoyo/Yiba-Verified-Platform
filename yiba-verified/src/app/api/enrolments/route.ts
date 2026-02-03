@@ -3,7 +3,7 @@
 //
 // POST Test commands (ready-to-copy):
 //   # With dev token (development only, should return 201):
-//   export BASE_URL="http://localhost:3001"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -X POST "$BASE_URL/api/enrolments" \
 //     -H "Content-Type: application/json" \
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Dev token authentication requires PLATFORM_ADMIN role
     if (authMode === "devtoken" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -80,10 +80,10 @@ export async function POST(request: NextRequest) {
         403
       );
     }
-    
+
     // Parse and validate request body
     const body: CreateEnrolmentBody = await request.json();
-    
+
     // Validate required fields - must provide EITHER qualification_id OR qualification_title
     if (!body.learner_id) {
       throw new AppError(
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         400
       );
     }
-    
+
     if (!body.qualification_id && !body.qualification_title) {
       throw new AppError(
         ERROR_CODES.VALIDATION_ERROR,
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
           404
         );
       }
-      
+
       qualificationId = qualification.qualification_id;
       qualificationTitle = qualification.name;
     } else {
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
       oldValue: null,
       institutionId: institutionId,
       reason: body.reason ?? null,
-      
+
       // RBAC: Only PLATFORM_ADMIN, INSTITUTION_ADMIN, INSTITUTION_STAFF can create enrolments
       assertCan: async (tx, ctx) => {
         const allowedRoles: Role[] = ["PLATFORM_ADMIN", "INSTITUTION_ADMIN", "INSTITUTION_STAFF"];
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
           );
         }
       },
-      
+
       // Mutation: Create enrolment
       mutation: async (tx, ctx) => {
         const created = await tx.enrolment.create({
@@ -245,18 +245,18 @@ export async function POST(request: NextRequest) {
             enrolment_status: enrolmentStatus,
           },
         });
-        
+
         return created;
       },
     });
-    
+
     // Add debug header in development (shows which auth method was used)
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
-    return NextResponse.json(enrolment, { 
+
+    return NextResponse.json(enrolment, {
       status: 201,
       headers,
     });
@@ -292,7 +292,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Dev token authentication requires PLATFORM_ADMIN role
     if (authMode === "devtoken" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -474,7 +474,7 @@ export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     return NextResponse.json({
       count: enrolments.length,
       items: enrolments,

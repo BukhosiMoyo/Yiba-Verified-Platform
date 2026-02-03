@@ -56,7 +56,7 @@ export default function DebugDashboardPage() {
   useEffect(() => {
     const isDev =
       typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      (window.location.hostname === "yibaverified.co.za" || window.location.hostname === "127.0.0.1");
     setShowNonDevBanner(!isDev);
   }, []);
 

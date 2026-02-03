@@ -34,8 +34,8 @@ export function createMockRequest(
       "content-type": options.headers?.["content-type"] || "application/json",
     },
     nextUrl: {
-      pathname: new URL(url, "http://localhost:3000").pathname,
-      searchParams: new URL(url, "http://localhost:3000").searchParams,
+      pathname: new URL(url, "https://yibaverified.co.za").pathname,
+      searchParams: new URL(url, "https://yibaverified.co.za").searchParams,
     },
     json: async () => options.body || {},
     formData: async () => new FormData(),

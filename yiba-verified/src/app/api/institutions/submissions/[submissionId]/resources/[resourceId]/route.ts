@@ -2,7 +2,7 @@
 //
 // DELETE Test commands:
 //   # With dev token (development only):
-//   export BASE_URL="http://localhost:3000"
+//   export BASE_URL="https://yibaverified.co.za"
 //   export DEV_API_TOKEN="<PASTE_DEV_TOKEN_HERE>"
 //   curl -X DELETE "$BASE_URL/api/institutions/submissions/<SUBMISSION_ID>/resources/<RESOURCE_ID>" \
 //     -H "X-DEV-TOKEN: $DEV_API_TOKEN"
@@ -44,7 +44,7 @@ export async function DELETE(
   try {
     // Use shared auth resolver (handles both dev token and NextAuth)
     const { ctx, authMode } = await requireAuth(request);
-    
+
     // Only INSTITUTION_* roles and PLATFORM_ADMIN can remove resources
     if (ctx.role !== "INSTITUTION_ADMIN" && ctx.role !== "INSTITUTION_STAFF" && ctx.role !== "PLATFORM_ADMIN") {
       throw new AppError(
@@ -144,7 +144,7 @@ export async function DELETE(
       newValue: null,
       institutionId: resource.submission.institution_id,
       reason: `Remove resource from submission: ${resource.submission.title || submissionId}`,
-      
+
       // RBAC: Only INSTITUTION_* roles and PLATFORM_ADMIN can remove resources
       assertCan: async (tx, ctx) => {
         const allowedRoles: Role[] = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "PLATFORM_ADMIN"];
@@ -156,7 +156,7 @@ export async function DELETE(
           );
         }
       },
-      
+
       // Mutation: Delete resource from submission
       mutation: async (tx, ctx) => {
         await tx.submissionResource.delete({
@@ -164,17 +164,17 @@ export async function DELETE(
             resource_id: resourceId,
           },
         });
-        
+
         return { resource_id: resourceId };
       },
     });
-    
+
     // Add debug header in development
     const headers: Record<string, string> = {};
     if (process.env.NODE_ENV === "development") {
       headers["X-AUTH-MODE"] = authMode;
     }
-    
+
     return NextResponse.json(
       { message: "Resource removed from submission" },
       { status: 200, headers }

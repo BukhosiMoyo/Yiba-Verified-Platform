@@ -47,7 +47,7 @@ describe("GET /api/public/institutions", () => {
   });
 
   it("returns 200 with items array when no profiles", async () => {
-    const req = new Request("http://localhost/api/public/institutions");
+    const req = new Request("https://yibaverified.co.za/api/public/institutions");
     const res = await getInstitutions(req);
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -62,7 +62,7 @@ describe("GET /api/public/institutions", () => {
   });
 
   it("queries only is_public profiles", async () => {
-    const req = new Request("http://localhost/api/public/institutions");
+    const req = new Request("https://yibaverified.co.za/api/public/institutions");
     await getInstitutions(req);
     expect(mockFindMany).toHaveBeenCalled();
     const call = mockFindMany.mock.calls[0][0];
@@ -87,7 +87,7 @@ describe("POST /api/public/institutions/[slug]/lead", () => {
   });
 
   it("returns 201 and creates lead with valid body", async () => {
-    const req = new Request("http://localhost/api/public/institutions/test-slug/lead", {
+    const req = new Request("https://yibaverified.co.za/api/public/institutions/test-slug/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -112,7 +112,7 @@ describe("POST /api/public/institutions/[slug]/lead", () => {
   });
 
   it("returns 400 when email is missing", async () => {
-    const req = new Request("http://localhost/api/public/institutions/test-slug/lead", {
+    const req = new Request("https://yibaverified.co.za/api/public/institutions/test-slug/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -127,7 +127,7 @@ describe("POST /api/public/institutions/[slug]/lead", () => {
   });
 
   it("returns 400 when full_name is too short", async () => {
-    const req = new Request("http://localhost/api/public/institutions/test-slug/lead", {
+    const req = new Request("https://yibaverified.co.za/api/public/institutions/test-slug/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -142,7 +142,7 @@ describe("POST /api/public/institutions/[slug]/lead", () => {
 
   it("returns 404 when profile not found or not public", async () => {
     mockFindFirst.mockResolvedValue(null);
-    const req = new Request("http://localhost/api/public/institutions/unknown-slug/lead", {
+    const req = new Request("https://yibaverified.co.za/api/public/institutions/unknown-slug/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

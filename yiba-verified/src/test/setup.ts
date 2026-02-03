@@ -63,7 +63,7 @@ vi.mock("next/server", async () => {
         this.url = url;
         this.method = init?.method || "GET";
         this.headers = new Headers(init?.headers || {});
-        this.nextUrl = new URL(url, "http://localhost:3000");
+        this.nextUrl = new URL(url, "https://yibaverified.co.za");
         this.body = init?.body;
       }
 
