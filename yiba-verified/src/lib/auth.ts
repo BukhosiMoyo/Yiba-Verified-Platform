@@ -1,6 +1,7 @@
 // NextAuth configuration
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
@@ -60,6 +61,19 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
+      },
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -161,6 +175,94 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Allow credentials and impersonation login flow to pass through
+      if (account?.provider === "credentials" || account?.provider === "impersonation") {
+        return true;
+      }
+
+      // 1. Check if user exists in DB
+      if (!user.email) return false;
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      // 2. If user exists, verify they are allowed to sign in
+      if (existingUser) {
+        // Enforce status check (e.g. not blocked)
+        if (existingUser.status !== "ACTIVE") {
+          return false;
+        }
+        return true; // Allow sign in (NextAuth will link account if enabled)
+      }
+
+      // 3. User does NOT exist in DB completely (new Google sign in).
+      // Check if they have a valid INVITE.
+      const existingInvite = await prisma.invite.findFirst({
+        where: {
+          email: user.email,
+          status: { in: ["SENT", "QUEUED", "SENDING"] }, // Allow pending statuses
+          expires_at: { gt: new Date() },
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      if (existingInvite) {
+        // 4. Provision the user from the invite
+        const firstName = profile?.name ? profile.name.split(" ")[0] : "User";
+        const lastName = profile?.name ? (profile.name.split(" ").slice(1).join(" ") || "") : "";
+
+        try {
+          await prisma.$transaction(async (tx) => {
+            // Create User
+            const newUser = await tx.user.create({
+              data: {
+                email: existingInvite.email,
+                role: existingInvite.role,
+                institution_id: existingInvite.institution_id,
+                default_province: existingInvite.default_province,
+                first_name: firstName,
+                last_name: lastName,
+                status: "ACTIVE",
+                onboarding_completed: false, // Force onboarding
+                emailVerified: new Date(),
+                image: user.image,
+              },
+            });
+
+            // Update Invite status
+            await tx.invite.update({
+              where: { invite_id: existingInvite.invite_id },
+              data: {
+                status: "ACCEPTED",
+                accepted_at: new Date(),
+              },
+            });
+
+            // If institution staff/admin, link user to institution in UserInstitution table
+            if (existingInvite.institution_id) {
+              await tx.userInstitution.create({
+                data: {
+                  user_id: newUser.user_id,
+                  institution_id: existingInvite.institution_id,
+                  role: existingInvite.role === "INSTITUTION_ADMIN" ? "ADMIN" : "STAFF",
+                  is_primary: true,
+                },
+              });
+            }
+          });
+
+          return true; // proceed
+        } catch (err) {
+          console.error("Failed to provision user from invite via Google:", err);
+          return false;
+        }
+      }
+
+      // 5. No user, No invite -> DENY
+      return false;
+    },
     async jwt({ token, user, trigger, session: sessionData }) {
       if (user) {
         // Initial login - set user data

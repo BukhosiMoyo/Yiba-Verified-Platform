@@ -418,9 +418,16 @@ model Readiness {
   curriculum_alignment_confirmed        Boolean?
 
   // Qualification Registry link (optional; legacy records have scalars only)
+  // Qualification Registry link (optional; legacy records have scalars only)
   qualification_registry_id String?
   qualification_registry    QualificationRegistry? @relation(fields: [qualification_registry_id], references: [id])
-  qualification_snapshot    Json? // Set at submission time to preserve submitted data
+
+  // NEW: Linked to the consolidated Qualification model
+  qualification_id String?
+  qualification    Qualification? @relation(fields: [qualification_id], references: [qualification_id])
+
+  qualification_snapshot      Json? // Set at submission time to preserve submitted data (legacy)
+  qualification_snapshot_json Json? // New snapshot field for consolidated model
 
   // Relations
   documents      Document[]               @relation("DocumentReadiness")
@@ -434,6 +441,7 @@ model Readiness {
   @@index([saqa_id])
   @@index([readiness_status])
   @@index([qualification_registry_id])
+  @@index([qualification_id])
 }
 
 model Learner {
@@ -481,15 +489,45 @@ model Learner {
 }
 
 model Qualification {
-  qualification_id String      @id @default(uuid())
+  qualification_id String              @id @default(uuid())
   name             String
-  code             String?
-  created_at       DateTime    @default(now())
-  updated_at       DateTime    @updatedAt
-  deleted_at       DateTime?
+  code             String              @unique
+  type             QualificationType   @default(OTHER)
+  nqf_level        Int                 @default(1) // 1-10
+  status           QualificationStatus @default(DRAFT)
+  summary          String? // 200-300 chars, nullable for backfill compatibility
+
+  // Study Details
+  study_mode     StudyMode    @default(ON_SITE)
+  duration_value Int          @default(12)
+  duration_unit  DurationUnit @default(MONTHS)
+
+  // Optional / Recommended
+  credits              Int?
+  regulatory_body      RegulatoryBody?
+  seta                 String?
+  entry_requirements   String?         @db.Text
+  assessment_type      AssessmentType?
+  workplace_required   Boolean         @default(false)
+  workplace_hours      Int?
+  language_of_delivery String?
+  career_outcomes      String[]
+  modules              String[]
+
+  // Merged fields from QualificationRegistry
+  saqa_id         String? @unique
+  curriculum_code String? @unique
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
   enrolments       Enrolment[]
+  readinessRecords Readiness[]
 
   @@index([code])
+  @@index([status])
+  @@index([saqa_id])
 }
 
 /// Canonical qualification list (SAQA/NQF/curriculum) — single source of truth for Form 5 readiness.
@@ -604,6 +642,50 @@ enum AttendanceStatus {
   ABSENT
   EXCUSED
   LATE
+}
+
+enum QualificationType {
+  OCCUPATIONAL_CERTIFICATE
+  SKILL_PROGRAMME
+  LEARNERSHIP
+  APPRENTICESHIP
+  UNIT_STANDARD
+  SHORT_COURSE
+  OTHER
+}
+
+enum QualificationStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  INACTIVE // Legacy
+  RETIRED // Legacy
+}
+
+enum StudyMode {
+  ON_SITE
+  ONLINE
+  HYBRID
+}
+
+enum DurationUnit {
+  WEEKS
+  MONTHS
+  YEARS
+}
+
+enum RegulatoryBody {
+  QCTO
+  SETA
+  DHET
+  OTHER
+}
+
+enum AssessmentType {
+  EXAM
+  PRACTICAL
+  PORTFOLIO
+  MIXED
 }
 
 /// Sick note for an excused/absent record. Reason required; document (e.g. medical certificate) optional.
@@ -1384,13 +1466,6 @@ enum ReadinessStatus {
   REVIEWED
   RECOMMENDED
   REJECTED
-}
-
-enum QualificationStatus {
-  ACTIVE
-  INACTIVE
-  RETIRED
-  DRAFT
 }
 
 enum AliasSource {
@@ -2291,8 +2366,8 @@ model Notification {
 
   action_link String? // Optional direct link
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
   // Relations

@@ -85,6 +85,15 @@ export async function GET(request: NextRequest) {
       deleted_at: null, // Only non-deleted qualifications
     };
 
+    // Filters
+    const type = searchParams.get("type");
+    const status = searchParams.get("status");
+    const nqfLevel = searchParams.get("nqf_level");
+
+    if (type) where.type = type;
+    if (status) where.status = status;
+    if (nqfLevel) where.nqf_level = parseInt(nqfLevel, 10);
+
     // Add search filter if provided
     if (searchQuery.trim()) {
       where.OR = [
@@ -99,13 +108,6 @@ export async function GET(request: NextRequest) {
     // Query qualifications
     const qualifications = await prisma.qualification.findMany({
       where,
-      select: {
-        qualification_id: true,
-        name: true,
-        code: true,
-        created_at: true,
-        updated_at: true,
-      },
       orderBy: {
         created_at: "desc", // Newest first
       },
@@ -129,7 +131,7 @@ export async function GET(request: NextRequest) {
  * 
  * RBAC: Only PLATFORM_ADMIN can access this endpoint.
  * 
- * Body: { "name": string, "code"?: string }
+ * Body: { name, code, type, nqf_level, status, summary, study_mode, duration_value, duration_unit, ... }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -145,31 +147,43 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, code } = body;
+    const {
+      name, code, type, nqf_level, status, summary,
+      study_mode, duration_value, duration_unit,
+      credits, regulatory_body, seta, entry_requirements, assessment_type,
+      workplace_required, workplace_hours, language_of_delivery, career_outcomes, modules
+    } = body;
 
     // Validate required fields
     if (!name || typeof name !== "string" || name.trim().length === 0) {
-      throw new AppError(
-        ERROR_CODES.VALIDATION_ERROR,
-        "Name is required and must be a non-empty string",
-        400
-      );
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Name is required", 400);
+    }
+    if (!code || typeof code !== "string" || code.trim().length === 0) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Code is required", 400);
+    }
+    if (nqf_level && (nqf_level < 1 || nqf_level > 10)) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "NQF Level must be between 1 and 10", 400);
+    }
+    if (duration_value && duration_value <= 0) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Duration value must be positive", 400);
     }
 
-    // Check for duplicate name (case-insensitive)
+    // Check for duplicate name or code (case-insensitive)
     const existing = await prisma.qualification.findFirst({
       where: {
-        name: { equals: name.trim(), mode: "insensitive" },
+        OR: [
+          { name: { equals: name.trim(), mode: "insensitive" } },
+          { code: { equals: code.trim(), mode: "insensitive" } }
+        ],
         deleted_at: null,
       },
     });
 
     if (existing) {
-      throw new AppError(
-        ERROR_CODES.VALIDATION_ERROR,
-        "A qualification with this name already exists",
-        409
-      );
+      if (existing.name.toLowerCase() === name.trim().toLowerCase()) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "A qualification with this name already exists", 409);
+      }
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "A qualification with this code already exists", 409);
     }
 
     // Create qualification with audit
@@ -183,14 +197,24 @@ export async function POST(request: NextRequest) {
         tx.qualification.create({
           data: {
             name: name.trim(),
-            code: code ? code.trim() : null,
-          },
-          select: {
-            qualification_id: true,
-            name: true,
-            code: true,
-            created_at: true,
-            updated_at: true,
+            code: code.trim().toUpperCase(),
+            type: type || "OTHER",
+            nqf_level: nqf_level || 1,
+            status: status || "DRAFT",
+            summary: summary || "",
+            study_mode: study_mode || "ON_SITE",
+            duration_value: duration_value || 12,
+            duration_unit: duration_unit || "MONTHS",
+            credits,
+            regulatory_body,
+            seta,
+            entry_requirements,
+            assessment_type,
+            workplace_required: workplace_required || false,
+            workplace_hours,
+            language_of_delivery,
+            career_outcomes: Array.isArray(career_outcomes) ? career_outcomes : [],
+            modules: Array.isArray(modules) ? modules : [],
           },
         }),
     });

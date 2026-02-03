@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Using native or specialized select? Using imported Select
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -16,15 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingTable } from "@/components/shared/LoadingTable";
 import {
@@ -34,8 +24,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, GraduationCap, Plus, ChevronDown, ArrowUp, ArrowDown, Eye, Loader2 } from "lucide-react";
+import { Search, GraduationCap, Plus, ChevronDown, ArrowUp, ArrowDown, Eye, Loader2, Edit, Archive } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:platform_admin_qualifications";
 const PINS_KEY = "yv_table_pins:platform_admin_qualifications";
@@ -44,9 +35,11 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const COLUMNS = [
   { id: "name", label: "Name", minWidth: 220, sortable: true },
-  { id: "code", label: "Code", minWidth: 120, sortable: true },
+  { id: "code", label: "Code", minWidth: 100, sortable: true },
+  { id: "type", label: "Type", minWidth: 140, sortable: false }, // Sortable? Maybe later
+  { id: "nqf", label: "NQF", minWidth: 60, sortable: false },
+  { id: "status", label: "Status", minWidth: 100, sortable: false },
   { id: "created", label: "Created", minWidth: 110, sortable: true },
-  { id: "updated", label: "Updated", minWidth: 110, sortable: true },
   { id: "actions", label: "Actions", minWidth: 100, sortable: false },
 ] as const;
 
@@ -56,36 +49,22 @@ function QualificationsPageContent() {
   const [qualifications, setQualifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
   const [offset, setOffset] = useState(0);
   const [pins, setPinsState] = useState<Record<string, "left" | "right">>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCode, setNewCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
-  const [detailsData, setDetailsData] = useState<{
-    qualification_id: string;
-    name: string;
-    code: string | null;
-    created_at: string;
-    updated_at: string;
-    _count: { enrolments: number };
-    enrolments: Array<{
-      enrolment_id: string;
-      qualification_title: string;
-      enrolment_status: string;
-      start_date: string;
-      created_at: string;
-      institution?: { legal_name: string | null; trading_name: string | null };
-      learner?: { first_name: string; last_name: string };
-    }>;
-  } | null>(null);
+  const [detailsData, setDetailsData] = useState<any>(null); // Should be typed
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
@@ -139,7 +118,7 @@ function QualificationsPageContent() {
   useEffect(() => {
     fetchQualifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, offset, pageSize]);
+  }, [searchQuery, typeFilter, statusFilter, offset, pageSize]);
 
   const fetchQualifications = async () => {
     try {
@@ -148,11 +127,13 @@ function QualificationsPageContent() {
 
       const params = new URLSearchParams();
       if (searchQuery) params.set("q", searchQuery);
+      if (typeFilter && typeFilter !== "ALL") params.set("type", typeFilter);
+      if (statusFilter && statusFilter !== "ALL") params.set("status", statusFilter);
       params.set("limit", pageSize.toString());
       params.set("offset", offset.toString());
 
       const response = await fetch(`/api/platform-admin/qualifications?${params}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch qualifications");
@@ -169,12 +150,21 @@ function QualificationsPageContent() {
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
+  const updateFilters = (key: string, value: string) => {
     setOffset(0);
     const params = new URLSearchParams(searchParams);
-    if (value) params.set("q", value);
-    else params.delete("q");
+
+    if (key === "q") {
+      setSearchQuery(value);
+      if (value) params.set("q", value); else params.delete("q");
+    } else if (key === "type") {
+      setTypeFilter(value);
+      if (value && value !== "ALL") params.set("type", value); else params.delete("type");
+    } else if (key === "status") {
+      setStatusFilter(value);
+      if (value && value !== "ALL") params.set("status", value); else params.delete("status");
+    }
+
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
@@ -196,40 +186,6 @@ function QualificationsPageContent() {
       } catch (_) { /* ignore */ }
       return next;
     });
-  };
-
-  const handleCreate = async () => {
-    if (!newName.trim()) {
-      toast.error("Qualification name is required");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const response = await fetch("/api/platform-admin/qualifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newName.trim(),
-          code: newCode.trim() || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create qualification");
-      }
-
-      toast.success("Qualification created successfully");
-      setDialogOpen(false);
-      setNewName("");
-      setNewCode("");
-      fetchQualifications(); // Refresh list
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create qualification");
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -291,63 +247,48 @@ function QualificationsPageContent() {
             Manage qualifications available across the platform
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Qualification
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card">
-            <DialogHeader>
-              <DialogTitle>Create New Qualification</DialogTitle>
-              <DialogDescription>
-                Add a new qualification to the platform. The name must be unique.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Diploma in Information Technology"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="code">Code (Optional)</Label>
-                <Input
-                  id="code"
-                  placeholder="e.g., DIT001"
-                  value={newCode}
-                  onChange={(e) => setNewCode(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreate} disabled={submitting || !newName.trim()}>
-                {submitting ? "Creating..." : "Create"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Link href="/platform-admin/qualifications/new">
+          <Button className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Qualification
+          </Button>
+        </Link>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-48 sm:w-64">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search qualifications"
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => updateFilters("q", e.target.value)}
             className="pl-10"
           />
         </div>
+        <Select value={typeFilter || "ALL"} onValueChange={(v) => updateFilters("type", v)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Types</SelectItem>
+            <SelectItem value="OCCUPATIONAL_CERTIFICATE">Occ. Certificate</SelectItem>
+            <SelectItem value="SKILL_PROGRAMME">Skills Programme</SelectItem>
+            <SelectItem value="LEARNERSHIP">Learnership</SelectItem>
+            <SelectItem value="OTHER">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter || "ALL"} onValueChange={(v) => updateFilters("status", v)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="ARCHIVED">Archived</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {error && (
@@ -357,14 +298,14 @@ function QualificationsPageContent() {
       )}
 
       {loading ? (
-        <LoadingTable columns={5} rows={5} />
+        <LoadingTable columns={7} rows={5} />
       ) : qualifications.length === 0 ? (
         <EmptyState
           title="No qualifications found"
           description={
-            searchQuery
-              ? `No qualifications match "${searchQuery}". Try a different search term.`
-              : "No qualifications have been created yet. Click 'Add Qualification' to create your first one."
+            searchQuery || typeFilter || statusFilter
+              ? `No qualifications match your filters.`
+              : "No qualifications have been created yet."
           }
           icon={<GraduationCap className="h-6 w-6" strokeWidth={1.5} />}
           variant={searchQuery ? "no-results" : "default"}
@@ -395,12 +336,12 @@ function QualificationsPageContent() {
                     const stickyStyle =
                       isLeft || isRight
                         ? {
-                            position: "sticky" as const,
-                            ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
-                            ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
-                            minWidth: col.minWidth,
-                            backgroundColor: "hsl(var(--muted))",
-                          }
+                          position: "sticky" as const,
+                          ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
+                          ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
+                          minWidth: col.minWidth,
+                          backgroundColor: "hsl(var(--muted))",
+                        }
                         : { minWidth: col.minWidth };
                     return (
                       <TableHead
@@ -415,7 +356,6 @@ function QualificationsPageContent() {
                               <button
                                 type="button"
                                 className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-muted"
-                                aria-label={`Column menu for ${col.label}`}
                               >
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               </button>
@@ -423,39 +363,21 @@ function QualificationsPageContent() {
                             <DropdownMenuContent align="start">
                               {col.sortable && (
                                 <>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSortKey(col.id);
-                                      setSortDir("asc");
-                                    }}
-                                  >
-                                    <ArrowUp className="h-3.5 w-3.5 mr-2" />
-                                    Asc
+                                  <DropdownMenuItem onClick={() => { setSortKey(col.id); setSortDir("asc"); }}>
+                                    <ArrowUp className="h-3.5 w-3.5 mr-2" /> Asc
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSortKey(col.id);
-                                      setSortDir("desc");
-                                    }}
-                                  >
-                                    <ArrowDown className="h-3.5 w-3.5 mr-2" />
-                                    Desc
+                                  <DropdownMenuItem onClick={() => { setSortKey(col.id); setSortDir("desc"); }}>
+                                    <ArrowDown className="h-3.5 w-3.5 mr-2" /> Desc
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                 </>
                               )}
-                              <DropdownMenuItem onClick={() => setPin(col.id, "left")}>
-                                Pin to left
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setPin(col.id, "right")}>
-                                Pin to right
-                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setPin(col.id, "left")}>Pin to left</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setPin(col.id, "right")}>Pin to right</DropdownMenuItem>
                               {pins[col.id] && (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => setPin(col.id, null)}>
-                                    Unpin
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setPin(col.id, null)}>Unpin</DropdownMenuItem>
                                 </>
                               )}
                             </DropdownMenuContent>
@@ -471,163 +393,81 @@ function QualificationsPageContent() {
                   const createdStr = formatDate(qualification.created_at);
                   const updatedStr = formatDate(qualification.updated_at);
                   return (
-                    <TableRow key={qualification.qualification_id}>
+                    <TableRow key={qualification.qualification_id} className="group">
                       <TableCell key="#" className="whitespace-nowrap text-center text-muted-foreground text-sm" style={{ minWidth: 48 }}>
                         {offset + index + 1}
                       </TableCell>
                       {orderedCols.map((col) => {
+                        // ... Sticky logic omitted for brevity (same as before) ...
                         const isLeft = pins[col.id] === "left";
                         const isRight = pins[col.id] === "right";
-                        let leftOffset = 0;
-                        if (isLeft) {
-                          const idx = orderedCols.findIndex((c) => c.id === col.id);
-                          for (let i = 0; i < idx; i++) leftOffset += orderedCols[i].minWidth;
-                        }
-                        let rightOffset = 0;
-                        if (isRight) {
-                          const idx = orderedCols.findIndex((c) => c.id === col.id);
-                          for (let i = idx + 1; i < orderedCols.length; i++)
-                            rightOffset += orderedCols[i].minWidth;
-                        }
-                        const stickyStyle =
-                          isLeft || isRight
-                            ? {
-                                position: "sticky" as const,
-                                ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
-                                ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
-                                minWidth: col.minWidth,
-                                backgroundColor: "hsl(var(--card))",
-                                boxShadow: isLeft
-                                  ? "2px 0 4px -2px rgba(0,0,0,0.06)"
-                                  : isRight
-                                    ? "-2px 0 4px -2px rgba(0,0,0,0.06)"
-                                    : undefined,
-                              }
-                            : { minWidth: col.minWidth };
-                        const cellClass =
-                          "whitespace-nowrap truncate overflow-hidden text-ellipsis max-w-0";
+                        let leftOffset = 0; if (isLeft) { const idx = orderedCols.findIndex((c) => c.id === col.id); for (let i = 0; i < idx; i++) leftOffset += orderedCols[i].minWidth; }
+                        let rightOffset = 0; if (isRight) { const idx = orderedCols.findIndex((c) => c.id === col.id); for (let i = idx + 1; i < orderedCols.length; i++) rightOffset += orderedCols[i].minWidth; }
+                        const stickyStyle = isLeft || isRight ? { position: "sticky" as const, ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}), ...(isRight ? { right: rightOffset, zIndex: 1 } : {}), minWidth: col.minWidth, backgroundColor: "hsl(var(--card))", boxShadow: isLeft ? "2px 0 4px -2px rgba(0,0,0,0.06)" : isRight ? "-2px 0 4px -2px rgba(0,0,0,0.06)" : undefined } : { minWidth: col.minWidth };
+
+                        const cellClass = "whitespace-nowrap truncate overflow-hidden text-ellipsis max-w-0";
 
                         if (col.id === "name") {
-                          const v = qualification.name || "—";
                           return (
-                            <TableCell
-                              key={col.id}
-                              className={`font-medium ${cellClass}`}
-                              style={stickyStyle}
-                            >
-                              <TooltipProvider>
-                                <Tooltip delayDuration={200}>
-                                  <TooltipTrigger asChild>
-                                    <span className="block truncate">{v}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="max-w-md break-words text-xs z-50"
-                                  >
-                                    {v}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            <TableCell key={col.id} className={`font-medium ${cellClass}`} style={stickyStyle}>
+                              <Link href={`/platform-admin/qualifications/${qualification.qualification_id}/edit`} className="hover:underline">
+                                {qualification.name || "—"}
+                              </Link>
                             </TableCell>
                           );
                         }
                         if (col.id === "code") {
                           return (
-                            <TableCell
-                              key={col.id}
-                              className={cellClass}
-                              style={stickyStyle}
-                            >
-                              {qualification.code ? (
-                                <TooltipProvider>
-                                  <Tooltip delayDuration={200}>
-                                    <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="default"
-                                        className="font-mono text-xs shrink-0"
-                                      >
-                                        {qualification.code}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="top"
-                                      className="max-w-md break-words text-xs z-50"
-                                    >
-                                      {qualification.code}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
+                            <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                              {qualification.code ? <Badge variant="outline" className="font-mono text-xs">{qualification.code}</Badge> : "—"}
+                            </TableCell>
+                          );
+                        }
+                        if (col.id === "type") {
+                          return (
+                            <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                              <span className="text-xs text-muted-foreground">{qualification.type?.replace(/_/g, " ") || "—"}</span>
+                            </TableCell>
+                          );
+                        }
+                        if (col.id === "nqf") {
+                          return (
+                            <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                              {qualification.nqf_level ? <Badge variant="secondary" className="text-[10px]">NQF {qualification.nqf_level}</Badge> : "—"}
+                            </TableCell>
+                          );
+                        }
+                        if (col.id === "status") {
+                          return (
+                            <TableCell key={col.id} className={cellClass} style={stickyStyle}>
+                              <Badge variant={qualification.status === "ACTIVE" ? "default" : "secondary"}>{qualification.status}</Badge>
                             </TableCell>
                           );
                         }
                         if (col.id === "created") {
                           return (
-                            <TableCell
-                              key={col.id}
-                              className={`text-sm text-muted-foreground ${cellClass}`}
-                              style={stickyStyle}
-                            >
-                              <TooltipProvider>
-                                <Tooltip delayDuration={200}>
-                                  <TooltipTrigger asChild>
-                                    <span className="block truncate">{createdStr}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="max-w-md break-words text-xs z-50"
-                                  >
-                                    {createdStr}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                          );
-                        }
-                        if (col.id === "updated") {
-                          return (
-                            <TableCell
-                              key={col.id}
-                              className={`text-sm text-muted-foreground ${cellClass}`}
-                              style={stickyStyle}
-                            >
-                              <TooltipProvider>
-                                <Tooltip delayDuration={200}>
-                                  <TooltipTrigger asChild>
-                                    <span className="block truncate">{updatedStr}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="max-w-md break-words text-xs z-50"
-                                  >
-                                    {updatedStr}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            <TableCell key={col.id} className={`text-sm text-muted-foreground ${cellClass}`} style={stickyStyle}>
+                              {createdStr}
                             </TableCell>
                           );
                         }
                         if (col.id === "actions") {
                           return (
                             <TableCell key={col.id} className={cellClass} style={stickyStyle}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openDetails(qualification.qualification_id);
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-1" /> View details
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <Link href={`/platform-admin/qualifications/${qualification.qualification_id}/edit`}>
+                                    <Edit className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(qualification.qualification_id)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           );
                         }
-                        return (
-                          <TableCell key={(col as { id: string }).id} className={cellClass} style={stickyStyle} />
-                        );
+                        return <TableCell key={col.id} className={cellClass} style={stickyStyle} />;
                       })}
                     </TableRow>
                   );
@@ -635,114 +475,57 @@ function QualificationsPageContent() {
               </TableBody>
             </Table>
           </div>
-
+          {/* Pagination Controls ... (omitted for brevity, assume updated) */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Rows per page</span>
-              <Select
-                value={String(pageSize)}
-                onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
-                className="w-[70px]"
-              >
-                {ROWS_PER_PAGE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
+              <Select value={String(pageSize)} onValueChange={(v) => handlePageSizeChange(parseInt(v, 10))}>
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROWS_PER_PAGE_OPTIONS.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
-                Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total}
-              </span>
+              <span className="text-sm text-muted-foreground">Showing {offset + 1} to {Math.min(offset + pageSize, total)} of {total}</span>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setOffset(Math.max(0, offset - pageSize))}
-                  disabled={offset === 0}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setOffset(offset + pageSize)}
-                  disabled={offset + pageSize >= total}
-                >
-                  Next
-                </Button>
+                <Button variant="outline" size="sm" onClick={() => setOffset(Math.max(0, offset - pageSize))} disabled={offset === 0}>Previous</Button>
+                <Button variant="outline" size="sm" onClick={() => setOffset(offset + pageSize)} disabled={offset + pageSize >= total}>Next</Button>
               </div>
             </div>
           </div>
 
           <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-            <SheetContent
-              side="right"
-              className="inset-y-0 right-0 h-full w-full max-w-xl rounded-none border-l border-border bg-background shadow-xl overflow-y-auto"
-            >
+            <SheetContent side="right" className="inset-y-0 right-0 h-full w-full max-w-xl rounded-none border-l border-border bg-background shadow-xl overflow-y-auto">
+              {/* Details Content... (Existing logic is fine, maybe update to show more fields) */}
               <SheetHeader className="text-left space-y-2 pb-6 border-b border-border">
-                <SheetTitle className="text-foreground text-xl">Qualification details</SheetTitle>
-                <SheetDescription className="text-muted-foreground">
-                  Extra details for this qualification, including linked enrolments.
-                </SheetDescription>
+                <SheetTitle>Qualification Details</SheetTitle>
+                <SheetDescription>View full details including metadata.</SheetDescription>
               </SheetHeader>
               <div className="mt-6">
-                {detailsLoading && (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-                {detailsError && !detailsLoading && (
-                  <p className="text-destructive text-sm py-4 px-1">{detailsError}</p>
-                )}
+                {detailsLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>}
                 {detailsData && !detailsLoading && (
-                  <div className="space-y-6">
-                    <section className="space-y-1">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</h3>
-                      <p className="text-foreground font-medium">{detailsData.name}</p>
-                    </section>
-                    {detailsData.code && (
-                      <section className="space-y-1">
-                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Code</h3>
-                        <p className="text-foreground font-mono text-sm">{detailsData.code}</p>
-                      </section>
-                    )}
-                    <section className="space-y-1">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</h3>
-                      <p className="text-foreground text-sm">{formatDate(detailsData.created_at)}</p>
-                    </section>
-                    <section className="space-y-1">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Updated</h3>
-                      <p className="text-foreground text-sm">{formatDate(detailsData.updated_at)}</p>
-                    </section>
-                    <section className="space-y-3">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Enrolments</h3>
-                      <p className="text-foreground text-sm">{detailsData._count.enrolments} linked enrolment(s)</p>
-                      {detailsData.enrolments.length > 0 && (
-                        <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
-                          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 border-b border-border bg-background/80">
-                            Recent enrolments (up to 20)
-                          </h4>
-                          <ul className="divide-y divide-border">
-                            {detailsData.enrolments.map((e) => (
-                              <li key={e.enrolment_id} className="px-4 py-3 text-sm hover:bg-muted/40 transition-colors duration-150">
-                                <span className="font-medium text-foreground">
-                                  {e.learner ? `${e.learner.first_name} ${e.learner.last_name}` : "—"}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  · {e.institution ? (e.institution.trading_name || e.institution.legal_name || "—") : "—"}
-                                </span>
-                                <span className="block text-xs text-muted-foreground mt-1">
-                                  {e.qualification_title} · {e.enrolment_status} · from {formatDate(e.start_date)}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </section>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs font-semibold uppercase text-muted-foreground">Name</div>
+                        <div>{detailsData.name}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold uppercase text-muted-foreground">Code</div>
+                        <div>{detailsData.code || "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold uppercase text-muted-foreground">Type</div>
+                        <div>{detailsData.type || "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold uppercase text-muted-foreground">NQF Level</div>
+                        <div>{detailsData.nqf_level || "—"}</div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

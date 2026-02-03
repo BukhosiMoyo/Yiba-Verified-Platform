@@ -10,19 +10,6 @@ import type { DeliveryMode } from "@prisma/client";
  * GET /api/institutions/readiness
  * 
  * Lists readiness records for the institution.
- * 
- * Access Control:
- * - INSTITUTION_* roles: Can view their institution's readiness records
- * - PLATFORM_ADMIN: Can view all readiness records
- * - Other roles: 403 Forbidden
- * 
- * Query Parameters:
- * - qualification_id: Filter by qualification ID
- * - status: Filter by readiness status
- * - limit: Number of results (default: 50, max: 200)
- * - offset: Pagination offset (default: 0)
- * 
- * Returns: { count: number, items: Readiness[] }
  */
 export async function GET(request: NextRequest) {
   try {
@@ -53,14 +40,12 @@ export async function GET(request: NextRequest) {
       }
       where.institution_id = ctx.institutionId;
     }
-    // PLATFORM_ADMIN sees all (no institution filter)
 
     if (qualificationId) {
-      // Note: readiness doesn't have qualification_id directly, but qualification_title is stored
-      // For now, we'll filter by qualification_title or saqa_id
       where.OR = [
         { qualification_title: { contains: qualificationId, mode: "insensitive" } },
         { saqa_id: qualificationId },
+        { qualification_id: qualificationId },
       ];
     }
 
@@ -115,10 +100,10 @@ export async function GET(request: NextRequest) {
       institution_id: readiness.institution_id,
       institution: readiness.institution
         ? {
-            institution_id: readiness.institution.institution_id,
-            legal_name: readiness.institution.legal_name,
-            trading_name: readiness.institution.trading_name,
-          }
+          institution_id: readiness.institution.institution_id,
+          legal_name: readiness.institution.legal_name,
+          trading_name: readiness.institution.trading_name,
+        }
         : null,
       qualification_title: readiness.qualification_title,
       saqa_id: readiness.saqa_id,
@@ -146,7 +131,8 @@ export async function GET(request: NextRequest) {
 }
 
 interface CreateReadinessBody {
-  qualification_registry_id?: string | null;
+  qualification_id?: string | null;
+  qualification_registry_id?: string | null; // Legacy
   qualification_title?: string;
   saqa_id?: string;
   nqf_level?: number;
@@ -154,29 +140,13 @@ interface CreateReadinessBody {
   credits?: number;
   occupational_category?: string;
   delivery_mode: DeliveryMode;
-  institution_id?: string; // optional, for PLATFORM_ADMIN when creating for a specific institution
+  institution_id?: string; // optional, for PLATFORM_ADMIN
 }
 
 /**
  * POST /api/institutions/readiness
  * 
- * Creates a new readiness record.
- * 
- * Access Control:
- * - INSTITUTION_* roles: Can create readiness for their institution
- * - PLATFORM_ADMIN: Can create readiness for any institution
- * - Other roles: 403 Forbidden
- * 
- * Request Body:
- * {
- *   qualification_title: string,
- *   saqa_id: string,
- *   nqf_level?: number,
- *   curriculum_code: string,
- *   delivery_mode: DeliveryMode
- * }
- * 
- * Returns: Readiness
+ * Creates a new readiness record from a Qualification (or manual entry).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -207,9 +177,36 @@ export async function POST(request: NextRequest) {
     let nqf_level: number | null = body.nqf_level ?? null;
     let credits: number | null = body.credits ?? null;
     let occupational_category: string | null = body.occupational_category?.trim() || null;
+    let qualification_id: string | null = body.qualification_id?.trim() || null;
     let qualification_registry_id: string | null = body.qualification_registry_id?.trim() || null;
 
-    if (body.qualification_registry_id) {
+    if (qualification_id) {
+      const qual = await prisma.qualification.findUnique({
+        where: { qualification_id, deleted_at: null }, // Allow linking even if not ACTIVE? Usually ACTIVE.
+      });
+      if (!qual || (qual.status !== "ACTIVE" && qual.status !== "DRAFT")) {
+        // Allow DRAFT for testing, maybe restrict to ACTIVE in prod? 
+        // Assuming ACTIVE for now.
+        if (qual?.status !== "ACTIVE") {
+          // But wait, if they create it, it might be DRAFT. 
+          // Inst users can only see ACTIVE or their own linked ones.
+          // So they can only link from ACTIVE.
+          // If Platform Admin, maybe they can link others.
+          // Let's enforce ACTIVE unless user is PLATFORM_ADMIN.
+          if (ctx.role !== "PLATFORM_ADMIN" && qual?.status !== "ACTIVE") {
+            throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not active", 400);
+          }
+        }
+        if (!qual) throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not found", 400);
+      }
+      qualification_title = qual.name;
+      saqa_id = qual.saqa_id ?? "";
+      curriculum_code = qual.curriculum_code ?? "";
+      nqf_level = qual.nqf_level ?? nqf_level;
+      credits = qual.credits ?? credits;
+      occupational_category = qual.occupational_category?.toString() ?? occupational_category;
+    } else if (body.qualification_registry_id) {
+      // LEGACY Fallback
       const registry = await prisma.qualificationRegistry.findFirst({
         where: { id: body.qualification_registry_id, deleted_at: null, status: "ACTIVE" },
       });
@@ -222,12 +219,13 @@ export async function POST(request: NextRequest) {
       nqf_level = registry.nqf_level ?? nqf_level;
       credits = registry.credits ?? credits;
       occupational_category = registry.occupational_category ?? occupational_category;
+      qualification_registry_id = registry.id;
     } else {
       qualification_title = body.qualification_title?.trim() ?? "";
       saqa_id = body.saqa_id?.trim() ?? "";
       curriculum_code = body.curriculum_code?.trim() ?? "";
       if (!qualification_title || !saqa_id || !curriculum_code) {
-        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Missing required fields: qualification_title, saqa_id, curriculum_code (or provide qualification_registry_id)", 400);
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Missing required fields: qualification_title, saqa_id, curriculum_code", 400);
       }
     }
 
@@ -235,13 +233,16 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.readiness.findFirst({
       where: {
         institution_id: ctx.institutionId || body.institution_id || "",
-        saqa_id,
+        OR: [
+          { saqa_id },
+          ...(qualification_id ? [{ qualification_id }] : [])
+        ],
         deleted_at: null,
       },
     });
 
     if (existing) {
-      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Readiness record already exists for this SAQA ID", 409);
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Readiness record already exists for this Qualification", 409);
     }
 
     // Create readiness record
@@ -250,12 +251,13 @@ export async function POST(request: NextRequest) {
       changeType: "CREATE",
       fieldName: "readiness_id",
       institutionId: ctx.institutionId || null,
-      reason: `Create readiness record for qualification: ${qualification_title} (SAQA ID: ${saqa_id})`,
-      assertCan: async () => {},
+      reason: `Create readiness record for qualification: ${qualification_title} (SAQA: ${saqa_id})`,
+      assertCan: async () => { },
       mutation: async (tx) =>
         tx.readiness.create({
           data: {
             institution_id: ctx.institutionId || body.institution_id || "",
+            qualification_id,
             qualification_registry_id,
             qualification_title,
             saqa_id,

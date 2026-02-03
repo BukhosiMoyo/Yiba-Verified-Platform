@@ -4,23 +4,17 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingTable } from "@/components/shared/LoadingTable";
 import { Search, GraduationCap } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:institution_qualifications";
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
-
-const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
-  { value: "RETIRED", label: "Retired" },
-  { value: "DRAFT", label: "Draft" },
-];
 
 function formatStatus(status: string) {
   const map: Record<string, { label: string; className: string }> = {
@@ -32,31 +26,27 @@ function formatStatus(status: string) {
   return map[status] || { label: status, className: "bg-muted text-muted-foreground" };
 }
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-ZA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function InstitutionQualificationsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [items, setItems] = useState<Array<{
-    id: string;
+    qualification_id: string;
     name: string | null;
+    code: string | null;
     saqa_id: string | null;
     curriculum_code: string | null;
+    type: string | null;
     nqf_level: number | null;
     status: string;
     updated_at: string;
   }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "ACTIVE");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "ALL");
   const [nqfFilter, setNqfFilter] = useState(searchParams.get("nqf_level") || "");
+
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get("page") || "1", 10)));
@@ -70,16 +60,14 @@ export default function InstitutionQualificationsPage() {
           setPageSizeState(n);
         }
       }
-    } catch (_) {
-      /* ignore */
-    }
+    } catch (_) { /* ignore */ }
   }, []);
 
   useEffect(() => {
     const offset = (page - 1) * pageSize;
     const params = new URLSearchParams();
     if (searchQuery) params.set("q", searchQuery);
-    if (statusFilter) params.set("status", statusFilter);
+    if (statusFilter && statusFilter !== "ALL") params.set("status", statusFilter);
     if (nqfFilter) params.set("nqf_level", nqfFilter);
     params.set("limit", String(pageSize));
     params.set("offset", String(offset));
@@ -111,29 +99,21 @@ export default function InstitutionQualificationsPage() {
     return () => { cancelled = true; };
   }, [searchQuery, statusFilter, nqfFilter, page, pageSize]);
 
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
+  const updateFilters = (key: string, value: string) => {
     setPage(1);
     const p = new URLSearchParams(searchParams.toString());
-    if (value) p.set("q", value); else p.delete("q");
-    p.delete("page");
-    router.push(`?${p.toString()}`, { scroll: false });
-  };
 
-  const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    setPage(1);
-    const p = new URLSearchParams(searchParams.toString());
-    if (value) p.set("status", value); else p.delete("status");
-    p.delete("page");
-    router.push(`?${p.toString()}`, { scroll: false });
-  };
+    if (key === "q") {
+      setSearchQuery(value);
+      if (value) p.set("q", value); else p.delete("q");
+    } else if (key === "status") {
+      setStatusFilter(value);
+      if (value && value !== "ALL") p.set("status", value); else p.delete("status");
+    } else if (key === "nqf_level") {
+      setNqfFilter(value);
+      if (value) p.set("nqf_level", value); else p.delete("nqf_level");
+    }
 
-  const handleNqfChange = (value: string) => {
-    setNqfFilter(value);
-    setPage(1);
-    const p = new URLSearchParams(searchParams.toString());
-    if (value) p.set("nqf_level", value); else p.delete("nqf_level");
     p.delete("page");
     router.push(`?${p.toString()}`, { scroll: false });
   };
@@ -143,9 +123,7 @@ export default function InstitutionQualificationsPage() {
     setPage(1);
     try {
       localStorage.setItem(PAGE_SIZE_KEY, String(size));
-    } catch (_) {
-      /* ignore */
-    }
+    } catch (_) { /* ignore */ }
     const p = new URLSearchParams(searchParams.toString());
     p.delete("page");
     router.push(`?${p.toString()}`, { scroll: false });
@@ -158,55 +136,45 @@ export default function InstitutionQualificationsPage() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Qualifications</h1>
         <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-          Browse the qualification registry (SAQA / curriculum / NQF). Select a row to view details.
+          Browse available qualifications. Click to view details and apply to offer them.
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-48 sm:w-64">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search name, SAQA ID, curriculum code"
+            placeholder="Search name or code"
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => updateFilters("q", e.target.value)}
             className="pl-10"
           />
         </div>
-        <Select
-          value={statusFilter}
-          onChange={(e) => handleStatusChange(e.target.value)}
-          className="w-[140px]"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value || "_"} value={o.value}>
-              {o.label}
-            </option>
-          ))}
+        <Select value={statusFilter} onValueChange={(v) => updateFilters("status", v)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="INACTIVE">Inactive</SelectItem>
+            <SelectItem value="RETIRED">Retired</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+          </SelectContent>
         </Select>
         <Input
-          placeholder="NQF level"
+          placeholder="NQF Lvl"
           className="w-24"
+          type="number"
+          min={1}
+          max={10}
           value={nqfFilter}
-          onChange={(e) => handleNqfChange(e.target.value)}
+          onChange={(e) => updateFilters("nqf_level", e.target.value)}
         />
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-sm text-muted-foreground">Per page</span>
-          <Select
-            value={String(pageSize)}
-            onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
-            className="w-[80px]"
-          >
-            {ROWS_PER_PAGE_OPTIONS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </Select>
-        </div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
+        <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>
       )}
 
       {loading ? (
@@ -215,25 +183,24 @@ export default function InstitutionQualificationsPage() {
         <EmptyState
           title="No qualifications found"
           description={
-            searchQuery || statusFilter || nqfFilter
+            searchQuery || statusFilter !== "ALL" || nqfFilter
               ? "Try adjusting filters."
-              : "No qualifications match the current filters."
+              : "No qualifications match your criteria."
           }
           icon={<GraduationCap className="h-6 w-6" strokeWidth={1.5} />}
-          variant={searchQuery || statusFilter || nqfFilter ? "no-results" : "default"}
+          variant={searchQuery ? "no-results" : "default"}
         />
       ) : (
         <>
-          <div className="rounded-xl border border-border overflow-x-auto bg-card">
+          <div className="rounded-xl border border-border overflow-x-auto bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Qualification</TableHead>
-                  <TableHead className="min-w-[100px]">SAQA ID</TableHead>
-                  <TableHead className="min-w-[120px]">Curriculum code</TableHead>
+                  <TableHead className="min-w-[220px]">Qualification</TableHead>
+                  <TableHead className="min-w-[100px]">Code</TableHead>
+                  <TableHead className="min-w-[140px]">Type</TableHead>
                   <TableHead className="min-w-[70px]">NQF</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="min-w-[110px]">Updated</TableHead>
+                  <TableHead className="min-w-[100px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -241,23 +208,26 @@ export default function InstitutionQualificationsPage() {
                   const statusBadge = formatStatus(row.status);
                   return (
                     <TableRow
-                      key={row.id}
-                      className="hover:bg-muted/50 cursor-pointer"
-                      onClick={() => router.push(`/institution/qualifications/${row.id}`)}
+                      key={row.qualification_id}
+                      className="hover:bg-muted/50 cursor-pointer group"
+                      onClick={() => router.push(`/institution/qualifications/${row.qualification_id}`)}
                     >
                       <TableCell className="font-medium">
-                        <span className="block truncate max-w-[240px]">{row.name ?? "—"}</span>
+                        <span className="block truncate max-w-[280px]" title={row.name || ""}>{row.name || "—"}</span>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">{row.saqa_id ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-sm">{row.curriculum_code ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {row.code ? <Badge variant="outline">{row.code}</Badge> : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {row.type?.replace(/_/g, " ") || "—"}
+                      </TableCell>
                       <TableCell>
-                        {row.nqf_level != null ? `NQF ${row.nqf_level}` : "—"}
+                        {row.nqf_level != null ? <Badge variant="secondary" className="text-[10px]">Lvl {row.nqf_level}</Badge> : "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusBadge.className}>{statusBadge.label}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(row.updated_at)}
+                        <Button variant="ghost" size="sm" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link href={`/institution/qualifications/${row.qualification_id}`}>View</Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -267,14 +237,14 @@ export default function InstitutionQualificationsPage() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
               <p className="text-sm text-muted-foreground">
                 Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
               </p>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={page <= 1}
                   onClick={() => {
                     setPage((p) => Math.max(1, p - 1));
@@ -284,13 +254,24 @@ export default function InstitutionQualificationsPage() {
                   }}
                 >
                   Previous
-                </button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Page {page} of {totalPages}</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => handlePageSizeChange(parseInt(v, 10))}
+                  >
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROWS_PER_PAGE_OPTIONS.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={page >= totalPages}
                   onClick={() => {
                     setPage((p) => Math.min(totalPages, p + 1));
@@ -300,7 +281,7 @@ export default function InstitutionQualificationsPage() {
                   }}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}

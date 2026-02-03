@@ -9,19 +9,6 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
 
 const ALLOWED_ROLES = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "PLATFORM_ADMIN"] as const;
 
-const SAFE_SELECT = {
-  id: true,
-  name: true,
-  status: true,
-  saqa_id: true,
-  curriculum_code: true,
-  nqf_level: true,
-  credits: true,
-  occupational_category: true,
-  description: true,
-  updated_at: true,
-} as const;
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ qualificationId: string }> }
@@ -49,9 +36,26 @@ export async function GET(
       );
     }
 
-    const item = await prisma.qualificationRegistry.findFirst({
-      where: { id: qualificationId, deleted_at: null },
-      select: SAFE_SELECT,
+    const item = await prisma.qualification.findUnique({
+      where: { qualification_id: qualificationId, deleted_at: null },
+      select: {
+        qualification_id: true,
+        name: true,
+        code: true,
+        type: true,
+        nqf_level: true,
+        status: true,
+        saqa_id: true,
+        curriculum_code: true,
+        credits: true,
+        occupational_category: true,
+        summary: true,
+        entry_requirements: true,
+        modules: true,
+        career_outcomes: true,
+        updated_at: true,
+        // Add more fields if needed for details view
+      },
     });
 
     if (!item) {
@@ -61,11 +65,15 @@ export async function GET(
     // Institution roles: ACTIVE and DRAFT always; other statuses only if linked to their readiness
     if (ctx.role === "INSTITUTION_ADMIN" || ctx.role === "INSTITUTION_STAFF") {
       const institutionId = ctx.institutionId!;
+      // DRAFT? Probably redundant if only ACTIVE is usually visible, but schema supports DRAFT visibility if they created it?
+      // Actually Qualification is Platform-Admin managed usually.
+      // But if status is ACTIVE, they can see it.
+      // If status is NOT ACTIVE (e.g. RETIRED), they can see ONLY if linked.
       if (item.status !== "ACTIVE" && item.status !== "DRAFT") {
         const linked = await prisma.readiness.count({
           where: {
             institution_id: institutionId,
-            qualification_registry_id: qualificationId,
+            qualification_id: qualificationId,
             deleted_at: null,
           },
         });
