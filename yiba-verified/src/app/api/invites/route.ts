@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           400
         );
       }
-      
+
       // Validate province for QCTO roles that require it
       const qctoRolesRequiringProvince = ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"];
       if (qctoRolesRequiringProvince.includes(role) && !default_province) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           400
         );
       }
-      
+
       // Validate province is valid if provided
       if (default_province) {
         const { PROVINCES } = await import("@/lib/provinces");
@@ -195,9 +195,52 @@ export async function POST(request: NextRequest) {
       return createdInvite;
     });
 
-    // Generate invite link (in production, this would be sent via email)
+    // Generate invite link
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const inviteLink = `${baseUrl}/invite?token=${rawToken}`;
+
+    // Send email immediately
+    try {
+      const { getEmailService } = await import("@/lib/email");
+      const { EmailType } = await import("@/lib/email/types");
+      const emailService = getEmailService();
+
+      // Generate simplified HTML locally or delegate to a template helper
+      // Ideally we use a helper, but for now let's inline a simple one or check for existing helpers.
+      // We know campaign-sender uses it.
+      const htmlBody = `
+            <h2>Welcome to Yiba Verified</h2>
+            <p>You have been invited to join Yiba Verified as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
+            <p>Click the button below to accept your invitation and set up your account:</p>
+            <p>
+                <a href="${inviteLink}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Accept Invitation</a>
+            </p>
+            <p>Or paste this link in your browser: <br/> ${inviteLink}</p>
+            <p>This link expires in 7 days.</p>
+        `;
+
+      await emailService.send({
+        to: email,
+        type: EmailType.INVITE,
+        subject: "You've been invited to Yiba Verified",
+        html: htmlBody,
+        text: `You have been invited to Yiba Verified. Click here to accept: ${inviteLink}`,
+      });
+
+      // Update status to SENT
+      await prisma.invite.update({
+        where: { invite_id: invite.invite_id },
+        data: { status: "SENT", sent_at: new Date() }
+      });
+
+      // Update return object status
+      (invite as any).status = "SENT";
+
+    } catch (emailErr) {
+      console.error("Failed to send invite email immediately:", emailErr);
+      // We don't fail the request, but we leave status as QUEUED so worker can pick it up if there is one
+      // (Audit log already created)
+    }
 
     return ok({
       ...invite,

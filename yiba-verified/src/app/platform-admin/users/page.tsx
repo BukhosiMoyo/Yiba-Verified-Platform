@@ -58,7 +58,7 @@ export default async function PlatformAdminUsersPage({
     ];
   }
 
-  const [users, total, institutions] = await Promise.all([
+  const [users, totalUsers, invites, totalInvites, institutions] = await Promise.all([
     prisma.user.findMany({
       where,
       select: {
@@ -84,6 +84,40 @@ export default async function PlatformAdminUsersPage({
       take: limit,
     }),
     prisma.user.count({ where }),
+    // Fetch pending invites (always show on first page or merge logic?)
+    // For now, let's fetch them if offset is 0 (first page) so they appear at top.
+    offset === 0 ? prisma.invite.findMany({
+      where: {
+        status: { not: "ACCEPTED" }, // Show QUEUED, SENT, FAILED, PENDING
+        ...(q ? { email: { contains: q, mode: "insensitive" } } : {}),
+        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(institutionId ? { institution_id: institutionId } : {}),
+      },
+      select: {
+        invite_id: true,
+        email: true,
+        role: true,
+        status: true,
+        created_at: true,
+        institution_id: true,
+        institution: {
+          select: {
+            institution_id: true,
+            legal_name: true,
+            trading_name: true,
+          },
+        },
+      },
+      orderBy: { created_at: "desc" }
+    }) : [],
+    prisma.invite.count({
+      where: {
+        status: { not: "ACCEPTED" },
+        ...(q ? { email: { contains: q, mode: "insensitive" } } : {}),
+        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(institutionId ? { institution_id: institutionId } : {}),
+      }
+    }),
     prisma.institution.findMany({
       where: { deleted_at: null },
       select: {
@@ -95,6 +129,24 @@ export default async function PlatformAdminUsersPage({
       take: INSTITUTIONS_LIMIT,
     }),
   ]);
+
+  // Map invites to UserRow shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inviteRows: any[] = invites.map(invite => ({
+    user_id: invite.invite_id, // Use invite_id as key
+    email: invite.email,
+    first_name: "(Invited)",
+    last_name: "",
+    role: invite.role,
+    status: invite.status === "QUEUED" ? "Queued" : (invite.status === "SENT" ? "Invited" : invite.status),
+    phone: null,
+    created_at: invite.created_at,
+    institution_id: invite.institution_id,
+    institution: invite.institution,
+  }));
+
+  const allRows = [...inviteRows, ...users];
+  const total = totalUsers + totalInvites;
 
   return (
     <div className="space-y-6 p-4 md:p-8">
@@ -109,7 +161,7 @@ export default async function PlatformAdminUsersPage({
 
       <Suspense fallback={<LoadingTable columns={9} rows={5} />}>
         <UsersTableClient
-          users={users}
+          users={allRows}
           total={total}
           institutions={institutions}
           initialQ={q}

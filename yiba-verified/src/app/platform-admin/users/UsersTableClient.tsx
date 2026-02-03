@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
@@ -380,28 +381,64 @@ export function UsersTableClient({
       toast.error("Province is required for this role");
       return;
     }
+
+    // Parse emails
+    const rawEmails = addUserFormData.email;
+    const emails = rawEmails
+      .split(/[\n,;]+/) // Split by newline, comma, or semicolon
+      .map(e => e.trim())
+      .filter(e => e.length > 0 && e.includes("@")); // Basic filter
+
+    if (emails.length === 0) {
+      toast.error("Please enter at least one valid email address");
+      return;
+    }
+
     try {
       setAddUserLoading(true);
-      const res = await fetch("/api/invites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: addUserFormData.email.trim(),
-          role: addUserFormData.role,
-          institution_id: addUserFormData.institution_id || null,
-          default_province: addUserFormData.default_province || null,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create invite");
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Loop and send invites sequentially (or parallelLimit)
+      for (const email of emails) {
+        try {
+          const res = await fetch("/api/invites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email,
+              role: addUserFormData.role,
+              institution_id: addUserFormData.institution_id || null,
+              default_province: addUserFormData.default_province || null,
+            }),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Failed");
+          }
+          successCount++;
+        } catch (err) {
+          failCount++;
+          errors.push(`${email}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
       }
-      toast.success(`Invite sent to ${addUserFormData.email.trim()}`);
+
+      if (successCount > 0) {
+        toast.success(`Sent ${successCount} invite${successCount !== 1 ? "s" : ""}`);
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to send ${failCount} invite${failCount !== 1 ? "s" : ""}`);
+        console.error("Invite errors:", errors);
+      }
+
       setAddUserModalOpen(false);
       setAddUserFormData({ email: "", role: "", institution_id: "", default_province: "" });
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create invite");
+      toast.error(err instanceof Error ? err.message : "Failed to process invites");
     } finally {
       setAddUserLoading(false);
     }
@@ -576,12 +613,12 @@ export function UsersTableClient({
                     const stickyStyle =
                       isLeft || isRight
                         ? {
-                            position: "sticky" as const,
-                            ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
-                            ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
-                            minWidth: col.minWidth,
-                            backgroundColor: "rgb(249, 250, 251)",
-                          }
+                          position: "sticky" as const,
+                          ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
+                          ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
+                          minWidth: col.minWidth,
+                          backgroundColor: "rgb(249, 250, 251)",
+                        }
                         : { minWidth: col.minWidth };
                     return (
                       <TableHead key={col.id} className="whitespace-nowrap truncate" style={stickyStyle}>
@@ -632,10 +669,10 @@ export function UsersTableClient({
                   const instName = user.institution?.trading_name || user.institution?.legal_name || "";
                   const joined = user.created_at
                     ? new Date(user.created_at).toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
                     : "—";
                   const roleProps = getRoleBadgeProps(user.role);
                   const isActive = user.status === "ACTIVE";
@@ -658,17 +695,17 @@ export function UsersTableClient({
                         const stickyStyle =
                           isLeft || isRight
                             ? {
-                                position: "sticky" as const,
-                                ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
-                                ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
-                                minWidth: col.minWidth,
-                                backgroundColor: "white",
-                                boxShadow: isLeft
-                                  ? "2px 0 4px -2px rgba(0,0,0,0.06)"
-                                  : isRight
-                                    ? "-2px 0 4px -2px rgba(0,0,0,0.06)"
-                                    : undefined,
-                              }
+                              position: "sticky" as const,
+                              ...(isLeft ? { left: leftOffset, zIndex: 1 } : {}),
+                              ...(isRight ? { right: rightOffset, zIndex: 1 } : {}),
+                              minWidth: col.minWidth,
+                              backgroundColor: "white",
+                              boxShadow: isLeft
+                                ? "2px 0 4px -2px rgba(0,0,0,0.06)"
+                                : isRight
+                                  ? "-2px 0 4px -2px rgba(0,0,0,0.06)"
+                                  : undefined,
+                            }
                             : { minWidth: col.minWidth };
                         const cellClass =
                           "whitespace-nowrap truncate overflow-hidden text-ellipsis max-w-0 " +
@@ -744,15 +781,21 @@ export function UsersTableClient({
                           );
                         }
                         if (col.id === "status") {
+                          const isInvited = ["QUEUED", "SENT", "PENDING", "Invited", "Queued"].includes(user.status);
+                          let badgeVariant: "default" | "secondary" | "destructive" | "outline" | "success" = isActive ? "success" : "destructive";
+                          if (isInvited) badgeVariant = "outline";
+
                           return (
                             <TableCell key={col.id} className={cellClass} style={stickyStyle}>
                               {user.status ? (
                                 <Badge
-                                  variant={isActive ? "success" : "destructive"}
+                                  variant={badgeVariant}
                                   className="inline-flex items-center gap-1.5"
                                 >
                                   {isActive ? (
                                     <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                                  ) : isInvited ? (
+                                    <Loader2 className="h-3.5 w-3.5 shrink-0" />
                                   ) : (
                                     <XCircle className="h-3.5 w-3.5 shrink-0" />
                                   )}
@@ -993,14 +1036,14 @@ export function UsersTableClient({
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
-                <Label htmlFor="add-email">Email</Label>
-                <Input
-                  id="add-email"
-                  type="email"
+                <Label htmlFor="add-emails">Emails (one per line or comma separated)</Label>
+                <Textarea
+                  id="add-emails"
                   value={addUserFormData.email}
                   onChange={(e) => setAddUserFormData((p) => ({ ...p, email: e.target.value }))}
-                  className="mt-1"
-                  placeholder="user@example.com"
+                  className="mt-1 font-mono text-sm"
+                  placeholder="user@example.com, another@example.com"
+                  rows={4}
                   required
                 />
               </div>
@@ -1043,25 +1086,25 @@ export function UsersTableClient({
               {["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"].includes(
                 addUserFormData.role
               ) && (
-                <div>
-                  <Label htmlFor="add-province">Default province</Label>
-                  <Select
-                    id="add-province"
-                    value={addUserFormData.default_province}
-                    onChange={(e) =>
-                      setAddUserFormData((p) => ({ ...p, default_province: e.target.value }))
-                    }
-                    className="mt-1 w-full"
-                  >
-                    <option value="">Select province</option>
-                    {PROVINCES.map((pr) => (
-                      <option key={pr} value={pr}>
-                        {pr}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
+                  <div>
+                    <Label htmlFor="add-province">Default province</Label>
+                    <Select
+                      id="add-province"
+                      value={addUserFormData.default_province}
+                      onChange={(e) =>
+                        setAddUserFormData((p) => ({ ...p, default_province: e.target.value }))
+                      }
+                      className="mt-1 w-full"
+                    >
+                      <option value="">Select province</option>
+                      {PROVINCES.map((pr) => (
+                        <option key={pr} value={pr}>
+                          {pr}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAddUserModalOpen(false)}>
