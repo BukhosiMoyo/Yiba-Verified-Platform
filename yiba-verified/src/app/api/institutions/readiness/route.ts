@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
       curriculum_code = qual.curriculum_code ?? "";
       nqf_level = qual.nqf_level ?? nqf_level;
       credits = qual.credits ?? credits;
-      occupational_category = qual.occupational_category?.toString() ?? occupational_category;
+
     } else if (body.qualification_registry_id) {
       // LEGACY Fallback
       const registry = await prisma.qualificationRegistry.findFirst({
