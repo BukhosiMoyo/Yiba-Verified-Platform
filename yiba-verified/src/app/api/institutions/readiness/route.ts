@@ -184,20 +184,14 @@ export async function POST(request: NextRequest) {
       const qual = await prisma.qualification.findUnique({
         where: { qualification_id, deleted_at: null }, // Allow linking even if not ACTIVE? Usually ACTIVE.
       });
-      if (!qual || (qual.status !== "ACTIVE" && qual.status !== "DRAFT")) {
-        // Allow DRAFT for testing, maybe restrict to ACTIVE in prod? 
-        // Assuming ACTIVE for now.
-        if (qual?.status !== "ACTIVE") {
-          // But wait, if they create it, it might be DRAFT. 
-          // Inst users can only see ACTIVE or their own linked ones.
-          // So they can only link from ACTIVE.
-          // If Platform Admin, maybe they can link others.
-          // Let's enforce ACTIVE unless user is PLATFORM_ADMIN.
-          if (ctx.role !== "PLATFORM_ADMIN" && qual?.status !== "ACTIVE") {
-            throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not active", 400);
-          }
+      if (!qual) throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not found", 400);
+
+      // Allow DRAFT for testing.
+      // If status is neither ACTIVE nor DRAFT (e.g. RETIRED), allow only PLATFORM_ADMIN.
+      if (qual.status !== "ACTIVE" && qual.status !== "DRAFT") {
+        if (ctx.role !== "PLATFORM_ADMIN") {
+          throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not active", 400);
         }
-        if (!qual) throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Qualification not found", 400);
       }
       qualification_title = qual.name;
       saqa_id = qual.saqa_id ?? "";
