@@ -57,11 +57,11 @@ export default async function InstitutionLayout({
 
   // Use viewing as user's context if present, otherwise use actual user's context
   const displayRole = viewAsInfo?.viewingAsRole || role;
-  
+
   // Allow access if original role can access institution OR viewing-as role can access institution
   const originalCanAccess = role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "PLATFORM_ADMIN";
   const viewingAsCanAccess = displayRole === "INSTITUTION_ADMIN" || displayRole === "INSTITUTION_STAFF" || displayRole === "PLATFORM_ADMIN";
-  
+
   if (!originalCanAccess && !viewingAsCanAccess) {
     redirect("/unauthorized");
   }
@@ -83,7 +83,7 @@ export default async function InstitutionLayout({
   const baseNavItems = viewAsInfo?.viewingAsRole
     ? getNavigationItemsForRole(viewAsInfo.viewingAsRole)
     : getInstitutionNavItems();
-  
+
   const navigationItems = filterNavItems(displayRole, baseNavItems);
 
   // Check onboarding status for INSTITUTION_ADMIN
@@ -100,6 +100,13 @@ export default async function InstitutionLayout({
     }
   }
 
+  // Fetch user image for consistency across app
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: { image: true },
+  });
+  const userImage = user?.image || null;
+
   return (
     <InstitutionOnboardingLayoutWrapper
       withAppShell={
@@ -108,6 +115,7 @@ export default async function InstitutionLayout({
           currentUserRole={displayRole}
           userName={displayUserName}
           userId={viewAsInfo?.viewingAsUserId || session.user.userId}
+          userImage={userImage}
           viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
           viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
           viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}

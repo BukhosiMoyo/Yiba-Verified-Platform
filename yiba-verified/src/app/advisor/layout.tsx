@@ -7,6 +7,7 @@ import { getAdvisorNavItems, getNavigationItemsForRole } from "@/lib/navigation"
 import { authOptions } from "@/lib/auth";
 import { canAccessArea } from "@/lib/rbac";
 import { getViewAsUserInfo } from "@/lib/viewAsUserServer";
+import { prisma } from "@/lib/prisma";
 
 const getCachedSession = cache(async () => {
   return getServerSession(authOptions);
@@ -47,12 +48,20 @@ export default async function AdvisorLayout({
     : getAdvisorNavItems();
   const navigationItems = filterNavItems(displayRole, baseNavItems);
 
+  // Fetch user image for consistency across app
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: { image: true },
+  });
+  const userImage = user?.image || null;
+
   return (
     <AppShell
       navigationItems={navigationItems}
       currentUserRole={displayRole}
       userName={displayUserName}
       userId={viewAsInfo?.viewingAsUserId || session.user.userId}
+      userImage={userImage}
       viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
       viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
       viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}

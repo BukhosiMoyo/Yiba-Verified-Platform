@@ -59,11 +59,11 @@ export default async function QCTOLayout({
 
   // Use viewing as user's context if present, otherwise use actual user's context
   const displayRole = viewAsInfo?.viewingAsRole || role;
-  
+
   // Allow access if original role can access qcto OR viewing-as role can access qcto
   const originalCanAccess = canAccessArea(role, "qcto") || role === "PLATFORM_ADMIN";
   const viewingAsCanAccess = displayRole ? (canAccessArea(displayRole, "qcto") || displayRole === "PLATFORM_ADMIN") : false;
-  
+
   if (!originalCanAccess && !viewingAsCanAccess) {
     redirect("/unauthorized");
   }
@@ -73,11 +73,11 @@ export default async function QCTOLayout({
   // We'll handle redirects on the client side to prevent server-side redirect loops
   let onboardingCompleted = true;
   let assignedProvinces: string[] | null = null;
-  
+
   // Determine which user's data to fetch (viewing as or actual user)
   const userIdToFetch = viewAsInfo?.viewingAsUserId || session.user.userId;
   const roleToFetch = viewAsInfo?.viewingAsRole || role;
-  
+
   if (roleToFetch !== "QCTO_SUPER_ADMIN" && roleToFetch !== "PLATFORM_ADMIN") {
     // Use cached version to avoid repeated database queries
     const userData = await getCachedUserData(userIdToFetch);
@@ -91,8 +91,15 @@ export default async function QCTOLayout({
   const baseNavItems = viewAsInfo?.viewingAsRole
     ? getNavigationItemsForRole(viewAsInfo.viewingAsRole, assignedProvinces)
     : getQctoNavItems(displayRole, assignedProvinces);
-  
+
   const navigationItems = filterNavItems(displayRole, baseNavItems);
+
+  // Fetch user image for consistency across app
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: { image: true },
+  });
+  const userImage = user?.image || null;
 
   return (
     <>
@@ -102,6 +109,7 @@ export default async function QCTOLayout({
         currentUserRole={displayRole}
         userName={displayUserName}
         userId={viewAsInfo?.viewingAsUserId || session.user.userId}
+        userImage={userImage}
         viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
         viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
         viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}

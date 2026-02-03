@@ -43,7 +43,7 @@ export default async function PlatformAdminLayout({
   }
 
   const role = session.user.role;
-  
+
   // Get View As User info early to check permissions
   const userName = session.user.name || "User";
   const viewAsInfo = await getViewAsUserInfo(
@@ -51,11 +51,11 @@ export default async function PlatformAdminLayout({
     session.user.role,
     userName
   );
-  
+
   // Use viewing as user's context if present, otherwise use actual user's context
   const displayRole = viewAsInfo?.viewingAsRole || role;
   const displayUserName = viewAsInfo?.viewingAsUserName || userName;
-  
+
   // Allow access if original role is PLATFORM_ADMIN OR viewing as PLATFORM_ADMIN
   if (role !== "PLATFORM_ADMIN" && displayRole !== "PLATFORM_ADMIN") {
     redirect("/unauthorized");
@@ -67,7 +67,7 @@ export default async function PlatformAdminLayout({
   const baseNavItems = viewAsInfo?.viewingAsRole
     ? getNavigationItemsForRole(viewAsInfo.viewingAsRole)
     : getPlatformAdminNavItems();
-  
+
   const filtered = filterNavItems(displayRole, baseNavItems);
   const navigationItems = filtered;
 
@@ -85,12 +85,20 @@ export default async function PlatformAdminLayout({
     redirect("/platform-admin/onboarding");
   }
 
+  // Fetch user image for consistency across app
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: { image: true },
+  });
+  const userImage = user?.image || null;
+
   return (
     <AppShell
       navigationItems={navigationItems}
       currentUserRole={displayRole}
       userName={displayUserName}
       userId={viewAsInfo?.viewingAsUserId || session.user.userId}
+      userImage={userImage}
       viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
       viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
       viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}

@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { OnboardingLayoutWrapper } from "@/components/student/onboarding/OnboardingLayoutWrapper";
 import type { Role } from "@/lib/rbac";
 import { getViewAsUserInfo } from "@/lib/viewAsUserServer";
+import { prisma } from "@/lib/prisma";
 
 export default async function StudentLayout({
   children,
@@ -42,8 +43,15 @@ export default async function StudentLayout({
   const baseNavItems = viewAsInfo?.viewingAsRole
     ? getNavigationItemsForRole(viewAsInfo.viewingAsRole)
     : getStudentNavItems();
-  
+
   const navigationItems = filterNavItems(displayRole, baseNavItems);
+
+  // Fetch user image for consistency across app
+  const user = await prisma.user.findUnique({
+    where: { user_id: session.user.userId },
+    select: { image: true },
+  });
+  const userImage = user?.image || null;
 
   return (
     <OnboardingLayoutWrapper
@@ -53,6 +61,7 @@ export default async function StudentLayout({
           currentUserRole={displayRole}
           userName={displayUserName}
           userId={viewAsInfo?.viewingAsUserId || session.user.userId}
+          userImage={userImage}
           viewingAsUserId={viewAsInfo?.viewingAsUserId ?? null}
           viewingAsRole={viewAsInfo?.viewingAsRole ?? null}
           viewingAsUserName={viewAsInfo?.viewingAsUserName ?? null}
