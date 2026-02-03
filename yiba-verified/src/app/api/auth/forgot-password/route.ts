@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         const { getSharedEmailLayout } = require("@/lib/email/layout");
 
         // Use user's first name if available, otherwise generic
-        const firstName = user.name ? user.name.split(" ")[0] : "there";
+        const firstName = user.first_name || "there";
 
         const contentHtml = `
             <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Reset your Yiba Verified password</h1>
