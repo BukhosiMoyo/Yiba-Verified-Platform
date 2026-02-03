@@ -440,15 +440,15 @@ export function InviteReviewWizard({ token }: { token: string }) {
     return (
         <div className="w-full max-w-5xl px-4 relative flex flex-col items-center justify-center min-h-[600px] h-full">
 
-            {/* Toggle Positioned Top Right of Container */}
-            <div className="absolute -top-16 right-4 sm:right-0 z-50">
-                <ThemeToggle variant="icon" className="bg-white/10 hover:bg-white/20 text-foreground backdrop-blur-md rounded-full h-10 w-10 border border-white/20" />
+            {/* Toggle Positioned Fixed Top Right */}
+            <div className="fixed top-6 right-6 z-50">
+                <ThemeToggle variant="icon" className="bg-background/20 hover:bg-background/40 backdrop-blur-md rounded-full h-12 w-12 border border-border/20 shadow-lg" />
             </div>
 
             <div className="grid grid-cols-1 place-items-center w-full relative perspective-[1200px]">
 
-                {/* Carousel Stack Container */}
-                <div className="relative w-full max-w-[800px] aspect-[4/5] md:aspect-[16/10] max-h-[80vh] flex items-center justify-center">
+                {/* Carousel Stack Container - Increased Height */}
+                <div className="relative w-full max-w-[800px] h-[85vh] max-h-[950px] min-h-[600px] flex items-center justify-center">
 
                     {/* Progress Pills (Floating Top Center) */}
                     <div className="absolute -top-12 left-0 right-0 flex justify-center gap-2 mb-8 z-40">
@@ -456,10 +456,10 @@ export function InviteReviewWizard({ token }: { token: string }) {
                             <div
                                 key={i}
                                 className={`h-2 rounded-full transition-all duration-500 shadow-sm ${i === currentStep
-                                        ? "w-12 bg-primary ring-2 ring-primary/20"
-                                        : i < currentStep
-                                            ? "w-4 bg-primary/40"
-                                            : "w-2 bg-muted-foreground/20"
+                                    ? "w-12 bg-primary ring-2 ring-primary/20"
+                                    : i < currentStep
+                                        ? "w-4 bg-primary/40"
+                                        : "w-2 bg-muted-foreground/20"
                                     }`}
                             />
                         ))}
@@ -503,8 +503,8 @@ export function InviteReviewWizard({ token }: { token: string }) {
                             {/* Card Content Wrapper */}
                             <div className="flex-1 flex flex-col overflow-hidden relative">
 
-                                {/* Step Content */}
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12">
+                                {/* Step Content - Hidden Scrollbar */}
+                                <div className="flex-1 overflow-y-auto p-8 md:p-12 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                                     <StepContent
                                         {...steps[currentStep]}
                                         isActive={true}
@@ -572,8 +572,8 @@ export function InviteReviewWizard({ token }: { token: string }) {
                                     key={r.value}
                                     htmlFor={r.value}
                                     className={`flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all hover:bg-muted/50 ${declineReason === r.value
-                                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                            : "border-border"
+                                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                        : "border-border"
                                         }`}
                                 >
                                     <RadioItem value={r.value} id={r.value} />
