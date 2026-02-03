@@ -99,19 +99,55 @@ export class NotificationService {
 
                 if (user?.email) {
                     const queuePriority = priority === "CRITICAL" || priority === "HIGH" ? "HIGH" : "NORMAL";
+
+                    // User Request: "Make sure emails are not just being queued"
+                    // Attempt immediate send
+                    let sentImmediately = false;
+                    let errorMsg = null;
+
+                    try {
+                        const { getEmailService } = await import("@/lib/email");
+                        const { EmailType } = await import("@/lib/email/types");
+                        const emailService = getEmailService();
+
+                        const htmlBody = `<p>${message}</p>${actionLink ? `<br><a href="${actionLink}">View Details</a>` : ''}`;
+
+                        const res = await emailService.send({
+                            to: user.email,
+                            type: EmailType.NOTIFICATION,
+                            subject: title,
+                            text: message,
+                            html: htmlBody
+                        });
+
+                        if (res.success) {
+                            sentImmediately = true;
+                        } else {
+                            errorMsg = res.error;
+                        }
+
+                    } catch (e: any) {
+                        console.error("[NotificationService] Immediate send failed:", e);
+                        errorMsg = e.message;
+                    }
+
+                    // Log to DB (as SENT or PENDING if failed)
                     await prisma.emailQueue.create({
                         data: {
                             user_id: userId,
                             to_email: user.email,
                             subject: title,
                             body_text: message,
-                            // Simple HTML wrapper
                             body_html: `<p>${message}</p>${actionLink ? `<br><a href="${actionLink}">View Details</a>` : ''}`,
-                            status: "PENDING",
-                            priority: queuePriority
+                            status: sentImmediately ? "SENT" : "PENDING", // PENDING means worker will retry
+                            sent_at: sentImmediately ? new Date() : null,
+                            priority: queuePriority,
+                            error_message: errorMsg || (sentImmediately ? null : "Immediate send failed, queued for retry")
                         }
                     });
-                    result.emailQueued = true;
+
+                    result.emailQueued = !sentImmediately;
+                    if (sentImmediately) result.emailSent = true;
                 }
             }
 

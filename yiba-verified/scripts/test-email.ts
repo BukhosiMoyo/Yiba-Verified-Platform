@@ -17,7 +17,7 @@ async function testEmail() {
     console.log("📧 Testing Email Service...");
     console.log("Provider:", process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? "resend" : "console"));
 
-    const targetEmail = process.env.TEST_EMAIL || "delivered@resend.dev";
+    const targetEmail = "hello@yibaverified.co.za";
     // delivered@resend.dev always returns success in Resend test mode
 
     console.log(`Sending test email to: ${targetEmail}`);

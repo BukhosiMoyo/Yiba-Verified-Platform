@@ -36,6 +36,7 @@ export interface CreateNotificationParams {
 export interface NotificationServiceResult {
     notificationId?: string; // If in-app was created
     emailQueued?: boolean;
+    emailSent?: boolean;
     smsQueued?: boolean;
     skipped?: boolean;
     error?: any;
