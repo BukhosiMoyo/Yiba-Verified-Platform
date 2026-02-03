@@ -48,7 +48,7 @@ export async function GET(
         saqa_id: true,
         curriculum_code: true,
         credits: true,
-        occupational_category: true,
+
         summary: true,
         entry_requirements: true,
         modules: true,
