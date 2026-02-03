@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
+import { UserRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UsersTableClient } from "./UsersTableClient";
@@ -90,7 +91,7 @@ export default async function PlatformAdminUsersPage({
       where: {
         status: { not: "ACCEPTED" }, // Show QUEUED, SENT, FAILED, PENDING
         ...(q ? { email: { contains: q, mode: "insensitive" } } : {}),
-        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(roleFilter ? { role: roleFilter as UserRole } : {}),
         ...(institutionId ? { institution_id: institutionId } : {}),
       },
       select: {
@@ -114,7 +115,7 @@ export default async function PlatformAdminUsersPage({
       where: {
         status: { not: "ACCEPTED" },
         ...(q ? { email: { contains: q, mode: "insensitive" } } : {}),
-        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(roleFilter ? { role: roleFilter as UserRole } : {}),
         ...(institutionId ? { institution_id: institutionId } : {}),
       }
     }),
