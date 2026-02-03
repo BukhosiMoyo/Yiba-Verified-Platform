@@ -259,7 +259,12 @@ export class StorageService {
  * Get storage service instance from environment variables
  */
 export function getStorageService(): StorageService {
-  const provider = (process.env.STORAGE_PROVIDER || "local") as "s3" | "local";
+  let provider = (process.env.STORAGE_PROVIDER || "local") as "s3" | "local";
+
+  // Auto-detect S3 if AWS credentials are present but provider is not explicitly set
+  if (!process.env.STORAGE_PROVIDER && (process.env.AWS_S3_BUCKET_NAME || process.env.S3_BUCKET)) {
+    provider = "s3";
+  }
 
   const config: StorageConfig = {
     provider,
