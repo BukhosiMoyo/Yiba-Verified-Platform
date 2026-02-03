@@ -29,6 +29,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify requesting user actually exists in DB (handles stale sessions)
+    const requestingUser = await prisma.user.findUnique({
+      where: { user_id: ctx.userId },
+      select: { user_id: true, deleted_at: true }
+    });
+
+    if (!requestingUser || requestingUser.deleted_at) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHENTICATED,
+        "User not found or account is inactive",
+        401
+      );
+    }
+
     const body = await request.json();
     const { email, role, institution_id, default_province } = body;
 
@@ -247,6 +261,10 @@ export async function POST(request: NextRequest) {
       invite_link: inviteLink,
     });
   } catch (error) {
+    console.error("POST /api/invites failed:", error);
+    if (error instanceof Error) {
+      console.error("Stack:", error.stack);
+    }
     return fail(error);
   }
 }
