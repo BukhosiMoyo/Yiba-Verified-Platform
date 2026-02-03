@@ -159,6 +159,44 @@ const FormMessage = React.forwardRef<
 })
 FormMessage.displayName = "FormMessage"
 
+// --- Legacy Support for Manual Forms (Non-Hook-Form) ---
+
+// Standalone Error Message (doesn't rely on FormContext)
+const FormErrorMessage = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, children, ...props }, ref) => {
+  if (!children) return null;
+  return (
+    <p
+      ref={ref}
+      className={cn("text-sm font-medium text-destructive mt-1", className)}
+      {...props}
+    >
+      {children}
+    </p>
+  )
+})
+FormErrorMessage.displayName = "FormErrorMessage"
+
+// Standalone Hint (doesn't rely on FormContext)
+const FormHint = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, children, ...props }, ref) => {
+  if (!children) return null;
+  return (
+    <p
+      ref={ref}
+      className={cn("text-sm text-muted-foreground mt-1", className)}
+      {...props}
+    >
+      {children}
+    </p>
+  )
+})
+FormHint.displayName = "FormHint"
+
 export {
   useFormField,
   Form,
@@ -168,4 +206,7 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  // Leagcy exports
+  FormErrorMessage,
+  FormHint,
 }
