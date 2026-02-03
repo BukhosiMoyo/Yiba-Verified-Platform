@@ -121,6 +121,9 @@ export class StorageService {
       Body: buffer,
       ContentType: contentType || "application/octet-stream",
       ServerSideEncryption: "AES256",
+      // Try to set public read ACL so images are viewable. 
+      // Note: This requires the bucket to NOT have "Block public access" enabled for ACLs.
+      ACL: "public-read",
     });
 
     await this.s3Client.send(command);
