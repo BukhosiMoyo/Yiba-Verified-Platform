@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 
 const MAX_RETRIES = 3;
 const BATCH_SIZE = 10;
@@ -52,6 +53,7 @@ export async function processEmailQueue() {
             // Send
             const result = await emailService.send({
                 to: item.to_email,
+                type: EmailType.NOTIFICATION,
                 subject: item.subject,
                 html: item.body_html || `<p>${item.body_text}</p>`, // Fallback
                 text: item.body_text || undefined
