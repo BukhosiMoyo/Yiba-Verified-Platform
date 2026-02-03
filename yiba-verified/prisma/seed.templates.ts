@@ -14,7 +14,7 @@ export async function seedEmailTemplates(prisma: PrismaClient) {
                 { type: "paragraph", content: "We've introduced a new way to review your invitation details before accepting." },
                 { type: "paragraph", content: "Click the button below to review your role and capabilities. This link expires in 7 days." },
             ],
-            cta_text: "Review invitation",
+            cta_text: "Accept Invitation",
             footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
         },
         {
@@ -67,6 +67,42 @@ export async function seedEmailTemplates(prisma: PrismaClient) {
             ],
             cta_text: "Access Dashboard",
             footer_html: "This is a privileged access invitation. Do not forward.",
+        },
+        {
+            type: "SYSTEM_NOTIFICATION",
+            name: "System Notification",
+            subject: "{{title}}",
+            body_sections: [
+                { type: "paragraph", content: "Hi {{recipient_name}}," },
+                { type: "paragraph", content: "{{message}}" },
+                { type: "paragraph", content: "View the full details in your dashboard." },
+            ],
+            cta_text: "View Dashboard",
+            footer_html: "You received this notification because of your account settings. Contact support if this is an error.",
+        },
+        {
+            type: "AUTH_PASSWORD_RESET",
+            name: "Password Reset",
+            subject: "Reset your Yiba Verified password",
+            body_sections: [
+                { type: "paragraph", content: "Hi {{recipient_name}}," },
+                { type: "paragraph", content: "We received a request to reset the password for your Yiba Verified account." },
+                { type: "paragraph", content: "If you made this request, click the button below to choose a new password. This link expires in 1 hour." },
+            ],
+            cta_text: "Reset Password",
+            footer_html: "If you didn't request a password reset, you can safely ignore this email. Your account is secure.",
+        },
+        {
+            type: "AUTH_EMAIL_VERIFY",
+            name: "Email Verification",
+            subject: "Verify your email address for Yiba Verified",
+            body_sections: [
+                { type: "paragraph", content: "Hi {{recipient_name}}," },
+                { type: "paragraph", content: "Thanks for signing up for Yiba Verified." },
+                { type: "paragraph", content: "Please verify your email address to complete your registration and secure your account." },
+            ],
+            cta_text: "Verify Email",
+            footer_html: "If you didn't create an account, please ignore this email.",
         },
     ];
 
