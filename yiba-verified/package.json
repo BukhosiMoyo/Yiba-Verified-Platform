@@ -14,6 +14,7 @@
     "seed:demo": "DEMO_MODE=true tsx prisma/seed.ts",
     "seed:demo:wipe": "DEMO_MODE=true tsx prisma/seed.demo-wipe.ts",
     "seed:production": "PRODUCTION_MODE=true tsx prisma/seed.ts",
+    "seed:templates": "tsx prisma/seed.templates-only.ts",
     "db:reset": "bash scripts/reset-database.sh",
     "test": "vitest",
     "test:ui": "vitest --ui",
