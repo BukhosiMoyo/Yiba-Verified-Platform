@@ -77,5 +77,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.warn("Could not fetch institution profiles for sitemap");
   }
 
-  return [...staticPages, ...blogPostPages, ...categoryPages, ...institutionPages];
+  // Public talent profiles (is_public only)
+  let talentPages: MetadataRoute.Sitemap = [];
+  try {
+    const publicTalent = await prisma.publicTalentProfile.findMany({
+      where: { is_public: true, user: { deleted_at: null } },
+      select: { slug: true, updated_at: true },
+    });
+    talentPages = publicTalent.map((p) => ({
+      url: `${baseUrl}/talent/${p.slug}`,
+      lastModified: p.updated_at,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    console.warn("Could not fetch talent profiles for sitemap");
+  }
+
+  return [...staticPages, ...blogPostPages, ...categoryPages, ...institutionPages, ...talentPages];
 }

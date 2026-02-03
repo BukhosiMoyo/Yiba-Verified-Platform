@@ -257,6 +257,12 @@ model User {
   readinessFacilitatorLinks    Facilitator[]           @relation("FacilitatorLinkedUser")
   institutionContacts          InstitutionContact[]
 
+  // Public CV / Talent Portal
+  publicTalentProfile PublicTalentProfile?
+  cvVersions          CvVersion[]
+  talentLikes         TalentLike[]
+  jobRequestsReceived JobOpportunityRequest[] @relation("JobRequestsCandidate")
+
   @@index([institution_id])
   @@index([qcto_id])
   @@index([role])
@@ -784,20 +790,21 @@ model ModuleCompletion {
 }
 
 model Document {
-  document_id            String                    @id @default(uuid())
-  related_entity         DocumentRelatedEntity
-  related_entity_id      String
-  document_type          String
-  file_name              String
-  version                Int
-  status                 DocumentStatus            @default(UPLOADED)
-  uploaded_by            String
-  uploaded_at            DateTime                  @default(now())
-  storage_key            String?
-  mime_type              String?
-  file_size_bytes        Int?
-  uploadedByUser         User                      @relation("UserUploadedDocuments", fields: [uploaded_by], references: [user_id])
-  enrolment              Enrolment?                @relation("DocumentEnrolment", fields: [related_entity_id], references: [enrolment_id], map: "fk_doc_enrolment")
+  document_id       String                @id @default(uuid())
+  related_entity    DocumentRelatedEntity
+  related_entity_id String
+  document_type     String
+  file_name         String
+  version           Int
+  status            DocumentStatus        @default(UPLOADED)
+  uploaded_by       String
+  uploaded_at       DateTime              @default(now())
+  storage_key       String?
+  mime_type         String?
+  file_size_bytes   Int?
+  uploadedByUser    User                  @relation("UserUploadedDocuments", fields: [uploaded_by], references: [user_id])
+  enrolment         Enrolment?            @relation("DocumentEnrolment", fields: [related_entity_id], references: [enrolment_id], map: "fk_doc_enrolment")
+
   institution            Institution?              @relation("DocumentInstitution", fields: [related_entity_id], references: [institution_id], map: "fk_doc_institution")
   learner                Learner?                  @relation("DocumentLearner", fields: [related_entity_id], references: [learner_id], map: "fk_doc_learner")
   readiness              Readiness?                @relation("DocumentReadiness", fields: [related_entity_id], references: [readiness_id], map: "fk_doc_readiness")
@@ -2434,4 +2441,103 @@ model EmailQueue {
   @@index([status])
   @@index([next_attempt_at])
   @@index([user_id])
+}
+
+model PublicTalentProfile {
+  id                 String                  @id @default(uuid())
+  user_id            String                  @unique
+  user               User                    @relation(fields: [user_id], references: [user_id])
+  slug               String                  @unique
+  is_public          Boolean                 @default(false)
+  headline           String?
+  bio                String?                 @db.Text
+  avatar_url         String?
+  banner_url         String?
+  primary_location   String?
+  open_to_anywhere   Boolean                 @default(false)
+  work_type          WorkType                @default(ONSITE)
+  contact_visibility TalentContactVisibility @default(REVEAL_ON_REQUEST)
+
+  public_cv_version_id String?
+  public_cv            CvVersion? @relation(fields: [public_cv_version_id], references: [id])
+
+  likes       TalentLike[]
+  jobRequests JobOpportunityRequest[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model CvVersion {
+  id           String  @id @default(uuid())
+  user_id      String
+  user         User    @relation(fields: [user_id], references: [user_id])
+  title        String
+  content_json Json
+  pdf_url      String?
+
+  profiles_using PublicTalentProfile[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model TalentLike {
+  id               String              @id @default(uuid())
+  liked_profile_id String
+  liked_profile    PublicTalentProfile @relation(fields: [liked_profile_id], references: [id])
+  user_id          String
+  user             User                @relation(fields: [user_id], references: [user_id])
+  created_at       DateTime            @default(now())
+
+  @@unique([liked_profile_id, user_id])
+}
+
+model JobOpportunityRequest {
+  id                   String @id @default(uuid())
+  candidate_user_id    String
+  candidate            User   @relation("JobRequestsCandidate", fields: [candidate_user_id], references: [user_id])
+  candidate_profile_id String // Keep redundant for history/lookup speed if needed, or rely on relation
+
+  company_name    String
+  company_email   String
+  company_domain  String?
+  company_website String?
+  role_title      String
+  message         String    @db.Text
+  location        String?
+  work_type       WorkType?
+
+  status JobRequestStatus @default(PENDING_VERIFICATION)
+
+  verification_token String
+  token_expires_at   DateTime
+  verified_at        DateTime?
+
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+  publicTalentProfile   PublicTalentProfile? @relation(fields: [publicTalentProfileId], references: [id])
+  publicTalentProfileId String?
+}
+
+enum WorkType {
+  REMOTE
+  ONSITE
+  HYBRID
+}
+
+enum TalentContactVisibility {
+  HIDDEN
+  REVEAL_ON_REQUEST
+  PUBLIC
+}
+
+enum JobRequestStatus {
+  PENDING_VERIFICATION
+  VERIFIED_SENT
+  VIEWED
+  ARCHIVED
+  EXPIRED
+  REJECTED
+  FLAGGED
 }

@@ -6,7 +6,9 @@ export enum EmailType {
     WELCOME = "WELCOME",
     NOTIFICATION = "NOTIFICATION",
     INACTIVITY = "INACTIVITY",
-    SYSTEM_ALERT = "SYSTEM_ALERT"
+    SYSTEM_ALERT = "SYSTEM_ALERT",
+    JOB_REQUEST_VERIFY = "JOB_REQUEST_VERIFY",
+    JOB_OPPORTUNITY = "JOB_OPPORTUNITY"
 }
 
 interface EmailTypeConfig {
@@ -62,6 +64,17 @@ export const EMAIL_CONFIG: Record<EmailType, EmailTypeConfig> = {
         fromName: "Yiba Verified System",
         // No reply-to
         previewText: "Please review recent account activity",
+    },
+    [EmailType.JOB_REQUEST_VERIFY]: {
+        fromLocal: "no-reply",
+        fromName: "Yiba Verified Security",
+        previewText: "Please verify your email to contact this candidate",
+    },
+    [EmailType.JOB_OPPORTUNITY]: {
+        fromLocal: "notifications",
+        fromName: "Yiba Verified Opportunities",
+        replyTo: SUPPORT_EMAIL,
+        previewText: "You have a new work opportunity waiting",
     }
 };
 
