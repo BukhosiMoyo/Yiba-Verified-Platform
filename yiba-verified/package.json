@@ -23,7 +23,8 @@
     "check:mutations": "bash scripts/check-no-direct-prisma-mutations.sh",
     "check:devtoken": "bash scripts/check-devtoken-guards.sh",
     "sync:messages": "tsx scripts/sync-messages-best-practices.ts",
-    "sync:messages:dry": "DRY_RUN=1 tsx scripts/sync-messages-best-practices.ts"
+    "sync:messages:dry": "DRY_RUN=1 tsx scripts/sync-messages-best-practices.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
