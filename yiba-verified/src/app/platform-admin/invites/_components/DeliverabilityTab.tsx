@@ -9,7 +9,7 @@ export function DeliverabilityTab() {
         { name: "SPF Configuration", status: "PASS", details: "v=spf1 include:resend.com ~all" },
         { name: "DKIM Configuration", status: "PASS", details: "Verified (resend._domainkey)" },
         { name: "DMARC Configuration", status: "WARN", details: "Found but policy is 'none'" },
-        { name: "Sending Domain", status: "PASS", details: "yiba.co.za" },
+        { name: "Sending Domain", status: "PASS", details: "yibaverified.co.za" },
         { name: "Rate Limiting", status: "PASS", details: "Active (100/hr global)" },
     ];
 

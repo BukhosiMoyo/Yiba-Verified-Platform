@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const provider = (process.env.EMAIL_PROVIDER || "console") as "resend" | "smtp" | "console";
-    const fromEmail = process.env.EMAIL_FROM || "noreply@yiba.co.za";
+    const fromEmail = process.env.EMAIL_FROM || "noreply@yibaverified.co.za";
     const fromName = process.env.EMAIL_FROM_NAME || "Yiba Verified";
     const replyTo = process.env.EMAIL_REPLY_TO ?? null;
 
