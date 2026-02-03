@@ -8,15 +8,13 @@ import {
     Loader2,
     Check,
     X,
-    ShieldCheck, // For specific icon replacement
-    FileCheck2, // Document icon replacement
+    ShieldCheck,
+    FileCheck2,
     LayoutDashboard,
     Unlock,
     ChevronRight,
     ArrowLeft,
     ArrowRight,
-    Shield,
-    User,
     Eye,
     EyeOff
 } from "lucide-react";
@@ -33,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioItem } from "@/components/ui/radio-group";
 import { StepContent } from "./StepContent";
-import { Alert } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/shared/ThemeToggle"; // Assumes this exists
 
 interface InviteData {
     email: string;
@@ -44,24 +42,18 @@ interface InviteData {
 
 const DECLINE_REASONS = [
     { value: "already_using_other_platform", label: "We're using another platform" },
-    { value: "manual_process", label: "We prefer a manual process" }, // Added based on prompt
+    { value: "manual_process", label: "We prefer a manual process" },
     { value: "not_responsible", label: "Not responsible for this role" },
-    { value: "not_ready", label: "Not ready at this time" }, // Added based on prompt
+    { value: "not_ready", label: "Not ready at this time" },
     { value: "other", label: "Other" },
 ];
 
 const roleRedirects: Record<string, string> = {
     PLATFORM_ADMIN: "/platform-admin",
     QCTO_USER: "/qcto",
-    QCTO_SUPER_ADMIN: "/qcto",
-    QCTO_ADMIN: "/qcto",
-    QCTO_REVIEWER: "/qcto",
-    QCTO_AUDITOR: "/qcto",
-    QCTO_VIEWER: "/qcto",
     INSTITUTION_ADMIN: "/institution",
     INSTITUTION_STAFF: "/institution",
     STUDENT: "/student",
-    ADVISOR: "/advisor",
 };
 
 export function InviteReviewWizard({ token }: { token: string }) {
@@ -89,7 +81,7 @@ export function InviteReviewWizard({ token }: { token: string }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [email, setEmail] = useState(""); // For signup confirmation
+    const [email, setEmail] = useState("");
 
     // --- 1. Validation Logic ---
     const validateAndTrack = useCallback(async () => {
@@ -128,9 +120,138 @@ export function InviteReviewWizard({ token }: { token: string }) {
         validateAndTrack();
     }, [validateAndTrack]);
 
-    // --- 2. Navigation ---
+    const steps = [
+        {
+            title: "Manage your institution on Yiba Verified",
+            icon: ShieldCheck,
+            emoji: "👋",
+            children: (
+                <>
+                    <p className="mb-4 text-lg leading-relaxed">
+                        Hi there! You’ve been invited to join <strong>{invite?.institution?.trading_name || "your institution"}</strong> as an Administrator.
+                    </p>
+                    <p className="text-muted-foreground mb-6">
+                        Yiba Verified is the QCTO-recognised platform for managing accreditation, learner records, and compliance in one secure place.
+                    </p>
+                    <div className="text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                        This invite was sent to <strong>{invite?.email}</strong>.
+                    </div>
+                </>
+            ),
+        },
+        {
+            title: "What is Yiba Verified?",
+            icon: FileCheck2,
+            emoji: "🛡️",
+            children: (
+                <>
+                    <p className="mb-6 text-muted-foreground">
+                        We help institutions move away from paper trails and email chains.
+                    </p>
+                    <ul className="space-y-3">
+                        <li className="flex gap-3 items-center bg-muted/40 p-3 rounded-xl border border-border/40">
+                            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <span className="font-medium">QCTO-aligned workflows</span>
+                        </li>
+                        <li className="flex gap-3 items-center bg-muted/40 p-3 rounded-xl border border-border/40">
+                            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <span className="font-medium">Clear audit trails & history</span>
+                        </li>
+                        <li className="flex gap-3 items-center bg-muted/40 p-3 rounded-xl border border-border/40">
+                            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <span className="font-medium">Secure document handling</span>
+                        </li>
+                    </ul>
+                </>
+            ),
+        },
+        {
+            title: "What you’ll be able to do",
+            icon: LayoutDashboard,
+            emoji: "📊",
+            children: (
+                <>
+                    <p className="mb-6 text-muted-foreground">
+                        As an Institution Admin, you have full visibility and control.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                            <div className="font-semibold mb-1">Upload Data</div>
+                            <div className="text-sm text-muted-foreground">Submit learners and enrolments securely.</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                            <div className="font-semibold mb-1">Track Progress</div>
+                            <div className="text-sm text-muted-foreground">See verification status in real-time.</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                            <div className="font-semibold mb-1">Audit Ready</div>
+                            <div className="text-sm text-muted-foreground">Everything is logged and searchable.</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                            <div className="font-semibold mb-1">Manage Staff</div>
+                            <div className="text-sm text-muted-foreground">Invite team members to help.</div>
+                        </div>
+                    </div>
+                </>
+            ),
+        },
+        {
+            title: "What happens next?",
+            icon: Unlock,
+            emoji: "🔓",
+            children: (
+                <div className="space-y-4">
+                    <div className="relative pl-6 border-l-2 border-primary/20 space-y-8 py-2">
+                        <div className="relative">
+                            <span className="absolute -left-[31px] top-0 h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center ring-4 ring-background">1</span>
+                            <h4 className="font-semibold">Create your account</h4>
+                            <p className="text-sm text-muted-foreground">Set a secure password to access the portal.</p>
+                        </div>
+                        <div className="relative">
+                            <span className="absolute -left-[31px] top-0 h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center ring-4 ring-background">2</span>
+                            <h4 className="font-semibold">Linked automatically</h4>
+                            <p className="text-sm text-muted-foreground">Your profile is instantly linked to {invite?.institution?.trading_name}.</p>
+                        </div>
+                        <div className="relative">
+                            <span className="absolute -left-[31px] top-0 h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center ring-4 ring-background">3</span>
+                            <h4 className="font-semibold">Start managing</h4>
+                            <p className="text-sm text-muted-foreground">You can start uploading or inviting staff immediately.</p>
+                        </div>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: "Ready to continue?",
+            icon: Check,
+            emoji: "✨",
+            children: (
+                <div className="flex flex-col h-full items-center text-center justify-center pb-8">
+                    <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-4xl">
+                        🚀
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3">One last step</h3>
+                    <p className="text-muted-foreground text-lg mb-8 max-w-md">
+                        Accept the invitation to activate your administrator access for <strong>{invite?.institution?.trading_name}</strong>.
+                    </p>
+
+                    <div className="w-full max-w-sm bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 p-4 rounded-xl text-yellow-800 dark:text-yellow-200 text-sm">
+                        By accepting, you agree to our Terms of Service and Privacy Policy.
+                    </div>
+                </div>
+            ),
+        },
+    ];
+
+    // --- Navigation Logic ---
     const goToNext = () => {
-        if (currentStep < 4) {
+        if (currentStep < steps.length - 1) {
             setDirection(1);
             setCurrentStep((prev) => prev + 1);
         }
@@ -143,14 +264,12 @@ export function InviteReviewWizard({ token }: { token: string }) {
         }
     };
 
-    // --- 3. Actions ---
+    // --- Actions ---
     const handleAcceptClick = () => {
         if (existingUser) {
-            // Redirect to login with callback
             const callbackUrl = `/invite/accept-callback?token=${encodeURIComponent(token)}`;
             router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
         } else {
-            // Show signup form in-place (premium feel)
             setDirection(1);
             setViewMode("signup");
         }
@@ -169,11 +288,8 @@ export function InviteReviewWizard({ token }: { token: string }) {
                 }),
             });
             if (!res.ok) throw new Error("Failed to decline");
-
-            // Redirect to declined page (reusing existing one)
             router.push(`/invite/declined?token=${encodeURIComponent(token)}`);
         } catch (err) {
-            // Show toast or alert? Just alert for now
             alert("Failed to decline. Please try again.");
             setDeclining(false);
         }
@@ -196,7 +312,6 @@ export function InviteReviewWizard({ token }: { token: string }) {
                 throw new Error(data.error || "Failed to accept invite");
             }
 
-            // Auto login
             const result = await signIn("credentials", {
                 email: email.trim(),
                 password,
@@ -207,7 +322,8 @@ export function InviteReviewWizard({ token }: { token: string }) {
                 const sessionRes = await fetch("/api/auth/session");
                 const session = await sessionRes.json();
                 const role = session?.user?.role as string;
-                const path = roleRedirects[role] || "/institution"; // Default to institution
+                // Basic redirect map
+                const path = roleRedirects[role] || "/institution";
                 router.push(path);
             } else {
                 router.push("/login?registered=true");
@@ -219,154 +335,62 @@ export function InviteReviewWizard({ token }: { token: string }) {
     };
 
 
-    // --- Render Helpers ---
-
+    // --- Loading / Error States ---
     if (loading) {
         return (
-            <div className="flex flex-col items-center text-white/80 animate-pulse">
-                <Loader2 className="h-10 w-10 animate-spin mb-4" />
-                <p>Verifying invitation...</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-white/80 animate-pulse">
+                <Loader2 className="h-12 w-12 animate-spin mb-4 text-primary" />
+                <p className="text-lg font-medium text-foreground">Verifying invitation...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="bg-card p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-border">
-                <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
-                    <X className="h-8 w-8" />
+            <div className="w-full max-w-md mx-auto p-8 bg-card rounded-2xl shadow-2xl border border-destructive/20 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
+                <div className="mx-auto h-20 w-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 text-destructive">
+                    <X className="h-10 w-10" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground mb-2">Unavailable</h2>
-                <p className="text-muted-foreground mb-6">{error}</p>
-                <Button onClick={() => router.push("/")} variant="outline">Go Home</Button>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Invitation Invalid</h2>
+                <p className="text-muted-foreground mb-8 text-lg">{error}</p>
+                <Button onClick={() => router.push("/")} variant="outline" className="w-full h-12 text-base">
+                    Return to Home
+                </Button>
             </div>
         );
     }
 
-    // Content Config
-    const institutionName = invite?.institution?.trading_name || invite?.institution?.legal_name || "the institution";
+    const isFinalStep = currentStep === steps.length - 1;
 
-    const steps = [
-        {
-            title: "You’ve been invited to manage an institution on Yiba Verified",
-            icon: ShieldCheck, // fall back
-            emoji: "👋",
-            children: (
-                <>
-                    <p className="mb-4">
-                        You’ve been invited to join Yiba Verified as an Institution Administrator.
-                        This role allows you to manage accreditation-related submissions, learner records, and institutional compliance in one secure place.
-                    </p>
-                    <p className="text-xs md:text-sm bg-muted/50 p-3 rounded-lg border border-border/50">
-                        This invitation was sent to <strong className="text-foreground">{invite?.email}</strong> and is specific to your institution.
-                    </p>
-                </>
-            ),
-        },
-        {
-            title: "What is Yiba Verified?",
-            icon: FileCheck2,
-            emoji: "🛡️",
-            children: (
-                <>
-                    <p className="mb-4">
-                        Yiba Verified is a QCTO-aligned platform that helps institutions manage qualification verification, Form 5 readiness, and compliance workflows — transparently and securely.
-                    </p>
-                    <p className="mb-4">It’s built for trust, auditability, and collaboration, not marketing.</p>
-                    <ul className="text-left space-y-2 bg-muted/30 p-4 rounded-xl">
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-green-500 mt-0.5" /> QCTO-aligned workflows</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-green-500 mt-0.5" /> Clear audit trails</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-green-500 mt-0.5" /> Secure document handling</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-green-500 mt-0.5" /> Designed for institutions, not individuals</li>
-                    </ul>
-                </>
-            ),
-        },
-        {
-            title: "What you’ll be able to do",
-            icon: LayoutDashboard,
-            emoji: "📊",
-            children: (
-                <>
-                    <p className="mb-4">
-                        As an Institution Admin, you’ll have access to tools that simplify compliance while keeping full visibility across submissions and reviews.
-                    </p>
-                    <ul className="text-left space-y-2 bg-muted/30 p-4 rounded-xl">
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Manage accreditation and readiness submissions</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Upload and track required documents</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Interact with QCTO reviewers</li>
-                        <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Monitor progress in real time</li>
-                    </ul>
-                </>
-            ),
-        },
-        {
-            title: "What happens next?",
-            icon: Unlock,
-            emoji: "🔓",
-            children: (
-                <>
-                    <div className="bg-muted/30 p-5 rounded-xl text-left space-y-3 mb-4">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">1</span>
-                            <span>You’ll log in or create your account</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">2</span>
-                            <span>Your profile will be linked to the institution</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">3</span>
-                            <span>No duplicate setup is required</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">4</span>
-                            <span>You can start immediately</span>
-                        </div>
-                    </div>
-                    <p>You stay in control — nothing is submitted without your action.</p>
-                </>
-            ),
-        },
-        {
-            title: "Ready to continue?",
-            icon: Check,
-            emoji: null, // No emoji for decision, or custom
-            children: (
-                <div className="flex flex-col h-full justify-center">
-                    <p className="mb-6 text-lg">
-                        You can accept this invitation now, or take a moment to review and decide later.
-                    </p>
-                    <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl mb-6">
-                        <p className="text-foreground font-medium">Accepting means you’re ready to manage your institution on Yiba Verified.</p>
-                    </div>
-                    <p className="text-sm">Declining helps us understand how to improve.</p>
-                </div>
-            ),
-        },
-    ];
-
-    /* ------------------- SIGNUP FORM RENDER ------------------- */
+    // --- Signup Mode Rendering ---
     if (viewMode === "signup") {
         return (
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-lg"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="w-full max-w-lg relative z-10"
             >
-                <div className="bg-card/95 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl overflow-hidden p-6 md:p-8">
-                    <h2 className="text-2xl font-bold mb-2">Create your account</h2>
-                    <p className="text-muted-foreground mb-6">Set up your profile to manage {institutionName}.</p>
+                <div className="bg-card/90 dark:bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl rounded-3xl overflow-hidden p-6 md:p-10">
+                    <div className="flex justify-between items-center mb-6">
+                        <Button variant="ghost" size="sm" onClick={() => setViewMode("review")} className="-ml-3 text-muted-foreground hover:text-foreground">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Review
+                        </Button>
+                        <ThemeToggle variant="icon-sm" />
+                    </div>
 
-                    <form onSubmit={handleSignupSubmit} className="space-y-4 text-left">
+                    <h2 className="text-3xl font-bold tracking-tight mb-2">Create Account</h2>
+                    <p className="text-muted-foreground mb-8">Set up your profile to manage {invite?.institution?.trading_name || "your institution"}.</p>
+
+                    <form onSubmit={handleSignupSubmit} className="space-y-5">
                         <div className="space-y-2">
                             <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" value={name} onChange={e => setName(e.target.value)} required placeholder="Jane Doe" className="h-11" />
+                            <Input id="name" value={name} onChange={e => setName(e.target.value)} required placeholder="Jane Doe" className="h-12 text-lg bg-background/50" />
                         </div>
 
                         <div className="space-y-2">
                             <Label>Email</Label>
-                            <Input value={email} disabled className="bg-muted h-11" />
+                            <Input value={email} disabled className="bg-muted h-12 text-lg opacity-70" />
                         </div>
 
                         <div className="space-y-2">
@@ -377,11 +401,11 @@ export function InviteReviewWizard({ token }: { token: string }) {
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     required
-                                    className="h-11 pr-10"
-                                    placeholder="Min 8 characters"
+                                    className="h-12 text-lg pr-10 bg-background/50"
+                                    placeholder="••••••••"
                                 />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1">
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
@@ -394,139 +418,191 @@ export function InviteReviewWizard({ token }: { token: string }) {
                                     value={confirmPassword}
                                     onChange={e => setConfirmPassword(e.target.value)}
                                     required
-                                    className="h-11 pr-10"
+                                    className="h-12 text-lg pr-10 bg-background/50"
+                                    placeholder="••••••••"
                                 />
-                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1">
+                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
 
-                        <div className="pt-4 flex gap-3">
-                            <Button type="button" variant="ghost" onClick={() => setViewMode("review")} className="flex-1 h-11">Back</Button>
-                            <Button type="submit" disabled={submitting} className="flex-[2] h-11 btn-primary-premium">
-                                {submitting ? <Loader2 className="animate-spin" /> : "Complete Setup"}
-                            </Button>
-                        </div>
+                        <Button type="submit" disabled={submitting} className="w-full h-12 text-lg mt-4 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                            {submitting ? <Loader2 className="animate-spin mr-2" /> : "Complete Setup"}
+                        </Button>
                     </form>
                 </div>
             </motion.div>
         );
     }
 
-    /* ------------------- REVIEW WIZARD RENDER ------------------- */
-    const isFinalStep = currentStep === steps.length - 1;
 
     return (
-        <div className="w-full max-w-2xl px-4">
-            {/* Card Container */}
-            <div className="relative bg-card/80 backdrop-blur-md border border-white/20 shadow-glass rounded-[2rem] overflow-hidden min-h-[500px] flex flex-col">
+        <div className="w-full max-w-5xl px-4 relative flex flex-col items-center justify-center min-h-[600px] h-full">
 
-                {/* Progress Indicator */}
-                <div className="absolute top-0 left-0 right-0 p-6 flex gap-2 justify-center z-20">
-                    {steps.map((_, i) => (
-                        <div
-                            key={i}
-                            className={`h-1.5 rounded-full transition-all duration-500 ease-out ${i === currentStep ? "w-8 bg-primary" : "w-2 bg-muted-foreground/20"
-                                }`}
-                        />
-                    ))}
-                </div>
+            {/* Toggle Positioned Top Right of Container */}
+            <div className="absolute -top-16 right-4 sm:right-0 z-50">
+                <ThemeToggle variant="icon" className="bg-white/10 hover:bg-white/20 text-foreground backdrop-blur-md rounded-full h-10 w-10 border border-white/20" />
+            </div>
 
-                {/* AnimateSlide Wrapper */}
-                <div className="flex-1 relative p-6 pt-16 md:p-10 md:pt-20 overflow-hidden">
-                    <AnimatePresence initial={false} custom={direction} mode="wait">
+            <div className="grid grid-cols-1 place-items-center w-full relative perspective-[1200px]">
+
+                {/* Carousel Stack Container */}
+                <div className="relative w-full max-w-[800px] aspect-[4/5] md:aspect-[16/10] max-h-[80vh] flex items-center justify-center">
+
+                    {/* Progress Pills (Floating Top Center) */}
+                    <div className="absolute -top-12 left-0 right-0 flex justify-center gap-2 mb-8 z-40">
+                        {steps.map((_, i) => (
+                            <div
+                                key={i}
+                                className={`h-2 rounded-full transition-all duration-500 shadow-sm ${i === currentStep
+                                        ? "w-12 bg-primary ring-2 ring-primary/20"
+                                        : i < currentStep
+                                            ? "w-4 bg-primary/40"
+                                            : "w-2 bg-muted-foreground/20"
+                                    }`}
+                            />
+                        ))}
+                    </div>
+
+                    <AnimatePresence initial={false} custom={direction} mode="popLayout">
                         <motion.div
                             key={currentStep}
                             custom={direction}
                             variants={{
-                                enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0, scale: 0.95, filter: "blur(4px)" }),
-                                center: { x: 0, opacity: 1, scale: 1, filter: "blur(0px)" },
-                                exit: (dir: number) => ({ x: dir < 0 ? "100%" : "-100%", opacity: 0, scale: 0.95, filter: "blur(4px)" }),
+                                enter: (dir: number) => ({
+                                    x: dir > 0 ? "110%" : "-110%",
+                                    scale: 0.85,
+                                    opacity: 0,
+                                    rotateY: dir > 0 ? 15 : -15,
+                                    zIndex: 0
+                                }),
+                                center: {
+                                    x: 0,
+                                    scale: 1,
+                                    opacity: 1,
+                                    rotateY: 0,
+                                    zIndex: 10,
+                                    filter: "blur(0px)"
+                                },
+                                exit: (dir: number) => ({
+                                    x: dir < 0 ? "110%" : "-110%",
+                                    scale: 0.85,
+                                    opacity: 0,
+                                    rotateY: dir < 0 ? 15 : -15,
+                                    zIndex: 0,
+                                    filter: "blur(4px)"
+                                }),
                             }}
                             initial="enter"
                             animate="center"
                             exit="exit"
-                            transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.4 }}
-                            className="absolute inset-0 p-6 md:p-10 pt-4"
+                            transition={{ type: "spring", stiffness: 200, damping: 25, mass: 0.8 }}
+                            className="absolute w-full h-full bg-card/95 dark:bg-card/70 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl dark:shadow-black/50 rounded-[2rem] overflow-hidden flex flex-col text-left"
                         >
-                            <StepContent
-                                {...steps[currentStep]}
-                                isActive={true}
-                            />
+                            {/* Card Content Wrapper */}
+                            <div className="flex-1 flex flex-col overflow-hidden relative">
+
+                                {/* Step Content */}
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12">
+                                    <StepContent
+                                        {...steps[currentStep]}
+                                        isActive={true}
+                                    />
+                                </div>
+
+                                {/* Sticky Footer */}
+                                <div className="p-6 md:p-8 border-t border-border/40 bg-background/50 backdrop-blur-md flex justify-between items-center z-20 mt-auto shrink-0">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={goToBack}
+                                        disabled={currentStep === 0}
+                                        className={`transition-all hover:bg-muted/50 ${currentStep === 0 ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+                                    >
+                                        <ArrowLeft className="mr-2 h-5 w-5" /> Back
+                                    </Button>
+
+                                    {!isFinalStep ? (
+                                        <Button onClick={goToNext} size="lg" className="rounded-full px-8 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                                            Next Step <ArrowRight className="ml-2 h-5 w-5" />
+                                        </Button>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-4 justify-end">
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => setDeclineModalOpen(true)}
+                                                className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                            >
+                                                <X className="mr-2 h-5 w-5" /> Decline
+                                            </Button>
+                                            <Button
+                                                onClick={handleAcceptClick}
+                                                size="lg"
+                                                className="rounded-full px-10 font-bold shadow-xl shadow-primary/25 bg-gradient-to-r from-primary to-blue-600 hover:to-blue-700 transition-all hover:scale-105"
+                                            >
+                                                Accept Invitation <Check className="ml-2 h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                         </motion.div>
                     </AnimatePresence>
-                </div>
-
-                {/* Navigation Footer */}
-                <div className="p-6 md:p-8 border-t border-border/50 bg-white/50 dark:bg-black/20 backdrop-blur-sm flex justify-between items-center z-20">
-                    <Button
-                        variant="ghost"
-                        onClick={goToBack}
-                        disabled={currentStep === 0}
-                        className={`text-muted-foreground hover:text-foreground transition-opacity ${currentStep === 0 ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                    </Button>
-
-                    {!isFinalStep ? (
-                        <Button onClick={goToNext} className="rounded-full px-6 btn-primary-premium">
-                            Next <ChevronRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    ) : (
-                        <div className="flex gap-3 w-full sm:w-auto">
-                            <Button variant="outline" onClick={() => setDeclineModalOpen(true)} className="flex-1 sm:flex-initial border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-900/30 dark:hover:bg-red-900/10">
-                                Decline
-                            </Button>
-                            <Button onClick={handleAcceptClick} className="flex-[2] sm:flex-initial bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-full px-8">
-                                Accept Invitation
-                            </Button>
-                        </div>
-                    )}
                 </div>
             </div>
 
             {/* Decline Modal */}
             <Dialog open={declineModalOpen} onOpenChange={setDeclineModalOpen}>
-                <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl">
+                <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl">
                     <DialogHeader>
-                        <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-2xl">
+                        <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center text-4xl shadow-inner">
                             😔
                         </div>
-                        <DialogTitle className="text-center text-xl">We understand — could you tell us why?</DialogTitle>
-                        <DialogDescription className="text-center">
-                            Your feedback helps us improve Yiba Verified.
+                        <DialogTitle className="text-center text-2xl font-bold">Decline Invitation?</DialogTitle>
+                        <DialogDescription className="text-center text-base mt-2">
+                            We're sorry to see you go. Please tell us a bit about why you're declining so we can improve.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-2">
+                    <div className="py-4">
                         <RadioGroup value={declineReason} onValueChange={setDeclineReason} className="gap-3">
                             {DECLINE_REASONS.map((r) => (
-                                <div key={r.value} className={`flex items-center space-x-3 border rounded-lg p-3 cursor-pointer transition-colors ${declineReason === r.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
+                                <label
+                                    key={r.value}
+                                    htmlFor={r.value}
+                                    className={`flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all hover:bg-muted/50 ${declineReason === r.value
+                                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                            : "border-border"
+                                        }`}
+                                >
                                     <RadioItem value={r.value} id={r.value} />
-                                    <Label htmlFor={r.value} className="flex-1 cursor-pointer font-normal">{r.label}</Label>
-                                </div>
+                                    <span className="flex-1 font-medium">{r.label}</span>
+                                </label>
                             ))}
                         </RadioGroup>
 
                         {declineReason === "other" && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="mt-3">
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="mt-4">
+                                <Label className="mb-2 block ml-1">Please specify details</Label>
                                 <Input
-                                    placeholder="Please specify..."
+                                    placeholder="Type your reason here..."
                                     value={declineReasonOther}
                                     onChange={e => setDeclineReasonOther(e.target.value)}
-                                    className="bg-background"
+                                    className="bg-background h-12"
+                                    autoFocus
                                 />
                             </motion.div>
                         )}
                     </div>
 
-                    <DialogFooter className="sm:justify-between gap-2 mt-2">
-                        <Button variant="ghost" onClick={() => setDeclineModalOpen(false)}>Cancel</Button>
+                    <DialogFooter className="sm:justify-between gap-3 mt-4">
+                        <Button variant="outline" className="flex-1" onClick={() => setDeclineModalOpen(false)}>Back</Button>
                         <Button
                             onClick={handleDeclineSubmit}
                             disabled={declining || !declineReason || (declineReason === "other" && !declineReasonOther)}
-                            variant="default"
+                            variant="destructive"
+                            className="flex-1 shadow-lg shadow-red-500/20"
                         >
                             {declining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Confirm Decline
