@@ -367,7 +367,6 @@ export function UsersTableClient({
   const handleAddUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const needsInst =
-      addUserFormData.role === "INSTITUTION_ADMIN" ||
       addUserFormData.role === "INSTITUTION_STAFF" ||
       addUserFormData.role === "STUDENT";
     const needsProvince =

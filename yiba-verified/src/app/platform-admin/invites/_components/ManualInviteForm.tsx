@@ -50,7 +50,6 @@ export function ManualInviteForm({ institutions }: ManualInviteFormProps) {
         e.preventDefault();
 
         const needsInst =
-            formData.role === "INSTITUTION_ADMIN" ||
             formData.role === "INSTITUTION_STAFF" ||
             formData.role === "STUDENT";
         const needsProvince =
@@ -123,7 +122,6 @@ export function ManualInviteForm({ institutions }: ManualInviteFormProps) {
     };
 
     const needsInst =
-        formData.role === "INSTITUTION_ADMIN" ||
         formData.role === "INSTITUTION_STAFF" ||
         formData.role === "STUDENT";
     const needsProvince =

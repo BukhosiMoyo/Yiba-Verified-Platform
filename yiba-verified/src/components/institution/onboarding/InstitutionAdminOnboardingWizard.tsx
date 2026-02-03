@@ -23,7 +23,7 @@ export function InstitutionAdminOnboardingWizard() {
   const { data: session, update: updateSession } = useSession();
   const hasExistingInstitution = !!session?.user?.institutionId;
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(hasExistingInstitution ? 7 : 1);
   const [institutions, setInstitutions] = useState<InstitutionFormEntry[]>(() =>
     hasExistingInstitution ? [] : [emptyInstitution()]
   );
@@ -94,22 +94,22 @@ export function InstitutionAdminOnboardingWizard() {
         institutions:
           validInstitutions.length > 0
             ? validInstitutions.map((inst) => ({
-                legal_name: inst.legal_name.trim(),
-                trading_name: inst.trading_name.trim() || null,
-                institution_type: inst.institution_type,
-                registration_number: inst.registration_number.trim(),
-                branch_code: inst.branch_code.trim() || null,
-                physical_address: inst.physical_address.trim(),
-                postal_address: inst.postal_address.trim() || null,
-                province: inst.province.trim(),
-                contact_person_name: inst.contact_person_name.trim() || null,
-                contact_email: inst.contact_email.trim() || null,
-                contact_number: inst.contact_number.trim() || null,
-                offers_workplace_based_learning:
-                  inst.offers_workplace_based_learning === "yes" ? true : inst.offers_workplace_based_learning === "no" ? false : null,
-                offers_web_based_learning:
-                  inst.offers_web_based_learning === "yes" ? true : inst.offers_web_based_learning === "no" ? false : null,
-              }))
+              legal_name: inst.legal_name.trim(),
+              trading_name: inst.trading_name.trim() || null,
+              institution_type: inst.institution_type,
+              registration_number: inst.registration_number.trim(),
+              branch_code: inst.branch_code.trim() || null,
+              physical_address: inst.physical_address.trim(),
+              postal_address: inst.postal_address.trim() || null,
+              province: inst.province.trim(),
+              contact_person_name: inst.contact_person_name.trim() || null,
+              contact_email: inst.contact_email.trim() || null,
+              contact_number: inst.contact_number.trim() || null,
+              offers_workplace_based_learning:
+                inst.offers_workplace_based_learning === "yes" ? true : inst.offers_workplace_based_learning === "no" ? false : null,
+              offers_web_based_learning:
+                inst.offers_web_based_learning === "yes" ? true : inst.offers_web_based_learning === "no" ? false : null,
+            }))
             : [],
       };
 
@@ -251,6 +251,7 @@ export function InstitutionAdminOnboardingWizard() {
               <ReviewConfirmStep
                 institutions={institutions}
                 staffInvites={staffInvites}
+                hasExistingInstitution={hasExistingInstitution}
                 acknowledged={acknowledged}
                 onAcknowledgedChange={setAcknowledged}
                 onBack={handleStepBack}
