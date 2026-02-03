@@ -58,15 +58,23 @@ export async function POST(request: NextRequest) {
             to: email,
             type: EmailType.PASSWORD_RESET,
             subject: "Reset your Yiba Verified password",
-            html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Reset Password</h2>
-          <p>You requested a password reset for your Yiba Verified account.</p>
-          <p>Click the link below to reset your password. This link is valid for 1 hour.</p>
-          <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Reset Password</a>
-          <p style="color: #666; font-size: 14px;">If you didn't request this, purely ignore this email.</p>
-        </div>
-      `,
+            const { getSharedEmailLayout } = require("@/lib/email/layout");
+
+            const contentHtml = `
+            <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Reset Password</h1>
+            <p>You requested a password reset for your Yiba Verified account.</p>
+            <p>Click the link below to reset your password. This link is valid for 1 hour.</p>
+            <div style="margin: 32px 0; text-align: center;">
+              <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
+            </div>
+            <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+        `;
+
+            const html = getSharedEmailLayout({
+                contentHtml,
+                title: "Reset Password",
+                previewText: "Reset your Yiba Verified password",
+            });
             text: `Reset your password: ${resetUrl}`,
         });
 

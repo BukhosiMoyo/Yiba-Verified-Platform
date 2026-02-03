@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
     // Hash the token to look it up
     const tokenHash = createHash("sha256").update(token).digest("hex");
 
+    console.log(`[InviteValidate] Validating token hash (first 8 chars): ${tokenHash.substring(0, 8)}...`);
+
     // Find invite
     const invite = await prisma.invite.findUnique({
       where: {
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!invite) {
+      console.warn(`[InviteValidate] Token not found in DB: ${tokenHash.substring(0, 8)}...`);
       throw new AppError(
         ERROR_CODES.NOT_FOUND,
         "Invalid invite token",

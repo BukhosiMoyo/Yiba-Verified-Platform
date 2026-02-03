@@ -153,6 +153,9 @@ export function getEmailTemplate(
     entityId?: string,
     baseUrl?: string
 ): { subject: string; html: string; text: string } {
+    // Import shared layout dynamically to avoid circular deps if any (though here it should be fine)
+    const { getSharedEmailLayout } = require("./layout");
+
     const appName = "Yiba Verified";
     const url = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -181,42 +184,36 @@ export function getEmailTemplate(
         }
     }
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">${appName}</h1>
-  </div>
-  
-  <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-    <h2 style="color: #111827; margin-top: 0; font-size: 20px;">${title}</h2>
+    const contentHtml = `
+      <h2 style="color: #111827; margin-top: 0; font-size: 20px; font-weight: 600;">${title}</h2>
     
-    <p style="color: #4b5563; font-size: 16px; margin: 20px 0;">
-      ${message.replace(/\n/g, "<br>")}
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${actionUrl}" 
-         style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-        View Details
-      </a>
-    </div>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
-      This is an automated notification from ${appName}. You can manage your notification preferences in your account settings.
-    </p>
-  </div>
-</body>
-</html>
-  `.trim();
+      <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">Hi,</p>
+
+      <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">
+        ${message.replace(/\n/g, "<br>")}
+      </p>
+      
+      <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">
+        To view the full details and take action, open your dashboard.
+      </p>
+
+      <div style="margin: 32px 0; text-align: center;">
+        <a href="${actionUrl}" 
+           style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+          View Notification
+        </a>
+      </div>
+      
+      <p style="color: #9ca3af; font-size: 14px; margin-top: 24px; text-align: center;">
+        You’re receiving this email because it relates to activity on your Yiba Verified account.
+      </p>
+    `;
+
+    const html = getSharedEmailLayout({
+        contentHtml,
+        title: `${title} - ${appName}`,
+        previewText: "There’s an update waiting for you on Yiba Verified.",
+    });
 
     const text = `
 ${appName}
@@ -228,7 +225,7 @@ ${message}
 View Details: ${actionUrl}
 
 ---
-This is an automated notification from ${appName}. You can manage your notification preferences in your account settings.
+This is an automated notification from ${appName}.
   `.trim();
 
     return {

@@ -61,47 +61,102 @@ export function buildInviteEmailFromTemplate(
   context: InviteTemplateContext,
   trackedLink: string,
   trackingPixelUrl: string,
-  customMessage?: string | null
+  customMessage?: string | null,
+  reviewLink?: string // New optional parameter for "Review Invitation"
 ): { subject: string; html: string; text: string } {
+  const { getSharedEmailLayout } = require("../layout"); // Import shared layout
+
   const subject = replacePlaceholders(template.subject, context);
-  const headerHtml = template.header_html
-    ? replacePlaceholders(template.header_html, context)
-    : `<div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px; text-align: center; border-radius: 8px 8px 0 0;"><h1 style="color: white; margin: 0; font-size: 24px;">Yiba Verified</h1><p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">QCTO-recognised platform</p></div>`;
+
+  // Build Body Content
   const bodyHtml = buildBodyHtml(template.body_sections, context);
   const customBlock = customMessage
-    ? `<p style="color: #4b5563; font-size: 16px; margin: 16px 0; font-style: italic;">${replacePlaceholders(customMessage, context)}</p>`
+    ? `<p style="margin: 16px 0; font-style: italic; border-left: 3px solid #e5e7eb; padding-left: 12px; color: #4b5563;">${replacePlaceholders(customMessage, context)}</p>`
     : "";
-  const ctaText = template.cta_text || "Review invitation";
-  const footerHtml = template.footer_html
-    ? replacePlaceholders(template.footer_html, context)
-    : "If you didn't expect this invitation, you can safely ignore this email. Questions? support@yibaverified.co.za";
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  ${headerHtml}
-  <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+  const ctaText = replacePlaceholders(template.cta_text || "Accept Invitation", context);
+
+  // Dual CTA Logic
+  // Primary: Accept (trackedLink)
+  // Secondary: Review (reviewLink) - optional
+
+  let buttonsHtml = "";
+
+  if (reviewLink) {
+    // Mobile: Stacked, Desktop: Side-by-side
+    buttonsHtml = `
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" class="btn-container" style="margin: 32px 0;">
+        <tr>
+          <td align="center">
+            <!--[if mso]>
+            <table border="0" cellpadding="0" cellspacing="0">
+            <tr>
+            <td style="padding-right: 12px;">
+            <![endif]-->
+            
+            <a href="${trackedLink}" class="btn" style="display: inline-block; background: #2563eb; color: white; font-weight: 600; font-size: 16px; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 12px; min-width: 140px; text-align: center;">
+              ${ctaText}
+            </a>
+            
+            <!--[if mso]>
+            </td>
+            <td style="padding-left: 12px;">
+            <![endif]-->
+            
+            <a href="${reviewLink}" class="btn" style="display: inline-block; background: transparent; color: #374151; font-weight: 500; font-size: 16px; padding: 12px 24px; text-decoration: none; border-radius: 6px; border: 1px solid #d1d5db; min-width: 140px; text-align: center;">
+              Review Invitation
+            </a>
+            
+            <!--[if mso]>
+            </td>
+            </tr>
+            </table>
+            <![endif]-->
+          </td>
+        </tr>
+      </table>
+     `;
+  } else {
+    // Single Button
+    buttonsHtml = `
+      <div style="margin: 32px 0; text-align: center;">
+        <a href="${trackedLink}" style="display: inline-block; background: #2563eb; color: white; font-weight: 600; font-size: 16px; padding: 14px 32px; text-decoration: none; border-radius: 8px;">
+          ${ctaText}
+        </a>
+      </div>
+     `;
+  }
+
+  // Compose Inner Content
+  const contentHtml = `
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">
+      ${replacePlaceholders(template.subject.replace("You're invited", "Invitation"), context)}
+    </h1>
+    
     ${bodyHtml}
     ${customBlock}
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${trackedLink}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">${replacePlaceholders(ctaText, context)}</a>
-    </div>
-    <p style="color: #9ca3af; font-size: 14px; margin: 20px 0;">Or copy and paste this link: <span style="word-break: break-all; color: #3b82f6;">${context.invite_link}</span></p>
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">${footerHtml}</p>
-  </div>
-  <img src="${trackingPixelUrl}" width="1" height="1" style="display: none;" alt="" />
-</body>
-</html>
-  `.trim();
+    
+    ${buttonsHtml}
+    
+    <p style="color: #6b7280; font-size: 14px; margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+      Or copy and paste this link: <br>
+      <a href="${context.invite_link}" style="color: #2563eb; word-break: break-all;">${context.invite_link}</a>
+    </p>
+  `;
 
+  const html = getSharedEmailLayout({
+    contentHtml,
+    title: subject,
+    previewText: replacePlaceholders((template.body_sections as any)?.[0]?.content || "You have an invitation", context),
+  });
+
+  // Inject tracking pixel at the end (outside layout or inside? Layout returns full <html>, so we append before </body>)
+  const htmlWithPixel = html.replace("</body>", `<img src="${trackingPixelUrl}" width="1" height="1" style="display: none;" alt="" /></body>`);
+
+  // Text version
   const textParts: string[] = [];
+  textParts.push(subject.toUpperCase());
+  textParts.push("---");
   if (Array.isArray(template.body_sections)) {
     (template.body_sections as { content?: string }[]).forEach((block) => {
       if (block && typeof block.content === "string") {
@@ -110,13 +165,16 @@ export function buildInviteEmailFromTemplate(
     });
   }
   if (customMessage) {
-    textParts.push(replacePlaceholders(customMessage, context));
+    textParts.push(`Note: ${replacePlaceholders(customMessage, context)}`);
   }
-  textParts.push(`${ctaText}: ${context.invite_link}`);
-  textParts.push(footerHtml);
+  textParts.push(`Accept: ${context.invite_link}`);
+  if (reviewLink) {
+    textParts.push(`Review: ${reviewLink}`);
+  }
+
   const text = textParts.join("\n\n");
 
-  return { subject, html, text };
+  return { subject, html: htmlWithPixel, text };
 }
 
 /**

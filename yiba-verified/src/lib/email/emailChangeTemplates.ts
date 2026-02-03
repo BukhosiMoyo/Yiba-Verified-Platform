@@ -43,63 +43,41 @@ export function generateVerifyNewEmailHtml({
   verificationUrl,
   expiresIn,
 }: VerifyNewEmailParams): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Your New Email</title>
-  <style>${baseStyles}</style>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="header-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-          </svg>
-        </div>
-        <h1>Verify Your New Email</h1>
-      </div>
-      
-      <div class="content">
-        <p>Hi ${userName},</p>
-        
-        <p>You requested to change your Yiba Verified account email to:</p>
-        
-        <div class="info-box">
-          <p><strong>${newEmail}</strong></p>
-        </div>
-        
-        <p>Click the button below to verify this email address and complete the change:</p>
-        
-        <div style="text-align: center;">
-          <a href="${verificationUrl}" class="button">Verify Email Address</a>
-        </div>
-        
-        <div class="warning-box">
-          <p>⏰ This link expires in <strong>${expiresIn}</strong>.</p>
-        </div>
-        
-        <p>If you didn't request this change, you can safely ignore this email. Your account email will remain unchanged.</p>
-        
-        <div class="security-tip">
-          <p>🔒 <strong>Security tip:</strong> Never share this link with anyone. Yiba Verified will never ask you for your password via email.</p>
-        </div>
-      </div>
-      
-      <div class="footer">
-        <p>This is an automated message from Yiba Verified.</p>
-        <p>If you have questions, contact us at <a href="mailto:support@yibaverified.co.za">support@yibaverified.co.za</a></p>
-      </div>
+  const { getSharedEmailLayout } = require("./layout");
+
+  const contentHtml = `
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Verify Your New Email</h1>
+    
+    <p>Hi ${userName},</p>
+    
+    <p>You requested to change your Yiba Verified account email to:</p>
+    
+    <div style="background: #eff6ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 16px; margin: 24px 0; color: #1e40af; font-weight: 600;">
+      ${newEmail}
     </div>
-  </div>
-</body>
-</html>
-`;
+    
+    <p>Click the button below to verify this email address and complete the change:</p>
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${verificationUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">Verify Email Address</a>
+    </div>
+    
+    <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #92400e; margin: 0; font-size: 14px;">⏰ This link expires in <strong>${expiresIn}</strong>.</p>
+    </div>
+    
+    <p>If you didn't request this change, you can safely ignore this email. Your account email will remain unchanged.</p>
+    
+    <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin-top: 24px;">
+      <p style="color: #4b5563; font-size: 13px; margin: 0;">🔒 <strong>Security tip:</strong> Never share this link with anyone. Yiba Verified will never ask you for your password via email.</p>
+    </div>
+  `;
+
+  return getSharedEmailLayout({
+    contentHtml,
+    title: "Verify Your New Email",
+    previewText: `Verify your new email address: ${newEmail}`,
+  });
 }
 
 export function generateVerifyNewEmailText({
@@ -143,73 +121,50 @@ export function generateNotifyOldEmailHtml({
   requestedAt,
   ipAddress,
 }: NotifyOldEmailParams): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Change Requested</title>
-  <style>${baseStyles}</style>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-        <div class="header-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </div>
-        <h1>Email Change Requested</h1>
+  const { getSharedEmailLayout } = require("./layout");
+
+  const contentHtml = `
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Email Change Requested</h1>
+    
+    <p>Hi ${userName},</p>
+    
+    <p>Someone requested to change the email address on your Yiba Verified account. Here are the details:</p>
+    
+    <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-size: 14px;">Current email</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${currentEmail}</span>
       </div>
-      
-      <div class="content">
-        <p>Hi ${userName},</p>
-        
-        <p>Someone requested to change the email address on your Yiba Verified account. Here are the details:</p>
-        
-        <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
-          <div class="detail-row">
-            <span class="detail-label">Current email</span>
-            <span class="detail-value">${currentEmail}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Requested new email</span>
-            <span class="detail-value">${newEmailMasked}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Requested at</span>
-            <span class="detail-value">${requestedAt}</span>
-          </div>
-          <div class="detail-row" style="border-bottom: none;">
-            <span class="detail-label">IP Address</span>
-            <span class="detail-value">${ipAddress}</span>
-          </div>
-        </div>
-        
-        <div class="info-box">
-          <p><strong>If this was you:</strong> Check your new email inbox (${newEmailMasked}) for the verification link to complete the change.</p>
-        </div>
-        
-        <div class="alert-box">
-          <p><strong>If this wasn't you:</strong></p>
-          <p style="margin-top: 8px;">1. Log in immediately and change your password</p>
-          <p>2. Contact support at <a href="mailto:support@yibaverified.co.za" style="color: #991b1b;">support@yibaverified.co.za</a></p>
-        </div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-size: 14px;">Requested new email</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${newEmailMasked}</span>
       </div>
-      
-      <div class="footer">
-        <p>This is an automated security notification from Yiba Verified.</p>
-        <p>You're receiving this because an email change was requested for your account.</p>
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-size: 14px;">Requested at</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${requestedAt}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+        <span style="color: #6b7280; font-size: 14px;">IP Address</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${ipAddress}</span>
       </div>
     </div>
-  </div>
-</body>
-</html>
-`;
+    
+    <div style="background: #eff6ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #1e40af; margin: 0; font-size: 14px;"><strong>If this was you:</strong> Check your new email inbox (${newEmailMasked}) for the verification link to complete the change.</p>
+    </div>
+    
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #991b1b; margin: 0; font-size: 14px;"><strong>If this wasn't you:</strong></p>
+      <p style="color: #991b1b; margin: 8px 0 0 0; font-size: 14px;">1. Log in immediately and change your password</p>
+      <p style="color: #991b1b; margin: 4px 0 0 0; font-size: 14px;">2. Contact support at <a href="mailto:support@yibaverified.co.za" style="color: #991b1b; text-decoration: underline;">support@yibaverified.co.za</a></p>
+    </div>
+  `;
+
+  return getSharedEmailLayout({
+    contentHtml,
+    title: "Email Change Requested",
+    previewText: "Security Alert: Email change requested for your account",
+  });
 }
 
 export function generateNotifyOldEmailText({
@@ -257,67 +212,45 @@ export function generateConfirmChangeHtml({
   newEmail,
   changedAt,
 }: ConfirmChangeParams): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Successfully Changed</title>
-  <style>${baseStyles}</style>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-        <div class="header-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-        </div>
-        <h1>Email Successfully Changed</h1>
+  const { getSharedEmailLayout } = require("./layout");
+
+  const contentHtml = `
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Email Successfully Changed</h1>
+    
+    <p>Hi ${userName},</p>
+    
+    <p>The email address on your Yiba Verified account has been successfully changed.</p>
+    
+    <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-size: 14px;">Previous email</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${oldEmail}</span>
       </div>
-      
-      <div class="content">
-        <p>Hi ${userName},</p>
-        
-        <p>The email address on your Yiba Verified account has been successfully changed.</p>
-        
-        <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
-          <div class="detail-row">
-            <span class="detail-label">Previous email</span>
-            <span class="detail-value">${oldEmail}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">New email</span>
-            <span class="detail-value">${newEmail}</span>
-          </div>
-          <div class="detail-row" style="border-bottom: none;">
-            <span class="detail-label">Changed at</span>
-            <span class="detail-value">${changedAt}</span>
-          </div>
-        </div>
-        
-        <div class="info-box">
-          <p>🔐 For security, all active sessions have been logged out. Please log in again with your new email address.</p>
-        </div>
-        
-        <div class="alert-box">
-          <p><strong>Didn't make this change?</strong></p>
-          <p style="margin-top: 8px;">Contact support immediately at <a href="mailto:support@yibaverified.co.za" style="color: #991b1b;">support@yibaverified.co.za</a></p>
-        </div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-size: 14px;">New email</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${newEmail}</span>
       </div>
-      
-      <div class="footer">
-        <p>This is an automated security notification from Yiba Verified.</p>
-        <p>This email was sent to your previous email address for security purposes.</p>
+      <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+        <span style="color: #6b7280; font-size: 14px;">Changed at</span>
+        <span style="color: #111827; font-size: 14px; font-weight: 500;">${changedAt}</span>
       </div>
     </div>
-  </div>
-</body>
-</html>
-`;
+    
+    <div style="background: #eff6ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #1e40af; margin: 0; font-size: 14px;">🔐 For security, all active sessions have been logged out. Please log in again with your new email address.</p>
+    </div>
+    
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #991b1b; margin: 0; font-size: 14px;"><strong>Didn't make this change?</strong></p>
+      <p style="color: #991b1b; margin: 8px 0 0 0; font-size: 14px;">Contact support immediately at <a href="mailto:support@yibaverified.co.za" style="color: #991b1b; text-decoration: underline;">support@yibaverified.co.za</a></p>
+    </div>
+  `;
+
+  return getSharedEmailLayout({
+    contentHtml,
+    title: "Email Successfully Changed",
+    previewText: "Your email address has been updated",
+  });
 }
 
 export function generateConfirmChangeText({
@@ -353,57 +286,35 @@ export function generateWelcomeNewEmailHtml({
   userName,
   newEmail,
 }: WelcomeNewEmailParams): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Your New Email</title>
-  <style>${baseStyles}</style>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="header-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-        </div>
-        <h1>Email Verified Successfully!</h1>
-      </div>
-      
-      <div class="content">
-        <p>Hi ${userName},</p>
-        
-        <p>Great news! Your email address has been successfully updated to:</p>
-        
-        <div class="info-box">
-          <p><strong>${newEmail}</strong></p>
-        </div>
-        
-        <p>From now on, you'll receive all Yiba Verified notifications and communications at this email address.</p>
-        
-        <div style="text-align: center;">
-          <a href="${process.env.NEXTAUTH_URL || "https://yibaverified.co.za"}/login" class="button">Log In to Your Account</a>
-        </div>
-        
-        <div class="security-tip">
-          <p>🔐 <strong>Reminder:</strong> All previous sessions have been logged out for security. You'll need to log in again.</p>
-        </div>
-      </div>
-      
-      <div class="footer">
-        <p>Welcome aboard!</p>
-        <p>The Yiba Verified Team</p>
-      </div>
+  const { getSharedEmailLayout } = require("./layout");
+
+  const contentHtml = `
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Email Verified Successfully!</h1>
+    
+    <p>Hi ${userName},</p>
+    
+    <p>Great news! Your email address has been successfully updated to:</p>
+    
+    <div style="background: #eff6ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="color: #1e40af; font-weight: 600; margin: 0;">${newEmail}</p>
     </div>
-  </div>
-</body>
-</html>
-`;
+    
+    <p>From now on, you'll receive all Yiba Verified notifications and communications at this email address.</p>
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${process.env.NEXTAUTH_URL || "https://yibaverified.co.za"}/login" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">Log In to Your Account</a>
+    </div>
+    
+    <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin-top: 24px;">
+      <p style="color: #4b5563; font-size: 13px; margin: 0;">🔐 <strong>Reminder:</strong> All previous sessions have been logged out for security. You'll need to log in again.</p>
+    </div>
+  `;
+
+  return getSharedEmailLayout({
+    contentHtml,
+    title: "Welcome to Your New Email",
+    previewText: "Your email has been successfully updated",
+  });
 }
 
 export function generateWelcomeNewEmailText({
@@ -431,10 +342,10 @@ The Yiba Verified Team
 export function maskEmail(email: string): string {
   const [localPart, domain] = email.split("@");
   if (!domain) return email;
-  
-  const maskedLocal = localPart.length <= 2 
-    ? localPart[0] + "***" 
+
+  const maskedLocal = localPart.length <= 2
+    ? localPart[0] + "***"
     : localPart.slice(0, 2) + "***" + localPart.slice(-1);
-  
+
   return `${maskedLocal}@${domain}`;
 }

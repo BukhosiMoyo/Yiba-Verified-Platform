@@ -160,6 +160,9 @@ export async function processInvite(
 
     // Generate invite link and tracked link / pixel
     const inviteLink = `${baseUrl}/invite?token=${rawToken}`;
+    // Link to the new Review Walkthrough page
+    const reviewLink = `${baseUrl}/invites/${rawToken}/review`;
+
     const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(rawToken)}`;
     const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(inviteLink)}`;
 
@@ -193,7 +196,8 @@ export async function processInvite(
         context,
         trackedLink,
         trackingPixelUrl,
-        invite.custom_message ?? null
+        invite.custom_message ?? null,
+        reviewLink // Pass review link for dual CTA
       );
       subject = built.subject;
       html = built.html;

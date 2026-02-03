@@ -163,6 +163,19 @@ export async function POST(request: NextRequest) {
     const { storeToken } = await import("@/lib/invites/token-store");
     storeToken(tokenHash, rawToken, 168); // Store for 7 days
 
+    // Invalidate previous pending invites for this email
+    await prisma.invite.updateMany({
+      where: {
+        email: email.toLowerCase().trim(),
+        status: { in: ["QUEUED", "SENT", "SENDING"] },
+        expires_at: { gt: new Date() }, // Only if not already expired
+      },
+      data: {
+        status: "EXPIRED",
+        expires_at: new Date(), // Expire immediately
+      },
+    });
+
     // Create invite with QUEUED status and audit log
     const invite = await prisma.$transaction(async (tx) => {
       const createdInvite = await tx.invite.create({
@@ -233,7 +246,7 @@ export async function POST(request: NextRequest) {
         heading: "Welcome to Yiba Verified"
       });
 
-      await emailService.send({
+      const emailResult = await emailService.send({
         to: email,
         type: EmailType.INVITE,
         subject: "You've been invited to Yiba Verified",
@@ -241,17 +254,22 @@ export async function POST(request: NextRequest) {
         text: `You have been invited to Yiba Verified. Click here to accept: ${inviteLink}`,
       });
 
-      // Update status to SENT
-      await prisma.invite.update({
-        where: { invite_id: invite.invite_id },
-        data: { status: "SENT", sent_at: new Date() }
-      });
+      if (emailResult.success) {
+        // Update status to SENT only if email actually sent
+        await prisma.invite.update({
+          where: { invite_id: invite.invite_id },
+          data: { status: "SENT", sent_at: new Date() }
+        });
 
-      // Update return object status
-      (invite as any).status = "SENT";
+        // Update return object status
+        (invite as any).status = "SENT";
+      } else {
+        console.error(`Email service returned failure for ${email}:`, emailResult.error);
+        // Status remains QUEUED
+      }
 
     } catch (emailErr) {
-      console.error("Failed to send invite email immediately:", emailErr);
+      console.error("Failed to call email service:", emailErr);
       // We don't fail the request, but we leave status as QUEUED so worker can pick it up if there is one
       // (Audit log already created)
     }
