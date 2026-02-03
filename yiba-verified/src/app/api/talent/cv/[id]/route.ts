@@ -8,11 +8,11 @@ import { AppError, ERROR_CODES } from "@/lib/api/errors";
 // GET /api/talent/cv/[id]
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { ctx } = await requireAuth(request);
-        const { id } = params;
+        const { id } = await params;
 
         const cv = await prisma.cvVersion.findFirst({
             where: { id, user_id: ctx.userId }
@@ -31,11 +31,11 @@ export async function GET(
 // PATCH /api/talent/cv/[id]
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { ctx } = await requireAuth(request);
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
 
         // Check ownership
@@ -66,11 +66,11 @@ export async function PATCH(
 // DELETE /api/talent/cv/[id]
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { ctx } = await requireAuth(request);
-        const { id } = params;
+        const { id } = await params;
 
         // Check ownership
         const existing = await prisma.cvVersion.findFirst({

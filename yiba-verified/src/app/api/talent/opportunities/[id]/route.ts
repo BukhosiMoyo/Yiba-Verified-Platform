@@ -9,11 +9,11 @@ import { JobRequestStatus } from "@prisma/client";
 // PATCH /api/talent/opportunities/[id]
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { ctx } = await requireAuth(request);
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { status } = body;
 

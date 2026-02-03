@@ -5,10 +5,10 @@ import { TalentContactVisibility } from "@prisma/client";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = params;
+        const { slug } = await params;
 
         const profile = await prisma.publicTalentProfile.findUnique({
             where: {
