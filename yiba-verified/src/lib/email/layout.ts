@@ -4,34 +4,34 @@
  */
 
 interface EmailLayoutProps {
-    contentHtml: string;
-    title?: string;
-    previewText?: string;
+  contentHtml: string;
+  title?: string;
+  previewText?: string;
 }
 
 export function getSharedEmailLayout({
-    contentHtml,
-    title = "Yiba Verified",
-    previewText,
+  contentHtml,
+  title = "Yiba Verified",
+  previewText,
 }: EmailLayoutProps): string {
-    // Base styles for consistency across clients
-    const styles = {
-        body: "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #374151; margin: 0; padding: 0; background-color: #f3f4f6; width: 100%;",
-        containerWrapper: "background-color: #f3f4f6; padding: 40px 20px; width: 100%;",
-        container: "max-width: 640px; margin: 0 auto; width: 100%;",
-        card: "background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);",
-        header: "padding: 32px 32px 0 32px; text-align: left;", // Logo top-left
-        content: "padding: 32px;",
-        footer: "padding: 24px; text-align: center; color: #6b7280; font-size: 13px;",
-        link: "color: #2563eb; text-decoration: none;",
-    };
+  // Base styles for consistency across clients
+  const styles = {
+    body: "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #374151; margin: 0; padding: 0; background-color: #f3f4f6; width: 100%;",
+    containerWrapper: "background-color: #f3f4f6; padding: 40px 20px; width: 100%;",
+    container: "max-width: 640px; margin: 0 auto; width: 100%;",
+    card: "background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);",
+    header: "padding: 32px 32px 0 32px; text-align: left;", // Logo top-left
+    content: "padding: 32px;",
+    footer: "padding: 24px; text-align: center; color: #6b7280; font-size: 13px;",
+    link: "color: #2563eb; text-decoration: none;",
+  };
 
-    const currentYear = new Date().getFullYear();
-    const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
-    const logoUrl = `${baseUrl}/images/logo-black.png`; // Fallback to text if missing, but typically we want a logo here. 
-    // NOTE: Ensure we have a public logo URL. For now we'll assume one exists or use text.
+  const currentYear = new Date().getFullYear();
+  const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
+  const logoUrl = `${baseUrl}/images/logo-black.png`; // Fallback to text if missing, but typically we want a logo here. 
+  // NOTE: Ensure we have a public logo URL. For now we'll assume one exists or use text.
 
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -77,9 +77,7 @@ export function getSharedEmailLayout({
                 <tr>
                   <td style="${styles.header}" class="header">
                      <!-- Using text for reliability if logo fails, otherwise <img src="..." height="28" /> -->
-                     <div style="font-weight: 700; font-size: 20px; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                       Yiba Verified
-                     </div>
+                     <img src="${baseUrl}/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" height="40" style="display: block; border: 0; max-width: 200px; height: auto;" />
                   </td>
                 </tr>
 
