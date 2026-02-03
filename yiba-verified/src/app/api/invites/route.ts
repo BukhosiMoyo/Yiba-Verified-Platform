@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
       // 1. Generate URLs
       const reviewLink = `${baseUrl}/invites/${rawToken}/review`;
       const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(rawToken)}`;
-      const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(reviewLink)}`; // Point main CTA to review? Or keep accept?
+      const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(inviteLink)}`; // Point main CTA to direct accept
       // User likely wants "Review" as part of the flow. 
       // If we use buildInviteEmailFromTemplate with `reviewLink`, it generates TWO buttons: Accept (trackedLink) and Review (reviewLink).
       // Ideally, the "Accept" button should PROBABLY go to the review page too if that's the new flow?
