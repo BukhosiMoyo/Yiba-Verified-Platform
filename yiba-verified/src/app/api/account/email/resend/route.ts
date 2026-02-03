@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import crypto from "crypto";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 import {
   generateVerifyNewEmailHtml,
   generateVerifyNewEmailText,
@@ -84,6 +85,7 @@ export async function POST() {
 
     await emailService.send({
       to: pendingRequest.new_email,
+      type: EmailType.VERIFICATION,
       subject: "Verify your new email address - Yiba Verified",
       html: generateVerifyNewEmailHtml({
         userName,

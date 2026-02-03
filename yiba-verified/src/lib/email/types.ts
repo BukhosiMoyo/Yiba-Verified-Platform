@@ -23,7 +23,7 @@ export const EMAIL_CONFIG: Record<EmailType, EmailTypeConfig> = {
     [EmailType.INVITE]: {
         fromLocal: "invites",
         fromName: "Yiba Verified Invites",
-        // No reply-to (Strict no-reply)
+        replyTo: SUPPORT_EMAIL, // CHANGED: Now replyable per directive
     },
     [EmailType.PASSWORD_RESET]: {
         fromLocal: "no-reply",
@@ -51,7 +51,7 @@ export const EMAIL_CONFIG: Record<EmailType, EmailTypeConfig> = {
         // No reply-to
     },
     [EmailType.SYSTEM_ALERT]: {
-        fromLocal: "notifications",
+        fromLocal: "no-reply",
         fromName: "Yiba Verified System",
         // No reply-to
     }

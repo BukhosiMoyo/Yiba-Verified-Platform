@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 import { InviteCampaign, Invite, EmailTemplate } from "@prisma/client";
 
 const BATCH_SIZE_DEFAULT = 25;
@@ -183,6 +184,7 @@ export class CampaignSender {
                 // Send
                 await emailService.send({
                     to: invite.email,
+                    type: EmailType.INVITE,
                     subject: subject,
                     html: htmlBody,
                 });

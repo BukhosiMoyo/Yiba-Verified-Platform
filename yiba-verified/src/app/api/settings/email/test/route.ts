@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     const emailService = getEmailService();
     const result = await emailService.send({
       to,
+      type: EmailType.SYSTEM_ALERT,
       subject: "Yiba Verified – test email",
       html: "<p>This is a test email from Yiba Verified. If you received this, email sending is configured correctly.</p>",
       text: "This is a test email from Yiba Verified. If you received this, email sending is configured correctly.",

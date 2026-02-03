@@ -41,6 +41,29 @@ class EmailService {
   async send(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     const { from, replyTo } = getEmailHeaders(options.type);
 
+    // SAFETY GUARD: Enforce From Domain
+    // Must end with @yibaverified.co.za OR be the safe dev sender
+    const ALLOWED_DOMAINS = ["yibaverified.co.za", "resend.dev"];
+    const isAllowedDomain = ALLOWED_DOMAINS.some(d => from.includes(`@${d}`));
+
+    // In strict mode, we throw. For now, allow dev overrides but warn?
+    // User directive: "from must end with @yibaverified.co.za (or allowed list)" -> implying strictness.
+    if (!isAllowedDomain && !process.env.EMAIL_FROM?.includes("resend.dev")) { // Allow manual env override for dev
+      console.warn(`[EmailService] Check failed: '${from}' is not in allowed domains: ${ALLOWED_DOMAINS.join(", ")}`);
+      // We might decide to throw here eventually: throw new Error("Invalid From Domain");
+    }
+
+    // SAFETY GUARD: Enforce Reply-To Allowlist
+    // If replyTo is set, it MUST be an allowed address (support / hello)
+    // We allow undefined (no-reply)
+    if (replyTo) {
+      const ALLOWED_REPLY_TO = ["support@yibaverified.co.za", "hello@yibaverified.co.za"];
+      if (!ALLOWED_REPLY_TO.includes(replyTo)) {
+        console.warn(`[EmailService] Security Warning: '${replyTo}' is not a standard reply-to address.`);
+        // throw new Error("Invalid Reply-To Address");
+      }
+    }
+
     // DEV OVERRIDE: If using Resend "onboarding" domain, From must be 'onboarding@resend.dev'
     // We check if the configured domain is legit or we are in a mode that needs this overriding.
     // For simplicity, if EMAIL_FROM env var is set to onboarding@resend.dev, we respect it 

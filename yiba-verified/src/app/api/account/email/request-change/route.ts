@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hash, compare } from "bcryptjs";
 import crypto from "crypto";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 import {
   generateVerifyNewEmailHtml,
   generateVerifyNewEmailText,
@@ -177,6 +178,7 @@ export async function POST(request: Request) {
     // Send verification email to new address
     await emailService.send({
       to: newEmail,
+      type: EmailType.VERIFICATION,
       subject: "Verify your new email address - Yiba Verified",
       html: generateVerifyNewEmailHtml({
         userName,
@@ -195,6 +197,7 @@ export async function POST(request: Request) {
     // Send notification to old address
     await emailService.send({
       to: user.email,
+      type: EmailType.SYSTEM_ALERT,
       subject: "⚠️ Email change requested for your Yiba Verified account",
       html: generateNotifyOldEmailHtml({
         userName,

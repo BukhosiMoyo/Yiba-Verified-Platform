@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { compare } from "bcryptjs";
 import { getEmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 import {
   generateConfirmChangeHtml,
   generateConfirmChangeText,
@@ -122,6 +123,7 @@ export async function GET(request: Request) {
     // Confirm to old email
     await emailService.send({
       to: oldEmail,
+      type: EmailType.SYSTEM_ALERT,
       subject: "Your Yiba Verified email has been changed",
       html: generateConfirmChangeHtml({
         userName,
@@ -140,6 +142,7 @@ export async function GET(request: Request) {
     // Welcome to new email
     await emailService.send({
       to: newEmail,
+      type: EmailType.NOTIFICATION,
       subject: "Welcome! Your email has been verified - Yiba Verified",
       html: generateWelcomeNewEmailHtml({
         userName,

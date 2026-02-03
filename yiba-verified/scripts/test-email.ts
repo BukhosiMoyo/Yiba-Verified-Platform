@@ -22,22 +22,35 @@ async function testEmail() {
 
     console.log(`Sending test email to: ${targetEmail}`);
 
-    const result = await emailService.send({
-        to: targetEmail,
-        type: EmailType.SYSTEM_ALERT,
-        subject: "Yiba Verified - Test Email",
-        html: `
-      <h1>It Works!</h1>
-      <p>This is a test email from Yiba Verified email infrastructure.</p>
-      <p>Time: ${new Date().toISOString()}</p>
-    `,
-        text: "It Works! This is a test email from Yiba Verified email infrastructure.",
-    });
+    const typesToTest = [
+        EmailType.INVITE,
+        EmailType.PASSWORD_RESET,
+        EmailType.VERIFICATION,
+        EmailType.WELCOME,
+        EmailType.NOTIFICATION,
+        EmailType.INACTIVITY,
+        EmailType.SYSTEM_ALERT
+    ];
 
-    if (result.success) {
-        console.log("✅ Email sent successfully!");
-    } else {
-        console.error("❌ Failed to send email:", result.error);
+    console.log(`\n🧪 Testing ${typesToTest.length} email types...`);
+
+    for (const type of typesToTest) {
+        console.log(`\n➡️  Sending ${type}...`);
+        const result = await emailService.send({
+            to: targetEmail,
+            type: type,
+            subject: `[TEST] ${type} - Yiba Verified`,
+            html: `<p>Test execution for type: <strong>${type}</strong></p>`,
+        });
+
+        if (result.success) {
+            console.log(`✅ ${type} Sent OK`);
+        } else {
+            console.error(`❌ ${type} Failed:`, result.error);
+        }
+
+        // Small delay to avoid rate limits
+        await new Promise(r => setTimeout(r, 1000));
     }
 }
 
