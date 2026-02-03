@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(bytes);
 
         const storage = getStorageService();
-        const result = await storage.upload(buffer, storageKey, file.type, true);
+        // Remove 'true' (isPublic) to rely on Bucket Policy instead of Object ACLs
+        const result = await storage.upload(buffer, storageKey, file.type);
 
         // ... (existing URL construction logic) ...
 
@@ -92,8 +93,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ url: imageUrl }, { status: 200 });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Profile upload error:", error);
+        // Log sensitive details only in server logs (not returned to client details, but message is fine)
+        if (error.name === "AccessDenied") {
+            console.error("S3 Access Denied. Check Bucket Policy or ACL settings.");
+        }
         return fail(error);
     }
 }

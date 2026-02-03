@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, { params }: Props) {
         const buffer = Buffer.from(bytes);
 
         const storage = getStorageService();
-        const result = await storage.upload(buffer, storageKey, file.type, true);
+        const result = await storage.upload(buffer, storageKey, file.type);
 
         let logoUrl = result.url;
 
