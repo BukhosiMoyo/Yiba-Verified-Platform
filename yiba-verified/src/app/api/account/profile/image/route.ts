@@ -46,30 +46,9 @@ export async function POST(request: NextRequest) {
         const storage = getStorageService();
         const result = await storage.upload(buffer, storageKey, file.type, true);
 
-        // In a real S3 setup without a CDN/CNAME, we might need a signed URL, 
-        // but for public buckets or simple setups, we often construct the URL.
-        // However, StorageService returns a 'url' property.
-        // If it's an s3:// URL, we might need to convert it to http for the frontend if the bucket isn't public.
-        // But typically for profile pics, we want a publicly accessible URL.
-        // Assuming the storage service returns a usable URL or we use a proxy route.
-        // For now, let's assume direct access or the service returns a proper http url if configured, 
-        // OR we update the user with the storage key/url. 
-        // Implementation note: The existing User model has 'image' string field.
+        // ... (existing URL construction logic) ...
 
         let imageUrl = result.url;
-
-        // If the storage service returns an s3:// URI, we need to convert it to a public URL if possible,
-        // or rely on a presigned URL generator for display. 
-        // For simplicity in this implementation, if it's S3, we'll try to construct a public URL 
-        // assuming the bucket allows public read for these objects, OR use a proxy.
-        // Let's check how other images are handled. Admin upload route returns `result.url` or `/api/storage/...` fallback.
-        // Let's stick to what storage service gives us, but if it's s3://, we might want to store the key or a cloudfront URL.
-
-        // If the result.url is local file path (in dev), we need to make it accessible via /api/storage possibly?
-        // StorageService local impl returns absolute path.
-
-        // HACK: For MVP/Dev with local storage, we need a way to serve this.
-        // If S3, we usually want https://bucket.s3.region.amazonaws.com/key
 
         if (result.url?.startsWith("s3://")) {
             // Construct public https URL for S3
@@ -77,10 +56,33 @@ export async function POST(request: NextRequest) {
             const region = process.env.S3_REGION || process.env.AWS_REGION || "us-east-1";
             imageUrl = `https://${bucket}.s3.${region}.amazonaws.com/${storageKey}`;
         } else if (result.url && !result.url.startsWith("http")) {
-            // Likely local path
-            // We probably need a retrieve route for local files, but for now let's just save it.
-            // Actually, for local dev, usually we serve via a route like /api/files/[key]
             imageUrl = `/api/storage/${storageKey}`;
+        }
+
+        // Cleanup: Delete old image if it exists
+        const currentUser = await prisma.user.findUnique({
+            where: { user_id: ctx.userId },
+            select: { image: true }
+        });
+
+        if (currentUser?.image) {
+            // Try to extract key from URL
+            // Format: https://bucket.s3.region.amazonaws.com/users/id/avatar-ts.ext
+            // or: /api/storage/users/id/avatar-ts.ext
+            try {
+                let oldKey = null;
+                if (currentUser.image.includes(".amazonaws.com/")) {
+                    oldKey = currentUser.image.split(".amazonaws.com/")[1];
+                } else if (currentUser.image.includes("/api/storage/")) {
+                    oldKey = currentUser.image.split("/api/storage/")[1];
+                }
+
+                if (oldKey) {
+                    await storage.delete(oldKey).catch(err => console.error("Failed to delete old image:", err));
+                }
+            } catch (e) {
+                console.error("Error parsing old image URL for deletion:", e);
+            }
         }
 
         await prisma.user.update({

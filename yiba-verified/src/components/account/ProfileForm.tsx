@@ -133,7 +133,7 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
     try {
       const formData = new FormData();
       // Append as a file
-      formData.append("file", croppedBlob, "profile-pic.jpg");
+      formData.append("file", croppedBlob, "profile-pic.webp");
 
       const res = await fetch("/api/account/profile/image", {
         method: "POST",

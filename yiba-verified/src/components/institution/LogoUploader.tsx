@@ -49,7 +49,7 @@ export function LogoUploader({ institutionId, currentLogo, className }: LogoUplo
         setUploading(true);
         try {
             const formData = new FormData();
-            formData.append("file", croppedBlob, "logo.jpg");
+            formData.append("file", croppedBlob, "logo.webp");
 
             const res = await fetch(`/api/institutions/${institutionId}/logo`, {
                 method: "POST",

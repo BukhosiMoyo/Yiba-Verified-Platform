@@ -82,15 +82,30 @@ export default async function getCroppedImg(
     // paste generated rotate image at the top left corner
     ctx.putImageData(data, 0, 0);
 
-    // As a Blob with compression
+    // As a Blob with compression and resizing
     return new Promise((resolve) => {
-        // Compress quality to 0.8
-        // If we wanted to resize, we could change canvas width/height above before putImageData, 
-        // but putImageData replaces content. 
-        // To resize, we'd need another drawImage call to a smaller canvas.
-        // For now, let's just compress the JPEG quality.
-        canvas.toBlob((blob) => {
+        // Create a temporary canvas for resizing
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = 100;
+        tempCanvas.height = 100;
+        const tempCtx = tempCanvas.getContext("2d");
+
+        if (!tempCtx) {
+            resolve(null);
+            return;
+        }
+
+        // Draw the cropped image onto the smaller canvas
+        // ctx.canvas holds the cropped full-res image
+        tempCtx.drawImage(
+            canvas,
+            0, 0, canvas.width, canvas.height, // source
+            0, 0, 100, 100 // destination
+        );
+
+        // Export as WebP
+        tempCanvas.toBlob((blob) => {
             resolve(blob);
-        }, "image/jpeg", 0.8);
+        }, "image/webp", 0.85);
     });
 }
