@@ -11,10 +11,16 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { user_id: session.user.userId, deleted_at: null },
-    select: { first_name: true, last_name: true, email: true, emailVerified: true, image: true },
-  });
+  let user = null;
+  try {
+    user = await prisma.user.findUnique({
+      where: { user_id: session.user.userId, deleted_at: null },
+      select: { first_name: true, last_name: true, email: true, emailVerified: true, image: true },
+    });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    // Don't redirect, just let user be null and handle below
+  }
 
   if (!user) {
     redirect("/login");

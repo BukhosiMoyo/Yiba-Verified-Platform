@@ -82,10 +82,15 @@ export default async function getCroppedImg(
     // paste generated rotate image at the top left corner
     ctx.putImageData(data, 0, 0);
 
-    // As a Blob
+    // As a Blob with compression
     return new Promise((resolve) => {
+        // Compress quality to 0.8
+        // If we wanted to resize, we could change canvas width/height above before putImageData, 
+        // but putImageData replaces content. 
+        // To resize, we'd need another drawImage call to a smaller canvas.
+        // For now, let's just compress the JPEG quality.
         canvas.toBlob((blob) => {
             resolve(blob);
-        }, "image/jpeg", 0.95);
+        }, "image/jpeg", 0.8);
     });
 }
