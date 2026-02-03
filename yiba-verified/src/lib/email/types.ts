@@ -10,9 +10,10 @@ export enum EmailType {
 }
 
 interface EmailTypeConfig {
-    fromLocal: string; // The "invites" part of invites@...
+    fromLocal: string;
     fromName: string;
-    replyTo?: string; // If undefined, behaves as no-reply (or explicit no-reply@) 
+    replyTo?: string;
+    previewText: string; // Mandatory preview text
 }
 
 // Domain is central - usually yibaverified.co.za
@@ -23,37 +24,44 @@ export const EMAIL_CONFIG: Record<EmailType, EmailTypeConfig> = {
     [EmailType.INVITE]: {
         fromLocal: "invites",
         fromName: "Yiba Verified Invites",
-        replyTo: SUPPORT_EMAIL, // CHANGED: Now replyable per directive
+        replyTo: SUPPORT_EMAIL,
+        previewText: "See what you’ll be able to manage before you accept",
     },
     [EmailType.PASSWORD_RESET]: {
         fromLocal: "no-reply",
         fromName: "Yiba Verified Security",
         // No reply-to
+        previewText: "This secure link will expire shortly",
     },
     [EmailType.VERIFICATION]: {
         fromLocal: "no-reply",
         fromName: "Yiba Verified Security",
         // No reply-to
+        previewText: "Action required to verify your email address", // Fallback for verification
     },
     [EmailType.WELCOME]: {
         fromLocal: "notifications",
         fromName: "Yiba Verified",
-        replyTo: SUPPORT_EMAIL, // Replyable
+        replyTo: SUPPORT_EMAIL,
+        previewText: "Your account is ready — here’s what to do first",
     },
     [EmailType.NOTIFICATION]: {
         fromLocal: "notifications",
         fromName: "Yiba Verified",
-        replyTo: SUPPORT_EMAIL, // Replyable
+        replyTo: SUPPORT_EMAIL,
+        previewText: "There’s an update waiting for you",
     },
     [EmailType.INACTIVITY]: {
         fromLocal: "notifications",
         fromName: "Yiba Verified",
         // No reply-to
+        previewText: "Your dashboard may have updates waiting",
     },
     [EmailType.SYSTEM_ALERT]: {
         fromLocal: "no-reply",
         fromName: "Yiba Verified System",
         // No reply-to
+        previewText: "Please review recent account activity",
     }
 };
 

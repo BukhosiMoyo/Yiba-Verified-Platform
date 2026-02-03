@@ -144,10 +144,14 @@ export function buildInviteEmailFromTemplate(
     </p>
   `;
 
+  // Resolve central preview text
+  const { EMAIL_CONFIG, EmailType } = require("../types");
+  const previewText = EMAIL_CONFIG[EmailType.INVITE].previewText;
+
   const html = getSharedEmailLayout({
     contentHtml,
     title: subject,
-    previewText: replacePlaceholders((template.body_sections as any)?.[0]?.content || "You have an invitation", context),
+    previewText: replacePlaceholders(previewText, context),
   });
 
   // Inject tracking pixel at the end (outside layout or inside? Layout returns full <html>, so we append before </body>)

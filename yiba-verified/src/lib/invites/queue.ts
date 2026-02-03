@@ -216,12 +216,16 @@ export async function processInvite(
 
     // Send email
     const emailService = getEmailService();
+    const { EMAIL_CONFIG } = require("@/lib/email/types");
+    const previewText = EMAIL_CONFIG[EmailType.INVITE].previewText;
+
     const result = await emailService.send({
       to: invite.email,
       type: EmailType.INVITE,
       subject,
       html,
       text,
+      previewText,
     });
 
     if (result.success) {

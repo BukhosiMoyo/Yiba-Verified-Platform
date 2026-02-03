@@ -114,6 +114,10 @@ export class NotificationService {
                         const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
                         const emailService = getEmailService();
 
+                        const { EMAIL_CONFIG } = await import("@/lib/email/types");
+                        const notificationConfig = EMAIL_CONFIG[EmailType.NOTIFICATION];
+                        const previewText = notificationConfig.previewText;
+
                         // Build branded HTML
                         const bodyContent = `<p style="font-size: 16px;">${message}</p>`;
                         finalBodyHtml = buildBaseEmailHtml({
@@ -121,7 +125,8 @@ export class NotificationService {
                             bodyHtml: bodyContent,
                             actionLabel: actionLink ? "View Details" : undefined,
                             actionUrl: actionLink,
-                            heading: "Notification"
+                            heading: "Notification",
+                            previewText // Inject into HTML
                         });
 
                         const res = await emailService.send({
@@ -129,7 +134,8 @@ export class NotificationService {
                             type: EmailType.NOTIFICATION,
                             subject: title,
                             text: message,
-                            html: finalBodyHtml
+                            html: finalBodyHtml,
+                            previewText // Enforce check
                         });
 
                         if (res.success) {

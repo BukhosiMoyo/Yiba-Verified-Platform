@@ -167,6 +167,10 @@ export async function POST(request: Request) {
 
     // Send emails
     const emailService = getEmailService();
+    const { EMAIL_CONFIG } = require("@/lib/email/types");
+    const verificationConfig = EMAIL_CONFIG[EmailType.VERIFICATION];
+    const systemAlertConfig = EMAIL_CONFIG[EmailType.SYSTEM_ALERT];
+
     const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
     const verificationUrl = `${baseUrl}/api/account/email/verify?token=${token}`;
     const userName = `${user.first_name} ${user.last_name}`;
@@ -185,6 +189,7 @@ export async function POST(request: Request) {
         newEmail,
         verificationUrl,
         expiresIn: "24 hours",
+        previewText: verificationConfig.previewText,
       }),
       text: generateVerifyNewEmailText({
         userName,
@@ -192,6 +197,7 @@ export async function POST(request: Request) {
         verificationUrl,
         expiresIn: "24 hours",
       }),
+      previewText: verificationConfig.previewText,
     });
 
     // Send notification to old address
@@ -205,6 +211,7 @@ export async function POST(request: Request) {
         newEmailMasked: maskEmail(newEmail),
         requestedAt,
         ipAddress,
+        previewText: systemAlertConfig.previewText,
       }),
       text: generateNotifyOldEmailText({
         userName,
@@ -213,6 +220,7 @@ export async function POST(request: Request) {
         requestedAt,
         ipAddress,
       }),
+      previewText: systemAlertConfig.previewText,
     });
 
     return NextResponse.json({

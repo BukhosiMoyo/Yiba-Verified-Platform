@@ -35,6 +35,7 @@ interface VerifyNewEmailParams {
   newEmail: string;
   verificationUrl: string;
   expiresIn: string;
+  previewText?: string;
 }
 
 export function generateVerifyNewEmailHtml({
@@ -42,6 +43,7 @@ export function generateVerifyNewEmailHtml({
   newEmail,
   verificationUrl,
   expiresIn,
+  previewText,
 }: VerifyNewEmailParams): string {
   const { getSharedEmailLayout } = require("./layout");
 
@@ -76,7 +78,7 @@ export function generateVerifyNewEmailHtml({
   return getSharedEmailLayout({
     contentHtml,
     title: "Verify Your New Email",
-    previewText: `Verify your new email address: ${newEmail}`,
+    previewText: previewText || `Verify your new email address: ${newEmail}`,
   });
 }
 
@@ -112,6 +114,7 @@ interface NotifyOldEmailParams {
   newEmailMasked: string;
   requestedAt: string;
   ipAddress: string;
+  previewText?: string;
 }
 
 export function generateNotifyOldEmailHtml({
@@ -120,6 +123,7 @@ export function generateNotifyOldEmailHtml({
   newEmailMasked,
   requestedAt,
   ipAddress,
+  previewText,
 }: NotifyOldEmailParams): string {
   const { getSharedEmailLayout } = require("./layout");
 
@@ -163,7 +167,7 @@ export function generateNotifyOldEmailHtml({
   return getSharedEmailLayout({
     contentHtml,
     title: "Email Change Requested",
-    previewText: "Security Alert: Email change requested for your account",
+    previewText: previewText || "Security Alert: Email change requested for your account",
   });
 }
 
@@ -204,6 +208,7 @@ interface ConfirmChangeParams {
   oldEmail: string;
   newEmail: string;
   changedAt: string;
+  previewText?: string;
 }
 
 export function generateConfirmChangeHtml({
@@ -211,6 +216,7 @@ export function generateConfirmChangeHtml({
   oldEmail,
   newEmail,
   changedAt,
+  previewText,
 }: ConfirmChangeParams): string {
   const { getSharedEmailLayout } = require("./layout");
 
@@ -249,7 +255,7 @@ export function generateConfirmChangeHtml({
   return getSharedEmailLayout({
     contentHtml,
     title: "Email Successfully Changed",
-    previewText: "Your email address has been updated",
+    previewText: previewText || "Your email address has been updated",
   });
 }
 
@@ -280,11 +286,13 @@ Yiba Verified - Security Notification
 interface WelcomeNewEmailParams {
   userName: string;
   newEmail: string;
+  previewText?: string;
 }
 
 export function generateWelcomeNewEmailHtml({
   userName,
   newEmail,
+  previewText,
 }: WelcomeNewEmailParams): string {
   const { getSharedEmailLayout } = require("./layout");
 
@@ -313,7 +321,7 @@ export function generateWelcomeNewEmailHtml({
   return getSharedEmailLayout({
     contentHtml,
     title: "Welcome to Your New Email",
-    previewText: "Your email has been successfully updated",
+    previewText: previewText || "Your email has been successfully updated",
   });
 }
 

@@ -238,12 +238,17 @@ export async function POST(request: NextRequest) {
             <p style="font-size: 16px;">To get started, please accept your invitation by clicking the button below. This link will expire in 7 days.</p>
         `;
 
+      const { EMAIL_CONFIG } = await import("@/lib/email/types");
+      const inviteConfig = EMAIL_CONFIG[EmailType.INVITE];
+      const previewText = inviteConfig.previewText;
+
       const emailHtml = buildBaseEmailHtml({
         subject: "You've been invited to Yiba Verified",
         bodyHtml: htmlBody,
         actionLabel: "Accept Invitation",
         actionUrl: inviteLink,
-        heading: "Welcome to Yiba Verified"
+        heading: "Welcome to Yiba Verified",
+        previewText
       });
 
       const emailResult = await emailService.send({
@@ -252,6 +257,7 @@ export async function POST(request: NextRequest) {
         subject: "You've been invited to Yiba Verified",
         html: emailHtml,
         text: `You have been invited to Yiba Verified. Click here to accept: ${inviteLink}`,
+        previewText
       });
 
       if (emailResult.success) {

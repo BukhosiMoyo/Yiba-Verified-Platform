@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       subject: "Yiba Verified – test email",
       html: "<p>This is a test email from Yiba Verified. If you received this, email sending is configured correctly.</p>",
       text: "This is a test email from Yiba Verified. If you received this, email sending is configured correctly.",
+      previewText: "Test email from Yiba Verified", // Explicit test preview
     });
 
     if (!result.success) {

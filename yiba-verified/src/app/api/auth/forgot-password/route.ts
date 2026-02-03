@@ -68,10 +68,13 @@ export async function POST(request: NextRequest) {
             </p>
         `;
 
+        const { EMAIL_CONFIG } = require("@/lib/email/types");
+        const config = EMAIL_CONFIG[EmailType.PASSWORD_RESET];
+
         const html = getSharedEmailLayout({
             contentHtml,
             title: "Reset your Yiba Verified password",
-            previewText: "This link will expire for security reasons.",
+            previewText: config.previewText,
         });
 
         await emailService.send({
@@ -80,6 +83,7 @@ export async function POST(request: NextRequest) {
             subject: "Reset your Yiba Verified password",
             html,
             text: `Reset your password: ${resetUrl}`,
+            previewText: config.previewText,
         });
 
         return NextResponse.json({ message: "Reset link sent" }, { status: 200 });

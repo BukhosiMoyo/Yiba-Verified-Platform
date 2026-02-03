@@ -119,6 +119,9 @@ export async function GET(request: Request) {
 
     // Send confirmation emails
     const emailService = getEmailService();
+    const { EMAIL_CONFIG } = require("@/lib/email/types");
+    const systemAlertConfig = EMAIL_CONFIG[EmailType.SYSTEM_ALERT];
+    const notificationConfig = EMAIL_CONFIG[EmailType.NOTIFICATION];
 
     // Confirm to old email
     await emailService.send({
@@ -130,6 +133,7 @@ export async function GET(request: Request) {
         oldEmail,
         newEmail,
         changedAt,
+        previewText: systemAlertConfig.previewText,
       }),
       text: generateConfirmChangeText({
         userName,
@@ -137,6 +141,7 @@ export async function GET(request: Request) {
         newEmail,
         changedAt,
       }),
+      previewText: systemAlertConfig.previewText,
     });
 
     // Welcome to new email
@@ -147,11 +152,13 @@ export async function GET(request: Request) {
       html: generateWelcomeNewEmailHtml({
         userName,
         newEmail,
+        previewText: notificationConfig.previewText,
       }),
       text: generateWelcomeNewEmailText({
         userName,
         newEmail,
       }),
+      previewText: notificationConfig.previewText,
     });
 
     // Redirect to login with success message

@@ -1,7 +1,7 @@
 // Email service
 // Handles sending emails for notifications and system alerts
 import { Resend } from "resend";
-import { EmailType, getEmailHeaders } from "./types";
+import { EmailType, getEmailHeaders, EMAIL_CONFIG } from "./types";
 import type { NotificationType } from "../notifications";
 
 export interface EmailConfig {
@@ -21,6 +21,7 @@ export interface EmailOptions {
     subject: string;
     html: string;
     text?: string;
+    previewText?: string; // Explicit preview text (optional, falls back to config)
 }
 
 class EmailService {
@@ -40,6 +41,17 @@ class EmailService {
      */
     async send(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
         const { from, replyTo } = getEmailHeaders(options.type);
+
+        // RESOLVE PREVIEW TEXT
+        // Priority: Explicit options > Config default
+        const config = EMAIL_CONFIG[options.type];
+        const previewText = options.previewText || config.previewText;
+
+        // ENFORCEMENT: Preview text must be present
+        if (!previewText || previewText.trim().length === 0) {
+            console.error(`[EmailService] Missing preview text for email type ${options.type}`);
+            return { success: false, error: "Preview text is required" };
+        }
 
         // SAFETY GUARD: Enforce From Domain
         // Must end with @yibaverified.co.za OR be the safe dev sender
@@ -83,11 +95,15 @@ class EmailService {
                 console.log(`Reply-To: ${replyTo || "(None)"}`);
                 console.log(`To: ${options.to}`);
                 console.log(`Subject: ${options.subject}`);
+                console.log(`Preview Text: ${previewText}`);
                 console.log(`Body:\n${options.text || options.html}\n`);
                 return { success: true };
             }
 
             if (this.config.provider === "resend" && this.resendClient) {
+                // Note: We don't pass previewText directly to Resend as a param (it's not supported in the root object),
+                // it serves as a validation gate here. The HTML generator MUST have included it.
+                // In a perfect world, we would parse the HTML to verify injection, but that's expensive.
                 await this.resendClient.emails.send({
                     from: finalFrom,
                     to: options.to,
@@ -95,6 +111,7 @@ class EmailService {
                     subject: options.subject,
                     html: options.html,
                     text: options.text,
+                    // tags: [{ name: "type", value: options.type }], // Good practice for future
                 });
                 return { success: true };
             }
@@ -209,10 +226,21 @@ export function getEmailTemplate(
       </p>
     `;
 
+    // Resolve preview text from type
+    // Note: getEmailTemplate handles mostly SYSTEM_NOTIFICATION type, but let's be aligned.
+    // The passed 'notificationType' (from prisma probably) is distinct from 'EmailType'.
+    // We map generic helper to NOTIFICATION type.
+    const { EMAIL_CONFIG } = require("./types");
+    const config = EMAIL_CONFIG[EmailType.NOTIFICATION];
+    // Dynamic preview text for notifications?
+    // User requested: "There’s an update waiting for you"
+    // If action_required = true (not easily detectable here without more args), stick to default for now or pass as arg.
+    // For now, use the one from config.
+
     const html = getSharedEmailLayout({
         contentHtml,
         title: `${title} - ${appName}`,
-        previewText: "There’s an update waiting for you on Yiba Verified.",
+        previewText: config.previewText || "There’s an update waiting for you",
     });
 
     const text = `

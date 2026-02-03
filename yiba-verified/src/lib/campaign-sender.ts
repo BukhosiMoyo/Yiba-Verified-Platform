@@ -138,9 +138,23 @@ export class CampaignSender {
                 const targetUrl = `${baseUrl}/invite?token=${rawToken}`;
                 const trackingLink = `${baseUrl}/api/invites/track/click?rid=${invite.invite_id}&to=${encodeURIComponent(targetUrl)}`;
 
-                // Open Pixel
                 const pixelUrl = `${baseUrl}/api/invites/track/open?rid=${invite.invite_id}`;
                 const pixelImg = `<img src="${pixelUrl}" alt="" width="1" height="1" style="display:none;" />`;
+
+                // Resolve preview text
+                const { EMAIL_CONFIG } = require("@/lib/email/types");
+                const inviteConfig = EMAIL_CONFIG[EmailType.INVITE];
+                const previewText = inviteConfig.previewText;
+
+                // Preheader HTML
+                const preheaderHtml = `
+                    <span style="display:none;font-size:0;line-height:0;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;visibility:hidden;width:0;">
+                        ${previewText}
+                    </span>
+                    <span style="display:none;opacity:0;visibility:hidden;mso-hide:all;font-size:1px;line-height:1px;max-height:0;max-width:0;width:0;overflow:hidden;">
+                        &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+                    </span>
+                `;
 
                 let subject = campaign.subject || "You're invited to Yiba Verified";
                 let htmlBody = "";
@@ -181,12 +195,21 @@ export class CampaignSender {
                     htmlBody += pixelImg;
                 }
 
+                // Add Preheader (Injection)
+                // If it contains <body>, try to insert after it. Otherwise, prepend.
+                if (htmlBody.includes("<body")) {
+                    htmlBody = htmlBody.replace(/<body[^>]*>/i, (match) => `${match}${preheaderHtml}`);
+                } else {
+                    htmlBody = preheaderHtml + htmlBody;
+                }
+
                 // Send
                 await emailService.send({
                     to: invite.email,
                     type: EmailType.INVITE,
                     subject: subject,
                     html: htmlBody,
+                    previewText,
                 });
 
                 // Update Invite Status

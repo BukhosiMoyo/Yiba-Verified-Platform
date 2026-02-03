@@ -1,29 +1,21 @@
-import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
-import { AuthLayout } from "@/components/auth/AuthLayout";
-import { AuthCard } from "@/components/auth/AuthCard";
-import ReviewWalkthroughClient from "./ReviewWalkthroughClient";
+import { InviteReviewWizard } from "./_components/InviteReviewWizard";
+import { ParticleBackground } from "./_components/ParticleBackground";
 
-export default async function ReviewPage({
-    params,
-}: {
-    params: Promise<{ token: string }>;
-}) {
-    const resolvedParams = await params;
+interface PageProps {
+    params: Promise<{
+        token: string;
+    }>;
+}
+
+export default async function InviteReviewPage(props: PageProps) {
+    const params = await props.params;
 
     return (
-        <Suspense
-            fallback={
-                <AuthLayout>
-                    <AuthCard title="Loading..." subtitle="Please wait">
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                    </AuthCard>
-                </AuthLayout>
-            }
-        >
-            <ReviewWalkthroughClient token={resolvedParams.token} />
-        </Suspense>
+        <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden">
+            <ParticleBackground />
+            <div className="relative z-10 w-full px-4 py-8 md:py-12 flex items-center justify-center">
+                <InviteReviewWizard token={params.token} />
+            </div>
+        </main>
     );
 }
