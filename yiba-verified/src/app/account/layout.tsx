@@ -112,6 +112,7 @@ export default async function AccountLayoutWrapper({
       currentUserRole={role}
       userName={userName}
       userId={session.user.userId}
+      userImage={userImageFromDb}
     >
       <AccountLayout
         currentUserRole={role}

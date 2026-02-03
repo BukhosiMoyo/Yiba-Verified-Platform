@@ -157,11 +157,12 @@ type SidebarProps = {
   isOpen: boolean;
   onClose: () => void;
   userName?: string;
+  userImage?: string | null;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
 };
 
-export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName = "User", collapsed: externalCollapsed, onCollapsedChange }: SidebarProps) {
+export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName = "User", userImage, collapsed: externalCollapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -607,16 +608,32 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
             collapsed && !isMobile ? (
               /* Collapsed: Show avatar only */
               <div className="flex items-center justify-center">
-                <div className="h-9 w-9 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
-                  {getInitials(userName)}
-                </div>
+                {userImage ? (
+                  <img
+                    src={userImage}
+                    alt={userName}
+                    className="h-9 w-9 rounded-full object-cover shadow-sm transition-all duration-200 hover:shadow-md border border-border/50"
+                  />
+                ) : (
+                  <div className="h-9 w-9 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
+                    {getInitials(userName)}
+                  </div>
+                )}
               </div>
             ) : (
               /* Expanded: Show user info with chevron */
               <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors duration-200 hover:bg-muted cursor-pointer group">
-                <div className="h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 group-hover:shadow-md">
-                  {getInitials(userName)}
-                </div>
+                {userImage ? (
+                  <img
+                    src={userImage}
+                    alt={userName}
+                    className="h-9 w-9 flex-shrink-0 rounded-full object-cover shadow-sm transition-all duration-200 group-hover:shadow-md border border-border/50"
+                  />
+                ) : (
+                  <div className="h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 group-hover:shadow-md">
+                    {getInitials(userName)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{userName}</p>
                   <p className="text-xs text-muted-foreground truncate">Account</p>

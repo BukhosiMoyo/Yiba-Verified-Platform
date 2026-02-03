@@ -17,6 +17,7 @@ import type { InstitutionDisplay } from "@/lib/currentInstitution";
 type TopbarProps = {
   userName: string;
   userId?: string;
+  userImage?: string | null;
   userRole: Role;
   onMenuClick: () => void;
   sidebarCollapsed?: boolean;
@@ -66,7 +67,7 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-export function Topbar({ userName, userId, userRole, onMenuClick, sidebarCollapsed = false, onSidebarCollapse, sidebarWidth, institutions, currentInstitutionId }: TopbarProps) {
+export function Topbar({ userName, userId, userImage, userRole, onMenuClick, sidebarCollapsed = false, onSidebarCollapse, sidebarWidth, institutions, currentInstitutionId }: TopbarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   // Avoid hydration mismatch: server and first client render use "Ctrl"; after mount we switch to "⌘" on Mac.
@@ -206,10 +207,19 @@ export function Topbar({ userName, userId, userRole, onMenuClick, sidebarCollaps
           trigger={
             <div className="flex items-center gap-2">
               {/* Avatar with initials */}
+              {/* Avatar with initials or image */}
               <div className="hidden sm:flex sm:items-center sm:gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
-                  {userInitials}
-                </div>
+                {userImage ? (
+                  <img
+                    src={userImage}
+                    alt={userName}
+                    className="h-9 w-9 rounded-full object-cover shadow-sm transition-all duration-200 hover:shadow-md border border-border/50"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md">
+                    {userInitials}
+                  </div>
+                )}
                 <div className="hidden lg:flex lg:flex-col lg:items-start lg:gap-0.5">
                   <span className="text-sm font-semibold text-foreground dark:text-white leading-tight">{userName}</span>
                   <span
@@ -224,9 +234,17 @@ export function Topbar({ userName, userId, userRole, onMenuClick, sidebarCollaps
                 </div>
               </div>
               {/* Mobile: Just show avatar */}
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md sm:hidden">
-                {userInitials}
-              </div>
+              {userImage ? (
+                <img
+                  src={userImage}
+                  alt={userName}
+                  className="h-9 w-9 rounded-full object-cover shadow-sm transition-all duration-200 hover:shadow-md sm:hidden border border-border/50"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-600 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md sm:hidden">
+                  {userInitials}
+                </div>
+              )}
               {/* Down arrow indicator */}
               <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" strokeWidth={1.5} />
             </div>

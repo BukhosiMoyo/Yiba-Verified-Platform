@@ -23,6 +23,7 @@ type AppShellProps = {
   currentUserRole: Role;
   userName?: string;
   userId?: string;
+  userImage?: string | null;
   // View As User props
   viewingAsUserId?: string | null;
   viewingAsRole?: Role | null;
@@ -40,6 +41,7 @@ export function AppShell({
   currentUserRole,
   userName = "User",
   userId,
+  userImage,
   viewingAsUserId,
   viewingAsRole,
   viewingAsUserName,
@@ -117,6 +119,7 @@ export function AppShell({
         <Topbar
           userName={userName}
           userId={userId}
+          userImage={userImage}
           userRole={currentUserRole}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           sidebarCollapsed={sidebarCollapsed}
@@ -135,6 +138,7 @@ export function AppShell({
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         userName={userName}
+        userImage={userImage}
         collapsed={sidebarCollapsed}
         onCollapsedChange={setSidebarCollapsed}
       />
