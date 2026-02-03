@@ -2,7 +2,7 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth"; // OR "@/lib/auth"?
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // This path might be different, need to verify
+import { authOptions } from "@/lib/auth"; // This path might be different, need to verify
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

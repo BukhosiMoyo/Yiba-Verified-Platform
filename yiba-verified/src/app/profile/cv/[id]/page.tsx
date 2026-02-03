@@ -2,7 +2,7 @@
 import { CVEditor } from "../_components/CVEditor";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 
@@ -22,7 +22,7 @@ export default async function EditCVPage({ params }: PageProps) {
         where: { id: params.id }
     });
 
-    if (!cv || cv.user_id !== session.user.id) {
+    if (!cv || cv.user_id !== session.user.userId) {
         notFound();
     }
 

@@ -59,7 +59,7 @@ export default async function TalentProfilePage({ params }: PageProps) {
             where: {
                 liked_profile_id_user_id: {
                     liked_profile_id: profile.id,
-                    user_id: session.user.id
+                    user_id: session.user.userId
                 }
             }
         });

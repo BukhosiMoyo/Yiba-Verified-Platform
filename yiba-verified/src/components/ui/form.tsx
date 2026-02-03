@@ -1,179 +1,171 @@
-"use client";
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
+"use client"
 
-/**
- * Form Field Wrapper
- * Provides consistent spacing and structure for form fields
- */
-export interface FormFieldProps {
-  children: React.ReactNode;
-  className?: string;
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { Controller, ControllerProps, FieldPath, FieldValues, FormProvider, useFormContext } from "react-hook-form"
+
+import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+
+const Form = FormProvider
+
+type FormFieldContextValue<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+> = {
+  name: TName
 }
 
-export function FormField({ children, className }: FormFieldProps) {
+const FormFieldContext = React.createContext<FormFieldContextValue>(
+  {} as FormFieldContextValue
+)
+
+const FormField = <
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>({
+  ...props
+}: ControllerProps<TFieldValues, TName>) => {
   return (
-    <div className={cn("space-y-2", className)}>
-      {children}
-    </div>
-  );
+    <FormFieldContext.Provider value={{ name: props.name }}>
+      <Controller {...props} />
+    </FormFieldContext.Provider>
+  )
 }
 
-/**
- * Form Label with Required Indicator
- */
-export interface FormLabelProps
-  extends React.LabelHTMLAttributes<HTMLLabelElement> {
-  required?: boolean;
-  error?: boolean;
-}
+const useFormField = () => {
+  const fieldContext = React.useContext(FormFieldContext)
+  const itemContext = React.useContext(FormItemContext)
+  const { getFieldState, formState } = useFormContext()
 
-export const FormLabel = React.forwardRef<HTMLLabelElement, FormLabelProps>(
-  ({ className, required, error, children, ...props }, ref) => {
-    return (
-      <label
-        ref={ref}
-        className={cn(
-          "text-sm font-medium leading-none",
-          "text-foreground",
-          error && "text-destructive",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        {required && (
-          <span className="ml-1 text-red-500" aria-label="required">
-            *
-          </span>
-        )}
-      </label>
-    );
+  const fieldState = getFieldState(fieldContext.name, formState)
+
+  if (!fieldContext) {
+    throw new Error("useFormField should be used within <FormField>")
   }
-);
-FormLabel.displayName = "FormLabel";
 
-/**
- * Form Error Message
- * Displays inline error messages below form fields
- */
-export interface FormErrorMessageProps {
-  children: React.ReactNode;
-  className?: string;
-  id?: string;
+  const { id } = itemContext
+
+  return {
+    id,
+    name: fieldContext.name,
+    formItemId: `${id}-form-item`,
+    formDescriptionId: `${id}-form-item-description`,
+    formMessageId: `${id}-form-item-message`,
+    ...fieldState,
+  }
 }
 
-export function FormErrorMessage({
-  children,
-  className,
-  id,
-}: FormErrorMessageProps) {
-  if (!children) return null;
+type FormItemContextValue = {
+  id: string
+}
+
+const FormItemContext = React.createContext<FormItemContextValue>(
+  {} as FormItemContextValue
+)
+
+const FormItem = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => {
+  const id = React.useId()
+
+  return (
+    <FormItemContext.Provider value={{ id }}>
+      <div ref={ref} className={cn("space-y-2", className)} {...props} />
+    </FormItemContext.Provider>
+  )
+})
+FormItem.displayName = "FormItem"
+
+const FormLabel = React.forwardRef<
+  React.ElementRef<typeof Label>,
+  React.ComponentPropsWithoutRef<typeof Label>
+>(({ className, ...props }, ref) => {
+  const { error, formItemId } = useFormField()
+
+  return (
+    <Label
+      ref={ref}
+      className={cn(error && "text-destructive", className)}
+      htmlFor={formItemId}
+      {...props}
+    />
+  )
+})
+FormLabel.displayName = "FormLabel"
+
+const FormControl = React.forwardRef<
+  React.ElementRef<typeof Slot>,
+  React.ComponentPropsWithoutRef<typeof Slot>
+>(({ ...props }, ref) => {
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+
+  return (
+    <Slot
+      ref={ref}
+      id={formItemId}
+      aria-describedby={
+        !error
+          ? `${formDescriptionId}`
+          : `${formDescriptionId} ${formMessageId}`
+      }
+      aria-invalid={!!error}
+      {...props}
+    />
+  )
+})
+FormControl.displayName = "FormControl"
+
+const FormDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => {
+  const { formDescriptionId } = useFormField()
 
   return (
     <p
-      id={id}
-      className={cn(
-        "text-xs font-medium text-red-600 mt-1",
-        className
-      )}
-      role="alert"
-    >
-      {children}
-    </p>
-  );
-}
+      ref={ref}
+      id={formDescriptionId}
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+})
+FormDescription.displayName = "FormDescription"
 
-/**
- * Form Hint / Helper Text
- * Displays helpful information below form fields
- */
-export interface FormHintProps {
-  children: React.ReactNode;
-  className?: string;
-  id?: string;
-}
+const FormMessage = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, children, ...props }, ref) => {
+  const { error, formMessageId } = useFormField()
+  const body = error ? String(error?.message) : children
 
-export function FormHint({ children, className, id }: FormHintProps) {
-  if (!children) return null;
+  if (!body) {
+    return null
+  }
 
   return (
     <p
-      id={id}
-      className={cn(
-        "text-xs text-muted-foreground mt-1",
-        className
-      )}
+      ref={ref}
+      id={formMessageId}
+      className={cn("text-sm font-medium text-destructive", className)}
+      {...props}
     >
-      {children}
+      {body}
     </p>
-  );
-}
+  )
+})
+FormMessage.displayName = "FormMessage"
 
-/**
- * Form Item
- * Complete form field container with label, input, error, and hint
- */
-export interface FormItemProps {
-  label?: string;
-  required?: boolean;
-  error?: string;
-  hint?: string;
-  children: React.ReactNode;
-  className?: string;
-  labelProps?: React.LabelHTMLAttributes<HTMLLabelElement>;
-}
-
-export function FormItem({
-  label,
-  required,
-  error,
-  hint,
-  children,
-  className,
-  labelProps,
-}: FormItemProps) {
-  const fieldId = React.useId();
-  const hasError = !!error;
-
-  // Clone children to add error prop and id
-  const enhancedChildren = React.Children.map(children, (child) => {
-    if (React.isValidElement(child)) {
-      return React.cloneElement(child, {
-        // @ts-ignore
-        id: child.props.id || fieldId,
-        error: hasError,
-        "aria-invalid": hasError,
-        "aria-describedby": hasError
-          ? `${fieldId}-error`
-          : hint
-          ? `${fieldId}-hint`
-          : undefined,
-      } as any);
-    }
-    return child;
-  });
-
-  return (
-    <FormField className={className}>
-      {label && (
-        <FormLabel
-          htmlFor={fieldId}
-          required={required}
-          error={hasError}
-          {...labelProps}
-        >
-          {label}
-        </FormLabel>
-      )}
-      {enhancedChildren}
-      {error && (
-        <FormErrorMessage id={`${fieldId}-error`}>{error}</FormErrorMessage>
-      )}
-      {hint && !error && (
-        <FormHint id={`${fieldId}-hint`}>{hint}</FormHint>
-      )}
-    </FormField>
-  );
+export {
+  useFormField,
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+  FormField,
 }
