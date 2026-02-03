@@ -6,6 +6,8 @@
 import type { UserRole } from "@prisma/client";
 import type { EmailTemplate } from "@prisma/client";
 import { replacePlaceholders, type InviteTemplateContext } from "./placeholders";
+import { getSharedEmailLayout } from "../layout";
+import { EMAIL_CONFIG, EmailType } from "../types";
 
 /** Map invite.role to EmailTemplateType for loading template. */
 export function getTemplateTypeForInviteRole(role: UserRole): string | null {
@@ -64,7 +66,8 @@ export function buildInviteEmailFromTemplate(
   customMessage?: string | null,
   reviewLink?: string // New optional parameter for "Review Invitation"
 ): { subject: string; html: string; text: string } {
-  const { getSharedEmailLayout } = require("../layout"); // Import shared layout
+  // removed require
+
 
   const subject = replacePlaceholders(template.subject, context);
 
@@ -145,7 +148,6 @@ export function buildInviteEmailFromTemplate(
   `;
 
   // Resolve central preview text
-  const { EMAIL_CONFIG, EmailType } = require("../types");
   const previewText = EMAIL_CONFIG[EmailType.INVITE].previewText;
 
   const html = getSharedEmailLayout({

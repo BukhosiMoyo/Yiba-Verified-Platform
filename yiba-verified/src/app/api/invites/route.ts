@@ -138,8 +138,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate institution exists if provided
+    // Validate institution exists if provided
+    let institution = null;
     if (finalInstitutionId) {
-      const institution = await prisma.institution.findUnique({
+      institution = await prisma.institution.findUnique({
         where: { institution_id: finalInstitutionId },
       });
       if (!institution || institution.deleted_at) {
@@ -230,33 +232,105 @@ export async function POST(request: NextRequest) {
     try {
       const { getEmailService } = await import("@/lib/email");
       const { EmailType } = await import("@/lib/email/types");
-      const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
+      const { buildInviteEmailFromTemplate, getTemplateTypeForInviteRole } = await import("@/lib/email/templates/inviteTemplates");
+      const { EMAIL_CONFIG } = await import("@/lib/email/types");
+
       const emailService = getEmailService();
 
-      const htmlBody = `
-            <p style="font-size: 16px; margin-bottom: 20px;">You have been invited to join <strong>Yiba Verified</strong> as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
-            <p style="font-size: 16px;">To get started, please accept your invitation by clicking the button below. This link will expire in 7 days.</p>
-        `;
+      // 1. Generate URLs
+      const reviewLink = `${baseUrl}/invites/${rawToken}/review`;
+      const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(rawToken)}`;
+      const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(reviewLink)}`; // Point main CTA to review? Or keep accept?
+      // User likely wants "Review" as part of the flow. 
+      // If we use buildInviteEmailFromTemplate with `reviewLink`, it generates TWO buttons: Accept (trackedLink) and Review (reviewLink).
+      // Ideally, the "Accept" button should PROBABLY go to the review page too if that's the new flow?
+      // But let's stick to the prompt: "Review experience... before an institution accepts or declines".
+      // So maybe "Accept" goes to direct accept (login/signup) and "Review" goes to review? 
+      // BUT the Review page HAS an accept button. 
+      // Let's set trackedLink (Primary CTA) to `reviewLink` as well if we want to force the review flow?
+      // Actually, if we pass `reviewLink`, the template generates a "Review Invitation" button. 
+      // Let's keep trackedLink as the direct "/invite?token=..." (or API accept) for now so the "Accept" button works as a shortcut, 
+      // OR update trackedLink to point to the review page if we want to force distinct flow.
+      // The user said: "Invites... used inside a step-by-step invitation review flow...".
+      // Let's Point trackedLink to the review page too? 
+      // No, let's just pass reviewLink to enable the dual button or "Review" option.
 
-      const { EMAIL_CONFIG } = await import("@/lib/email/types");
-      const inviteConfig = EMAIL_CONFIG[EmailType.INVITE];
-      const previewText = inviteConfig.previewText;
+      // 2. Fetch Template
+      const templateType = getTemplateTypeForInviteRole(role as any); // role validated above
+      let template = null;
+      if (templateType) {
+        template = await prisma.emailTemplate.findUnique({ where: { type: templateType as any } });
+      }
 
-      const emailHtml = buildBaseEmailHtml({
-        subject: "You've been invited to Yiba Verified",
-        bodyHtml: htmlBody,
-        actionLabel: "Accept Invitation",
-        actionUrl: inviteLink,
-        heading: "Welcome to Yiba Verified",
-        previewText
-      });
+      // 3. Build Email Content
+      let subject: string;
+      let html: string;
+      let text: string;
+      let previewText: string;
 
+      if (template && template.is_active) {
+        // Use DB Template
+        const context = {
+          recipient_name: email.split("@")[0],
+          institution_name: institution?.trading_name || institution?.legal_name || "the institution",
+          inviter_name: "Yiba Verified", // Could fetch user name if needed
+          role: role.replace(/_/g, " "),
+          invite_link: inviteLink,
+          action_url: inviteLink,
+          expiry_date: expiresAt.toLocaleDateString("en-ZA", { dateStyle: "long" }),
+        };
+
+        // We pass reviewLink here
+        const built = buildInviteEmailFromTemplate(
+          template,
+          context,
+          trackedLink, // "Accept" button link
+          trackingPixelUrl,
+          null,
+          reviewLink // "Review" button link
+        );
+        subject = built.subject;
+        html = built.html;
+        text = built.text;
+
+        // Resolve preview text using config as fallback
+        const inviteConfig = EMAIL_CONFIG[EmailType.INVITE];
+        previewText = inviteConfig.previewText;
+      } else {
+        // Fallback template (matches queue.ts fallback but using review link)
+        // We can't easily access the `generateInviteEmail` helper from queue.ts without exporting it or duplicating.
+        // Let's rely on buildBaseEmailHtml for fallback but cleaner.
+        const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
+
+        const fallbackHtml = `
+            <p>You have been invited to join <strong>Yiba Verified</strong> as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
+            <p>We've introduced a new way to review your invitation details before accepting.</p>
+            <div style="margin: 32px 0; text-align: center;">
+               <a href="${reviewLink}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Review Invitation
+               </a>
+            </div>
+            <p style="margin-top:20px; font-size:14px; color:#6b7280;">Or accept directly: <a href="${inviteLink}">Click here</a></p>
+          `;
+
+        subject = "You've been invited to Yiba Verified";
+        previewText = "Review your invitation to join Yiba Verified";
+        html = buildBaseEmailHtml({
+          subject,
+          heading: "Invitation to Yiba Verified",
+          bodyHtml: fallbackHtml,
+          previewText
+        });
+        text = `You've been invited. Review here: ${reviewLink}`;
+      }
+
+      // 4. Send
       const emailResult = await emailService.send({
         to: email,
         type: EmailType.INVITE,
-        subject: "You've been invited to Yiba Verified",
-        html: emailHtml,
-        text: `You have been invited to Yiba Verified. Click here to accept: ${inviteLink}`,
+        subject,
+        html,
+        text,
         previewText
       });
 

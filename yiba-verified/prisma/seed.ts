@@ -433,7 +433,7 @@ async function main() {
         updateData.next_of_kin_phone = "+27821234567";
         updateData.next_of_kin_address = `${between(1, 999)} Main Street, Johannesburg, 2000`;
       }
-      
+
       if (Object.keys(updateData).length > 0) {
         learner = await prisma.learner.update({
           where: { learner_id: learner.learner_id },
@@ -445,11 +445,11 @@ async function main() {
 
     const user = await prisma.user.upsert({
       where: { email: acc.email },
-      update: { 
-        password_hash: studentPassword, 
-        status: "ACTIVE", 
-        first_name: acc.firstName, 
-        last_name: acc.lastName, 
+      update: {
+        password_hash: studentPassword,
+        status: "ACTIVE",
+        first_name: acc.firstName,
+        last_name: acc.lastName,
         role: "STUDENT",
         onboarding_completed: true, // Mark as completed since we're creating the learner record directly
         onboarding_completed_at: new Date(),
@@ -593,10 +593,10 @@ async function main() {
   const qctoSuperAdminPassword = await hashPassword("QctoAdmin@123!");
   const qctoSuperAdmin = await prisma.user.upsert({
     where: { email: "qcto-superadmin@yibaverified.co.za" },
-    update: { 
-      password_hash: qctoSuperAdminPassword, 
-      role: "QCTO_SUPER_ADMIN", 
-      qcto_id: qctoOrg.id, 
+    update: {
+      password_hash: qctoSuperAdminPassword,
+      role: "QCTO_SUPER_ADMIN",
+      qcto_id: qctoOrg.id,
       status: "ACTIVE",
       default_province: null, // QCTO_SUPER_ADMIN can be national (no province)
       assigned_provinces: [],
@@ -710,228 +710,228 @@ async function main() {
   try {
     console.log("\n📬 Creating chat demo data...");
 
-  // Get users for chat
-  chatUsers = await prisma.user.findMany({
-    where: {
-      email: {
-        in: [
-          "admin@yibaverified.co.za",
-          "qcto@yibaverified.co.za",
-          "instadmin@yibaverified.co.za",
-          "staff@yibaverified.co.za",
-          "student@yibaverified.co.za",
-        ],
+    // Get users for chat
+    chatUsers = await prisma.user.findMany({
+      where: {
+        email: {
+          in: [
+            "admin@yibaverified.co.za",
+            "qcto@yibaverified.co.za",
+            "instadmin@yibaverified.co.za",
+            "staff@yibaverified.co.za",
+            "student@yibaverified.co.za",
+          ],
+        },
       },
-    },
-    select: { user_id: true, email: true, first_name: true, last_name: true },
-  });
-
-  userByEmail = Object.fromEntries(chatUsers.map((u) => [u.email, u]));
-
-  // Only create chat data if we have users
-  if (Object.keys(userByEmail).length >= 3) {
-    // Check if demo conversations already exist
-    const existingConv = await prisma.conversation.findFirst({
-      where: { name: "Platform Support Team" },
+      select: { user_id: true, email: true, first_name: true, last_name: true },
     });
 
-    if (!existingConv) {
-      // Create a group chat
-      const groupChat = await prisma.conversation.create({
-        data: {
-          type: "GROUP",
-          name: "Platform Support Team",
-          description: "Internal team chat for platform support",
-          createdBy: userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id,
-          lastMessageAt: new Date(),
-          lastMessageText: "Welcome to the support team chat!",
-          members: {
-            create: [
-              { userId: userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id, role: "OWNER" },
-              ...(userByEmail["qcto@yibaverified.co.za"] ? [{ userId: userByEmail["qcto@yibaverified.co.za"].user_id, role: "MEMBER" as const }] : []),
-              ...(userByEmail["instadmin@yibaverified.co.za"] ? [{ userId: userByEmail["instadmin@yibaverified.co.za"].user_id, role: "MEMBER" as const }] : []),
-            ],
-          },
-        },
+    userByEmail = Object.fromEntries(chatUsers.map((u) => [u.email, u]));
+
+    // Only create chat data if we have users
+    if (Object.keys(userByEmail).length >= 3) {
+      // Check if demo conversations already exist
+      const existingConv = await prisma.conversation.findFirst({
+        where: { name: "Platform Support Team" },
       });
 
-      // Add messages to group chat
-      const adminId = userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
-      const qctoId = userByEmail["qcto@yibaverified.co.za"]?.user_id;
-      const instAdminId = userByEmail["instadmin@yibaverified.co.za"]?.user_id;
-
-      await prisma.message.createMany({
-        data: [
-          {
-            conversationId: groupChat.id,
-            senderId: adminId,
-            content: "Welcome to the Platform Support Team chat!",
-            messageType: "SYSTEM",
-            status: "DELIVERED",
-            createdAt: new Date(Date.now() - 86400000 * 2), // 2 days ago
-          },
-          {
-            conversationId: groupChat.id,
-            senderId: adminId,
-            content: "This is where we coordinate platform support activities. Feel free to ask questions or share updates.",
-            status: "DELIVERED",
-            isAdminMessage: true,
-            createdAt: new Date(Date.now() - 86400000 * 2 + 60000),
-          },
-          ...(qctoId ? [{
-            conversationId: groupChat.id,
-            senderId: qctoId,
-            content: "Thanks for setting this up! Looking forward to better coordination.",
-            status: "DELIVERED" as const,
-            createdAt: new Date(Date.now() - 86400000),
-          }] : []),
-          ...(instAdminId ? [{
-            conversationId: groupChat.id,
-            senderId: instAdminId,
-            content: "Great initiative! This will help us communicate faster about readiness reviews.",
-            status: "DELIVERED" as const,
-            createdAt: new Date(Date.now() - 3600000 * 5),
-          }] : []),
-          {
-            conversationId: groupChat.id,
-            senderId: adminId,
-            content: "Remember, you can also use the Report Issue button in the top bar for bug reports.",
-            status: "DELIVERED",
-            createdAt: new Date(Date.now() - 3600000),
-          },
-        ],
-      });
-
-      console.log("Created group chat:", groupChat.name);
-
-      // Create a DM between admin and qcto
-      if (qctoId) {
-        const dmChat = await prisma.conversation.create({
+      if (!existingConv) {
+        // Create a group chat
+        const groupChat = await prisma.conversation.create({
           data: {
-            type: "DIRECT",
-            createdBy: adminId,
-            lastMessageAt: new Date(Date.now() - 7200000),
-            lastMessageText: "Let me know if you need any help with the dashboard.",
+            type: "GROUP",
+            name: "Platform Support Team",
+            description: "Internal team chat for platform support",
+            createdBy: userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id,
+            lastMessageAt: new Date(),
+            lastMessageText: "Welcome to the support team chat!",
             members: {
               create: [
-                { userId: adminId, role: "OWNER" },
-                { userId: qctoId, role: "MEMBER" },
+                { userId: userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id, role: "OWNER" },
+                ...(userByEmail["qcto@yibaverified.co.za"] ? [{ userId: userByEmail["qcto@yibaverified.co.za"].user_id, role: "MEMBER" as const }] : []),
+                ...(userByEmail["instadmin@yibaverified.co.za"] ? [{ userId: userByEmail["instadmin@yibaverified.co.za"].user_id, role: "MEMBER" as const }] : []),
               ],
             },
           },
         });
 
+        // Add messages to group chat
+        const adminId = userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
+        const qctoId = userByEmail["qcto@yibaverified.co.za"]?.user_id;
+        const instAdminId = userByEmail["instadmin@yibaverified.co.za"]?.user_id;
+
         await prisma.message.createMany({
           data: [
             {
-              conversationId: dmChat.id,
+              conversationId: groupChat.id,
+              senderId: adminId,
+              content: "Welcome to the Platform Support Team chat!",
+              messageType: "SYSTEM",
+              status: "DELIVERED",
+              createdAt: new Date(Date.now() - 86400000 * 2), // 2 days ago
+            },
+            {
+              conversationId: groupChat.id,
+              senderId: adminId,
+              content: "This is where we coordinate platform support activities. Feel free to ask questions or share updates.",
+              status: "DELIVERED",
+              isAdminMessage: true,
+              createdAt: new Date(Date.now() - 86400000 * 2 + 60000),
+            },
+            ...(qctoId ? [{
+              conversationId: groupChat.id,
               senderId: qctoId,
-              content: "Hi! I have a question about the QCTO dashboard.",
-              status: "READ",
+              content: "Thanks for setting this up! Looking forward to better coordination.",
+              status: "DELIVERED" as const,
               createdAt: new Date(Date.now() - 86400000),
-            },
+            }] : []),
+            ...(instAdminId ? [{
+              conversationId: groupChat.id,
+              senderId: instAdminId,
+              content: "Great initiative! This will help us communicate faster about readiness reviews.",
+              status: "DELIVERED" as const,
+              createdAt: new Date(Date.now() - 3600000 * 5),
+            }] : []),
             {
-              conversationId: dmChat.id,
+              conversationId: groupChat.id,
               senderId: adminId,
-              content: "Of course! What would you like to know?",
-              status: "READ",
-              createdAt: new Date(Date.now() - 86400000 + 300000),
-            },
-            {
-              conversationId: dmChat.id,
-              senderId: qctoId,
-              content: "How do I filter readiness reviews by province?",
-              status: "READ",
-              createdAt: new Date(Date.now() - 43200000),
-            },
-            {
-              conversationId: dmChat.id,
-              senderId: adminId,
-              content: "You can use the province dropdown in the sidebar, or the filter bar on the Readiness page.",
-              status: "READ",
-              createdAt: new Date(Date.now() - 43200000 + 120000),
-            },
-            {
-              conversationId: dmChat.id,
-              senderId: adminId,
-              content: "Let me know if you need any help with the dashboard.",
+              content: "Remember, you can also use the Report Issue button in the top bar for bug reports.",
               status: "DELIVERED",
-              createdAt: new Date(Date.now() - 7200000),
+              createdAt: new Date(Date.now() - 3600000),
             },
           ],
         });
 
-        console.log("Created DM between admin and QCTO user");
+        console.log("Created group chat:", groupChat.name);
+
+        // Create a DM between admin and qcto
+        if (qctoId) {
+          const dmChat = await prisma.conversation.create({
+            data: {
+              type: "DIRECT",
+              createdBy: adminId,
+              lastMessageAt: new Date(Date.now() - 7200000),
+              lastMessageText: "Let me know if you need any help with the dashboard.",
+              members: {
+                create: [
+                  { userId: adminId, role: "OWNER" },
+                  { userId: qctoId, role: "MEMBER" },
+                ],
+              },
+            },
+          });
+
+          await prisma.message.createMany({
+            data: [
+              {
+                conversationId: dmChat.id,
+                senderId: qctoId,
+                content: "Hi! I have a question about the QCTO dashboard.",
+                status: "READ",
+                createdAt: new Date(Date.now() - 86400000),
+              },
+              {
+                conversationId: dmChat.id,
+                senderId: adminId,
+                content: "Of course! What would you like to know?",
+                status: "READ",
+                createdAt: new Date(Date.now() - 86400000 + 300000),
+              },
+              {
+                conversationId: dmChat.id,
+                senderId: qctoId,
+                content: "How do I filter readiness reviews by province?",
+                status: "READ",
+                createdAt: new Date(Date.now() - 43200000),
+              },
+              {
+                conversationId: dmChat.id,
+                senderId: adminId,
+                content: "You can use the province dropdown in the sidebar, or the filter bar on the Readiness page.",
+                status: "READ",
+                createdAt: new Date(Date.now() - 43200000 + 120000),
+              },
+              {
+                conversationId: dmChat.id,
+                senderId: adminId,
+                content: "Let me know if you need any help with the dashboard.",
+                status: "DELIVERED",
+                createdAt: new Date(Date.now() - 7200000),
+              },
+            ],
+          });
+
+          console.log("Created DM between admin and QCTO user");
+        }
+
+        // Create a support chat for the institution
+        if (instAdminId) {
+          const supportChat = await prisma.conversation.create({
+            data: {
+              type: "SUPPORT",
+              name: "Test Institution Support",
+              isSupport: true,
+              institutionId: institution.institution_id,
+              createdBy: instAdminId,
+              lastMessageAt: new Date(Date.now() - 1800000),
+              lastMessageText: "Thanks for your help!",
+              members: {
+                create: [
+                  { userId: instAdminId, role: "OWNER" },
+                  { userId: adminId, role: "ADMIN" },
+                ],
+              },
+            },
+          });
+
+          await prisma.message.createMany({
+            data: [
+              {
+                conversationId: supportChat.id,
+                senderId: instAdminId,
+                content: "Hello, I need help with submitting our Form 5 readiness application.",
+                status: "READ",
+                createdAt: new Date(Date.now() - 86400000 * 3),
+              },
+              {
+                conversationId: supportChat.id,
+                senderId: adminId,
+                content: "Hi! I'd be happy to help. What specific section are you having trouble with?",
+                status: "READ",
+                isAdminMessage: true,
+                createdAt: new Date(Date.now() - 86400000 * 3 + 1800000),
+              },
+              {
+                conversationId: supportChat.id,
+                senderId: instAdminId,
+                content: "The document upload section - some files are not uploading.",
+                status: "READ",
+                createdAt: new Date(Date.now() - 86400000 * 2),
+              },
+              {
+                conversationId: supportChat.id,
+                senderId: adminId,
+                content: "Please make sure your files are under 10MB and in PDF, DOC, or image format. If you're still having issues, try a different browser.",
+                status: "READ",
+                isAdminMessage: true,
+                createdAt: new Date(Date.now() - 86400000 * 2 + 600000),
+              },
+              {
+                conversationId: supportChat.id,
+                senderId: instAdminId,
+                content: "That worked! Thanks for your help!",
+                status: "DELIVERED",
+                createdAt: new Date(Date.now() - 1800000),
+              },
+            ],
+          });
+
+          console.log("Created support chat for Test Institution");
+        }
+      } else {
+        console.log("Chat demo data already exists, skipping...");
       }
-
-      // Create a support chat for the institution
-      if (instAdminId) {
-        const supportChat = await prisma.conversation.create({
-          data: {
-            type: "SUPPORT",
-            name: "Test Institution Support",
-            isSupport: true,
-            institutionId: institution.institution_id,
-            createdBy: instAdminId,
-            lastMessageAt: new Date(Date.now() - 1800000),
-            lastMessageText: "Thanks for your help!",
-            members: {
-              create: [
-                { userId: instAdminId, role: "OWNER" },
-                { userId: adminId, role: "ADMIN" },
-              ],
-            },
-          },
-        });
-
-        await prisma.message.createMany({
-          data: [
-            {
-              conversationId: supportChat.id,
-              senderId: instAdminId,
-              content: "Hello, I need help with submitting our Form 5 readiness application.",
-              status: "READ",
-              createdAt: new Date(Date.now() - 86400000 * 3),
-            },
-            {
-              conversationId: supportChat.id,
-              senderId: adminId,
-              content: "Hi! I'd be happy to help. What specific section are you having trouble with?",
-              status: "READ",
-              isAdminMessage: true,
-              createdAt: new Date(Date.now() - 86400000 * 3 + 1800000),
-            },
-            {
-              conversationId: supportChat.id,
-              senderId: instAdminId,
-              content: "The document upload section - some files are not uploading.",
-              status: "READ",
-              createdAt: new Date(Date.now() - 86400000 * 2),
-            },
-            {
-              conversationId: supportChat.id,
-              senderId: adminId,
-              content: "Please make sure your files are under 10MB and in PDF, DOC, or image format. If you're still having issues, try a different browser.",
-              status: "READ",
-              isAdminMessage: true,
-              createdAt: new Date(Date.now() - 86400000 * 2 + 600000),
-            },
-            {
-              conversationId: supportChat.id,
-              senderId: instAdminId,
-              content: "That worked! Thanks for your help!",
-              status: "DELIVERED",
-              createdAt: new Date(Date.now() - 1800000),
-            },
-          ],
-        });
-
-        console.log("Created support chat for Test Institution");
-      }
-    } else {
-      console.log("Chat demo data already exists, skipping...");
     }
-  }
   } catch (err) {
     console.warn("⚠️ Chat demo data skipped (tables may be missing):", (err as Error).message);
   }
@@ -940,97 +940,171 @@ async function main() {
   // ISSUE REPORTS SEED DATA (optional – skip if table missing)
   // ========================================
   try {
-  console.log("\n🐛 Creating issue reports demo data...");
+    console.log("\n🐛 Creating issue reports demo data...");
 
-  const existingIssue = await prisma.issueReport.findFirst({
-    where: { title: "Document upload fails for large PDF files" },
-  });
-
-  if (!existingIssue && chatUsers.length > 0) {
-    const reporterId = userByEmail["instadmin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
-    const studentReporterId = userByEmail["student@yibaverified.co.za"]?.user_id;
-    const qctoReporterId = userByEmail["qcto@yibaverified.co.za"]?.user_id;
-    const adminId = userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
-
-    await prisma.issueReport.createMany({
-      data: [
-        {
-          reportedBy: reporterId,
-          institutionId: institution.institution_id,
-          category: "BUG",
-          title: "Document upload fails for large PDF files",
-          description: "When I try to upload a PDF file larger than 5MB, the upload fails with no error message. The progress bar reaches 100% but then nothing happens.",
-          pageUrl: "/institution/readiness/new",
-          status: "IN_PROGRESS",
-          priority: "HIGH",
-          assignedTo: adminId,
-          createdAt: new Date(Date.now() - 86400000 * 5),
-        },
-        ...(studentReporterId ? [{
-          reportedBy: studentReporterId,
-          category: "ACCESS_ISSUE" as const,
-          title: "Cannot access my enrolment details",
-          description: "I'm trying to view my enrolment status for the current qualification but the page shows 'No enrolments found' even though I know I'm enrolled.",
-          pageUrl: "/student/enrolments",
-          status: "OPEN" as const,
-          priority: "MEDIUM" as const,
-          createdAt: new Date(Date.now() - 86400000 * 2),
-        }] : []),
-        ...(qctoReporterId ? [{
-          reportedBy: qctoReporterId,
-          category: "FEATURE_REQUEST" as const,
-          title: "Add bulk export for readiness reviews",
-          description: "It would be helpful to have a way to export all readiness reviews as a CSV or Excel file for reporting purposes.",
-          pageUrl: "/qcto/readiness",
-          status: "OPEN" as const,
-          priority: "LOW" as const,
-          createdAt: new Date(Date.now() - 86400000 * 7),
-        }] : []),
-        {
-          reportedBy: reporterId,
-          institutionId: institution.institution_id,
-          category: "DATA_ISSUE",
-          title: "Learner attendance percentages seem incorrect",
-          description: "Some learners are showing 0% attendance even though attendance has been captured for them. I think the calculation might be wrong.",
-          pageUrl: "/institution/learners",
-          status: "RESOLVED",
-          priority: "HIGH",
-          resolution: "Fixed calculation bug in attendance percentage. Percentages now update correctly when attendance is captured.",
-          resolvedAt: new Date(Date.now() - 86400000),
-          createdAt: new Date(Date.now() - 86400000 * 10),
-        },
-      ],
+    const existingIssue = await prisma.issueReport.findFirst({
+      where: { title: "Document upload fails for large PDF files" },
     });
 
-    console.log("Created issue reports demo data");
-  } else {
-    console.log("Issue reports demo data already exists, skipping...");
-  }
+    if (!existingIssue && chatUsers.length > 0) {
+      const reporterId = userByEmail["instadmin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
+      const studentReporterId = userByEmail["student@yibaverified.co.za"]?.user_id;
+      const qctoReporterId = userByEmail["qcto@yibaverified.co.za"]?.user_id;
+      const adminId = userByEmail["admin@yibaverified.co.za"]?.user_id || chatUsers[0].user_id;
+
+      await prisma.issueReport.createMany({
+        data: [
+          {
+            reportedBy: reporterId,
+            institutionId: institution.institution_id,
+            category: "BUG",
+            title: "Document upload fails for large PDF files",
+            description: "When I try to upload a PDF file larger than 5MB, the upload fails with no error message. The progress bar reaches 100% but then nothing happens.",
+            pageUrl: "/institution/readiness/new",
+            status: "IN_PROGRESS",
+            priority: "HIGH",
+            assignedTo: adminId,
+            createdAt: new Date(Date.now() - 86400000 * 5),
+          },
+          ...(studentReporterId ? [{
+            reportedBy: studentReporterId,
+            category: "ACCESS_ISSUE" as const,
+            title: "Cannot access my enrolment details",
+            description: "I'm trying to view my enrolment status for the current qualification but the page shows 'No enrolments found' even though I know I'm enrolled.",
+            pageUrl: "/student/enrolments",
+            status: "OPEN" as const,
+            priority: "MEDIUM" as const,
+            createdAt: new Date(Date.now() - 86400000 * 2),
+          }] : []),
+          ...(qctoReporterId ? [{
+            reportedBy: qctoReporterId,
+            category: "FEATURE_REQUEST" as const,
+            title: "Add bulk export for readiness reviews",
+            description: "It would be helpful to have a way to export all readiness reviews as a CSV or Excel file for reporting purposes.",
+            pageUrl: "/qcto/readiness",
+            status: "OPEN" as const,
+            priority: "LOW" as const,
+            createdAt: new Date(Date.now() - 86400000 * 7),
+          }] : []),
+          {
+            reportedBy: reporterId,
+            institutionId: institution.institution_id,
+            category: "DATA_ISSUE",
+            title: "Learner attendance percentages seem incorrect",
+            description: "Some learners are showing 0% attendance even though attendance has been captured for them. I think the calculation might be wrong.",
+            pageUrl: "/institution/learners",
+            status: "RESOLVED",
+            priority: "HIGH",
+            resolution: "Fixed calculation bug in attendance percentage. Percentages now update correctly when attendance is captured.",
+            resolvedAt: new Date(Date.now() - 86400000),
+            createdAt: new Date(Date.now() - 86400000 * 10),
+          },
+        ],
+      });
+
+      console.log("Created issue reports demo data");
+    } else {
+      console.log("Issue reports demo data already exists, skipping...");
+    }
   } catch (err) {
     console.warn("⚠️ Issue reports demo data skipped (table may be missing):", (err as Error).message);
   }
 
   // Default email templates (at least Institution Admin Invite for smart invite)
+  // Default email templates - Seed ALL types
+  const TEMPLATES_TO_SEED = [
+    {
+      type: "INSTITUTION_ADMIN_INVITE",
+      name: "Institution Admin Invite",
+      subject: "You're invited to manage {{institution_name}} on Yiba Verified",
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "{{inviter_name}} has invited you to manage {{institution_name}} on Yiba Verified — the QCTO-recognised platform for qualification verification and accreditation." },
+        { type: "paragraph", content: "We've introduced a new way to review your invitation details before accepting." },
+        { type: "paragraph", content: "Click the button below to review your role and capabilities. This link expires in 7 days." },
+      ],
+      cta_text: "Review invitation", // Matches the Review flow
+      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
+    },
+    {
+      type: "INSTITUTION_STAFF_INVITE",
+      name: "Institution Staff Invite",
+      subject: "You're invited to join {{institution_name}} on Yiba Verified",
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "{{inviter_name}} has invited you to join {{institution_name}} on Yiba Verified as a staff member." },
+        { type: "paragraph", content: "You'll be able to assist with managing learners, uploading documents, and tracking submissions." },
+        { type: "paragraph", content: "Click below to review your invitation and set up your account." },
+      ],
+      cta_text: "Review invitation",
+      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
+    },
+    {
+      type: "STUDENT_INVITE",
+      name: "Student Invite",
+      subject: "Invitation to join {{institution_name}} on Yiba Verified",
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "{{institution_name}} has invited you to access your learner profile and digital records on Yiba Verified." },
+        { type: "paragraph", content: "This is your secure portal for tracking your qualifications and achievements." },
+        { type: "paragraph", content: "Please accept this invitation to create your account." },
+      ],
+      cta_text: "Accept Invitation",
+      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
+    },
+    {
+      type: "QCTO_INVITE",
+      name: "QCTO User Invite",
+      subject: "Invitation to Yiba Verified (QCTO Team)",
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "You have been invited to join the Yiba Verified platform as a QCTO user." },
+        { type: "paragraph", content: "Role: {{role}}" },
+        { type: "paragraph", content: "Please click below to set up your secure access." },
+      ],
+      cta_text: "Setup Account",
+      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
+    },
+    {
+      type: "PLATFORM_ADMIN_INVITE",
+      name: "Platform Admin Invite",
+      subject: "Admin Access Invitation: Yiba Verified",
+      body_sections: [
+        { type: "paragraph", content: "Hi {{recipient_name}}," },
+        { type: "paragraph", content: "You have been granted Platform Administrator access to Yiba Verified." },
+        { type: "paragraph", content: "Please use the link below to configure your credentials." },
+      ],
+      cta_text: "Access Dashboard",
+      footer_html: "This is a privileged access invitation. Do not forward.",
+    },
+  ];
+
   try {
-    await prisma.emailTemplate.upsert({
-      where: { type: "INSTITUTION_ADMIN_INVITE" },
-      create: {
-        type: "INSTITUTION_ADMIN_INVITE",
-        name: "Institution Admin Invite",
-        subject: "You're invited to manage {{institution_name}} on Yiba Verified",
-        header_html: null,
-        body_sections: [
-          { type: "paragraph", content: "Hi {{recipient_name}}," },
-          { type: "paragraph", content: "{{inviter_name}} has invited you to manage {{institution_name}} on Yiba Verified — the QCTO-recognised platform for qualification verification and accreditation." },
-          { type: "paragraph", content: "Click the button below to review your invitation and get started. This link expires in 7 days." },
-        ],
-        cta_text: "Review invitation",
-        footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
-        is_active: true,
-      },
-      update: {},
-    });
-    console.log("Default email template (Institution Admin Invite) ready.");
+    for (const t of TEMPLATES_TO_SEED) {
+      // We use upsert to create or UPDATE existing templates to the new standard/design
+      await prisma.emailTemplate.upsert({
+        where: { type: t.type as any },
+        create: {
+          type: t.type as any,
+          name: t.name,
+          subject: t.subject,
+          header_html: null,
+          body_sections: t.body_sections as any,
+          cta_text: t.cta_text,
+          footer_html: t.footer_html,
+          is_active: true,
+        },
+        update: {
+          // Force update to ensure new design/copy is applied
+          name: t.name,
+          subject: t.subject,
+          body_sections: t.body_sections as any,
+          cta_text: t.cta_text,
+          footer_html: t.footer_html,
+        },
+      });
+    }
+    console.log(`Seeded/Updated ${TEMPLATES_TO_SEED.length} email templates.`);
   } catch (err) {
     console.warn("⚠️ Email template seed skipped:", (err as Error).message);
   }
