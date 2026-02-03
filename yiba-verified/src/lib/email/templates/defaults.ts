@@ -74,31 +74,8 @@ export function getDefaultTemplateForType(type: EmailTemplateType): {
         cta_text: "Accept Invitation",
         footer_html: inviteFooter,
       };
-    case "WELCOME":
-      return {
-        name,
-        subject: "Welcome to Yiba Verified 🎉",
-        header_html: null,
-        body_sections: [
-          { type: "paragraph", content: "Hi {{recipient_name}}," },
-          { type: "paragraph", content: "Welcome to Yiba Verified — you’re officially in." },
-          { type: "paragraph", content: "Yiba Verified is designed to help institutions, learners, and regulators manage accreditation, readiness, and verification in one secure platform." },
-          { type: "paragraph", content: "Here’s what you can do next:" },
-          {
-            type: "list", content: JSON.stringify([
-              "Complete your profile and institution details",
-              "Upload and manage compliance documentation",
-              "Track submissions and review progress in real time"
-            ])
-          },
-          { type: "paragraph", content: "We recommend starting with your dashboard so you can familiarise yourself with the platform." },
-          { type: "paragraph", content: "If you ever need help, our support team is just an email away." },
-        ],
-        cta_text: "Go to Dashboard",
-        footer_html: "If you didn’t expect this account to be created, please contact support immediately.",
-      };
+
     case "SYSTEM_NOTIFICATION":
-    case "NOTIFICATION":
       return {
         name,
         subject: "{{notification_subject}}", // Dynamic subject
@@ -111,23 +88,7 @@ export function getDefaultTemplateForType(type: EmailTemplateType): {
         cta_text: "View Notification",
         footer_html: "You’re receiving this email because it relates to activity on your Yiba Verified account.",
       };
-    case "SYSTEM_ALERT":
-      return {
-        name,
-        subject: "Security alert on your Yiba Verified account",
-        header_html: null,
-        body_sections: [
-          { type: "paragraph", content: "Hi {{recipient_name}}," },
-          { type: "paragraph", content: "We detected a security-related action on your Yiba Verified account:" },
-          { type: "paragraph", content: "{{alert_description}}" },
-          { type: "paragraph", content: "Date & Time: {{timestamp}}" },
-          { type: "paragraph", content: "Location: {{location}}" },
-          { type: "paragraph", content: "If this was you, no further action is needed." },
-          { type: "paragraph", content: "If you don’t recognise this activity, we strongly recommend resetting your password immediately and contacting support." },
-        ],
-        cta_text: "Secure My Account",
-        footer_html: "For your protection, we’ll never ask for your password via email.",
-      };
+
     case "AUTH_PASSWORD_RESET":
       // Handled in separate route, but keeping default here just in case
       return {

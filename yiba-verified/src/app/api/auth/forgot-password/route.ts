@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
         // 4. Send Email
         const emailService = getEmailService();
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
         const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
         const { getSharedEmailLayout } = require("@/lib/email/layout");

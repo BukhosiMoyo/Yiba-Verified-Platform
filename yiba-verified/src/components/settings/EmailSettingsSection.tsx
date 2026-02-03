@@ -80,84 +80,90 @@ export function EmailSettingsSection() {
     }
   };
 
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  import { Badge } from "@/components/ui/badge";
+  import { Separator } from "@/components/ui/separator";
+
+  // ... (keep state and accessors)
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4 text-destructive">
-        {error}
-      </div>
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardContent className="p-6 text-destructive">
+          {error}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-foreground">Provider</span>
-        <span className="text-sm text-muted-foreground">{config?.provider ?? "—"}</span>
-        {config?.configured ? (
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
-            Configured
-          </span>
-        ) : (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-            Not configured
-          </span>
-        )}
-      </div>
-      <div>
-        <span className="text-sm font-medium text-foreground">From</span>
-        <p className="text-sm text-muted-foreground">
-          {config?.fromName} &lt;{config?.fromEmail}&gt;
-        </p>
-      </div>
-      {config?.replyTo != null && config.replyTo !== "" && (
-        <div>
-          <span className="text-sm font-medium text-foreground">Reply-to</span>
-          <p className="text-sm text-muted-foreground">{config.replyTo}</p>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle>Configuration</CardTitle>
+            <CardDescription>Current email provider settings.</CardDescription>
+          </div>
+          {config?.configured ? (
+            <Badge variant="default" className="bg-green-600 hover:bg-green-700">Configured</Badge>
+          ) : (
+            <Badge variant="destructive">Not Configured</Badge>
+          )}
         </div>
-      )}
-      <p className="text-xs text-muted-foreground">
-        API key and from address are set via environment variables (e.g.{" "}
-        <code className="rounded bg-border px-1">RESEND_API_KEY</code>,{" "}
-        <code className="rounded bg-border px-1">EMAIL_FROM</code>).
-      </p>
-      <div className="border-t border-border pt-4">
-        <Label htmlFor="test-to" className="text-foreground">
-          Send test email
-        </Label>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Input
-            id="test-to"
-            type="email"
-            placeholder="you@example.com"
-            value={testTo}
-            onChange={(e) => setTestTo(e.target.value)}
-            className="max-w-xs border-border bg-background text-foreground"
-          />
-          <Button
-            type="button"
-            onClick={handleSendTest}
-            disabled={sending}
-            className="shrink-0"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Mail className="h-4 w-4 mr-2" />
-                Send test
-              </>
-            )}
-          </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">Provider</span>
+            <p className="font-medium">{config?.provider ?? "—"}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">From Address</span>
+            <p className="font-medium">{config?.fromName} &lt;{config?.fromEmail}&gt;</p>
+          </div>
+          {config?.replyTo && (
+            <div className="space-y-1 sm:col-span-2">
+              <span className="text-sm font-medium text-muted-foreground">Reply-To</span>
+              <p className="font-medium">{config.replyTo}</p>
+            </div>
+          )}
         </div>
-      </div>
-    </div>
+
+        <div className="rounded-md bg-muted p-4 text-xs text-muted-foreground">
+          Settings are managed via environment variables (e.g. <code className="font-semibold text-foreground">RESEND_API_KEY</code>, <code className="font-semibold text-foreground">EMAIL_FROM</code>).
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium">Test Configuration</h4>
+            <p className="text-sm text-muted-foreground">Send a test email to verify your settings.</p>
+          </div>
+          <div className="flex w-full max-w-sm items-center space-x-2">
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+            />
+            <Button onClick={handleSendTest} disabled={sending}>
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+              Send
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -31,7 +31,7 @@ function generateInviteEmail(
   role: string,
   institutionName?: string
 ): { html: string; text: string } {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
   const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(inviteLink.split("token=")[1] || "")}`;
   const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(inviteLink.split("token=")[1] || "")}&redirect=${encodeURIComponent(inviteLink)}`;
 
@@ -126,7 +126,7 @@ export async function processInvite(
     // Get the raw token (we need to reconstruct it or store it separately)
     // For now, we'll generate a new token hash lookup
     // In production, you might want to store the raw token temporarily
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
 
     // Get raw token from store
     const rawToken = getRawToken(invite.token_hash);

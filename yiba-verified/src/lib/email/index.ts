@@ -126,7 +126,7 @@ export function getEmailService(): EmailService {
 
     const config: EmailConfig = {
         provider,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "https://yibaverified.co.za",
     };
 
     if (provider === "resend") {
@@ -157,7 +157,7 @@ export function getEmailTemplate(
     const { getSharedEmailLayout } = require("./layout");
 
     const appName = "Yiba Verified";
-    const url = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const url = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || "https://yibaverified.co.za";
 
     // Generate action link if entity info is provided
     let actionUrl = `${url}/notifications`;
@@ -248,7 +248,7 @@ export async function sendEmailNotification(
 ): Promise<void> {
     try {
         const emailService = getEmailService();
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
 
         const template = getEmailTemplate(
             notificationType,

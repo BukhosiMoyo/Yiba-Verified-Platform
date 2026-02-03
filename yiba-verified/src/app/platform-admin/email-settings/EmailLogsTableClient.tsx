@@ -103,104 +103,118 @@ export function EmailLogsTableClient() {
 
   const totalPages = Math.ceil(total / limit);
 
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+  // ... (keep state)
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">Filter</span>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>Email Logs</CardTitle>
+            <CardDescription>Recent invite email attempts and delivery status.</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={(val) => {
+              setStatusFilter(val);
               setPage(0);
-            }}
-            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
-          >
-            <option value="all">All</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-          </select>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRetryFailed}
-          disabled={retrying}
-          className="border-border"
-        >
-          {retrying ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <RotateCcw className="h-4 w-4 mr-2" />
-          )}
-          Retry failed invites
-        </Button>
-      </div>
-      <ResponsiveTable withCard>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>To</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="max-w-[200px]">Failure reason</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : logs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No email logs found
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                    {formatDate(log.sent_at ?? log.updated_at)}
-                  </TableCell>
-                  <TableCell className="font-medium">{log.to_email}</TableCell>
-                  <TableCell>{statusBadge(log.status)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate" title={log.failure_reason ?? undefined}>
-                    {log.failure_reason ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </ResponsiveTable>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Page {page + 1} of {totalPages} ({total} total)
-          </span>
-          <div className="flex gap-2">
+            }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
+              onClick={handleRetryFailed}
+              disabled={retrying}
             >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages - 1}
-            >
-              Next
+              {retrying ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Retry Failed
             </Button>
           </div>
         </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveTable>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>To</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="max-w-[200px]">Failure reason</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
+              ) : logs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No email logs found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                logs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {formatDate(log.sent_at ?? log.updated_at)}
+                    </TableCell>
+                    <TableCell className="font-medium">{log.to_email}</TableCell>
+                    <TableCell>{statusBadge(log.status)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate" title={log.failure_reason ?? undefined}>
+                      {log.failure_reason ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </ResponsiveTable>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+            <span>
+              Page {page + 1} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages - 1}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
