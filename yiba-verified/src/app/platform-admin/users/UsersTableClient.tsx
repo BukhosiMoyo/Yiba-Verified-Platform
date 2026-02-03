@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { ChipEmailInput } from "@/components/shared/ChipEmailInput";
 import {
   Search,
   Users as UsersIcon,
@@ -197,7 +198,7 @@ export function UsersTableClient({
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserFormData, setAddUserFormData] = useState({
-    email: "",
+    emails: [] as string[],
     role: "",
     institution_id: "",
     default_province: "",
@@ -382,12 +383,8 @@ export function UsersTableClient({
       return;
     }
 
-    // Parse emails
-    const rawEmails = addUserFormData.email;
-    const emails = rawEmails
-      .split(/[\n,;]+/) // Split by newline, comma, or semicolon
-      .map(e => e.trim())
-      .filter(e => e.length > 0 && e.includes("@")); // Basic filter
+    // Emails are already an array
+    const emails = addUserFormData.emails;
 
     if (emails.length === 0) {
       toast.error("Please enter at least one valid email address");
@@ -435,7 +432,7 @@ export function UsersTableClient({
       }
 
       setAddUserModalOpen(false);
-      setAddUserFormData({ email: "", role: "", institution_id: "", default_province: "" });
+      setAddUserFormData({ emails: [], role: "", institution_id: "", default_province: "" });
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to process invites");
@@ -1036,15 +1033,12 @@ export function UsersTableClient({
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
-                <Label htmlFor="add-emails">Emails (one per line or comma separated)</Label>
-                <Textarea
-                  id="add-emails"
-                  value={addUserFormData.email}
-                  onChange={(e) => setAddUserFormData((p) => ({ ...p, email: e.target.value }))}
-                  className="mt-1 font-mono text-sm"
-                  placeholder="user@example.com, another@example.com"
-                  rows={4}
-                  required
+                <Label htmlFor="add-emails">Emails</Label>
+                <ChipEmailInput
+                  value={addUserFormData.emails}
+                  onChange={(emails) => setAddUserFormData((p) => ({ ...p, emails }))}
+                  className="mt-1"
+                  placeholder="Type email and press Enter or Comma..."
                 />
               </div>
               <div>
