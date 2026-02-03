@@ -29,18 +29,7 @@ export async function POST(request: NextRequest) {
         const token = crypto.randomBytes(32).toString("hex");
         const expires = new Date(Date.now() + 3600000); // 1 hour
 
-        // 3. Store token (Assuming verification_token table or add fields to User)
-        // Check if we have a verification token table or similar. 
-        // Standard NextAuth often uses VerificationToken.
-        // Or we can add reset_token to User.
-
-        // Let's check prisma schema first?
-        // For now, I'll assume standard NextAuth VerificationToken model exists or I'll check it.
-        // If not, I'll update User model or use a separate table.
-
-        // SAFE BET: Use VerificationToken if it exists, otherwise assume fields on User.
-        // I will write this file assuming VerificationToken model since NextAuth is used.
-
+        // 3. Store token
         await prisma.verificationToken.create({
             data: {
                 identifier: email.toLowerCase(),
@@ -54,27 +43,42 @@ export async function POST(request: NextRequest) {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
         const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
+        const { getSharedEmailLayout } = require("@/lib/email/layout");
+
+        // Use user's first name if available, otherwise generic
+        const firstName = user.name ? user.name.split(" ")[0] : "there";
+
+        const contentHtml = `
+            <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Reset your Yiba Verified password</h1>
+            
+            <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">Hi ${firstName},</p>
+            
+            <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">We received a request to reset the password for your Yiba Verified account.</p>
+            
+            <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">Click the button below to choose a new password. For security reasons, this link will expire in 60 minutes.</p>
+            
+            <div style="margin: 32px 0; text-align: center;">
+              <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
+            </div>
+            
+            <p style="color: #4b5563; font-size: 16px; margin: 20px 0; line-height: 1.6;">If you didn’t request a password reset, you can safely ignore this email — your account will remain secure.</p>
+            
+            <p style="color: #9ca3af; font-size: 14px; margin-top: 24px; text-align: center;">
+              For your protection, we’ll never ask for your password via email.
+            </p>
+        `;
+
+        const html = getSharedEmailLayout({
+            contentHtml,
+            title: "Reset your Yiba Verified password",
+            previewText: "This link will expire for security reasons.",
+        });
+
         await emailService.send({
             to: email,
             type: EmailType.PASSWORD_RESET,
             subject: "Reset your Yiba Verified password",
-            const { getSharedEmailLayout } = require("@/lib/email/layout");
-
-            const contentHtml = `
-            <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">Reset Password</h1>
-            <p>You requested a password reset for your Yiba Verified account.</p>
-            <p>Click the link below to reset your password. This link is valid for 1 hour.</p>
-            <div style="margin: 32px 0; text-align: center;">
-              <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
-            </div>
-            <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
-        `;
-
-            const html = getSharedEmailLayout({
-                contentHtml,
-                title: "Reset Password",
-                previewText: "Reset your Yiba Verified password",
-            });
+            html,
             text: `Reset your password: ${resetUrl}`,
         });
 
