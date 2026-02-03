@@ -164,12 +164,12 @@ const QUALIFICATIONS = [
 ];
 
 const CITIES = [
-  "Johannesburg", "Durban", "Cape Town", "Pretoria", "Port Elizabeth", 
+  "Johannesburg", "Durban", "Cape Town", "Pretoria", "Port Elizabeth",
   "Bloemfontein", "Polokwane", "Nelspruit", "Kimberley", "East London",
 ];
 
 const STREET_NAMES = [
-  "Main", "Church", "School", "Voortrekker", "Bree", "Long", "High", "Park", 
+  "Main", "Church", "School", "Voortrekker", "Bree", "Long", "High", "Park",
   "Victoria", "King", "Queen", "Market", "Station", "Railway", "Hospital",
 ];
 
@@ -181,7 +181,7 @@ const HOME_LANGUAGES = ["en", "zu", "xh", "af", "nso", "tn", "ve", "ts", "ss", "
 // Delete all data in correct order (respecting foreign keys)
 async function deleteAllData() {
   console.log("\n🗑️  Deleting all existing data...\n");
-  
+
   // Delete in reverse dependency order
   await prisma.sickNote.deleteMany({});
   await prisma.attendanceRecord.deleteMany({});
@@ -212,7 +212,7 @@ async function deleteAllData() {
   await prisma.institution.deleteMany({});
   await prisma.qCTOOrg.deleteMany({});
   await prisma.verificationToken.deleteMany({});
-  
+
   console.log("✅ All data deleted.\n");
 }
 
@@ -320,16 +320,16 @@ export async function main() {
     const [firstName, lastName] = qctoUserNames[i];
     const email = `qcto.${lastName.toLowerCase().replace(/\s/g, "")}${i > 0 ? i : ""}@gmail.com`;
     const role = qctoRoles[i];
-    
+
     // QCTO_SUPER_ADMIN: no province required (can be national)
     // All other QCTO roles: require default_province
     const defaultProvince = role === "QCTO_SUPER_ADMIN" ? null : randomItem(PROVINCES);
-    const assignedProvinces = role === "QCTO_SUPER_ADMIN" 
+    const assignedProvinces = role === "QCTO_SUPER_ADMIN"
       ? [] // National - no provinces assigned
       : role === "QCTO_ADMIN"
-      ? [defaultProvince!, randomItem(PROVINCES.filter(p => p !== defaultProvince))] // Multiple provinces for QCTO_ADMIN
-      : [defaultProvince!]; // Single province for others
-    
+        ? [defaultProvince!, randomItem(PROVINCES.filter(p => p !== defaultProvince))] // Multiple provinces for QCTO_ADMIN
+        : [defaultProvince!]; // Single province for others
+
     const user = await prisma.user.create({
       data: {
         email,
@@ -553,26 +553,26 @@ export async function main() {
 
   for (const inst of institutions) {
     const instLearners = allLearners.filter(l => l.institution_id === inst.id);
-    
+
     for (const learner of instLearners) {
       // Each learner has 1-2 enrolments
       const numEnrolments = Math.random() < 0.8 ? 1 : 2;
-      
+
       for (let e = 0; e < numEnrolments; e++) {
         const qualCode = randomItem(Array.from(qualificationMap.keys()));
         const qualificationId = qualificationMap.get(qualCode)!;
         const qual = QUALIFICATIONS.find(q => q.code === qualCode)!;
-        
+
         const startDate = randomDateInRange(365 * 2, 30);
         const endDate = new Date(startDate);
         endDate.setMonth(endDate.getMonth() + randomInt(12, 24));
-        
+
         const statusRoll = Math.random();
         const status: "ACTIVE" | "COMPLETED" | "TRANSFERRED" | "ARCHIVED" =
           statusRoll < 0.7 ? "ACTIVE" :
-          statusRoll < 0.85 ? "COMPLETED" :
-          statusRoll < 0.95 ? "TRANSFERRED" : "ARCHIVED";
-        
+            statusRoll < 0.85 ? "COMPLETED" :
+              statusRoll < 0.95 ? "TRANSFERRED" : "ARCHIVED";
+
         const enrolment = await prisma.enrolment.create({
           data: {
             learner_id: learner.learner_id,
@@ -583,14 +583,14 @@ export async function main() {
             expected_completion_date: endDate,
             enrolment_status: status,
             attendance_percentage: status === "ACTIVE" ? randomInt(60, 100) :
-                                 status === "COMPLETED" ? randomInt(80, 100) : null,
+              status === "COMPLETED" ? randomInt(80, 100) : null,
             assessment_centre_code: `AC-${randomInt(1000, 9999)}`,
             readiness_status: status === "ACTIVE" ? "IN_PROGRESS" : "COMPLETED",
             flc_status: status === "ACTIVE" ? "PENDING" : "COMPLETED",
             statement_number: status === "COMPLETED" ? `STMT-${randomInt(10000, 99999)}` : null,
           },
         });
-        
+
         allEnrolments.push({
           enrolment_id: enrolment.enrolment_id,
           institution_id: inst.id,
@@ -608,21 +608,21 @@ export async function main() {
 
   for (const inst of institutions) {
     const numReadiness = randomInt(3, 8);
-    
+
     for (let r = 0; r < numReadiness; r++) {
       const qual = randomItem(QUALIFICATIONS);
       const qualId = qualificationMap.get(qual.code)!;
-      
+
       const statusRoll = Math.random();
       const status: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "RETURNED_FOR_CORRECTION" | "REVIEWED" | "RECOMMENDED" | "REJECTED" =
         statusRoll < 0.1 ? "NOT_STARTED" :
-        statusRoll < 0.3 ? "IN_PROGRESS" :
-        statusRoll < 0.5 ? "SUBMITTED" :
-        statusRoll < 0.65 ? "UNDER_REVIEW" :
-        statusRoll < 0.75 ? "RETURNED_FOR_CORRECTION" :
-        statusRoll < 0.85 ? "REVIEWED" :
-        statusRoll < 0.95 ? "RECOMMENDED" : "REJECTED";
-      
+          statusRoll < 0.3 ? "IN_PROGRESS" :
+            statusRoll < 0.5 ? "SUBMITTED" :
+              statusRoll < 0.65 ? "UNDER_REVIEW" :
+                statusRoll < 0.75 ? "RETURNED_FOR_CORRECTION" :
+                  statusRoll < 0.85 ? "REVIEWED" :
+                    statusRoll < 0.95 ? "RECOMMENDED" : "REJECTED";
+
       const readiness = await prisma.readiness.create({
         data: {
           institution_id: inst.id,
@@ -683,7 +683,7 @@ export async function main() {
           learning_material_quality_verified: status === "RECOMMENDED" ? true : status !== "NOT_STARTED" ? Math.random() < 0.8 : null,
         },
       });
-      
+
       allReadiness.push({
         readiness_id: readiness.readiness_id,
         institution_id: inst.id,
@@ -696,27 +696,27 @@ export async function main() {
   // 9. Create Submissions
   console.log("Creating submissions...");
   const submissionTypes = ["READINESS", "ACCREDITATION", "LEARNER_EVIDENCE", "COMPLIANCE_PACK", "ANNUAL_REPORT"] as const;
-  
+
   for (const inst of institutions) {
     const numSubmissions = randomInt(5, 15);
     const instUsers = [inst.admin, ...inst.staff];
-    
+
     for (let s = 0; s < numSubmissions; s++) {
       const submitter = randomItem(instUsers);
       const statusRoll = Math.random();
       const status: "DRAFT" | "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "RETURNED_FOR_CORRECTION" =
         statusRoll < 0.2 ? "DRAFT" :
-        statusRoll < 0.4 ? "SUBMITTED" :
-        statusRoll < 0.5 ? "UNDER_REVIEW" :
-        statusRoll < 0.75 ? "APPROVED" :
-        statusRoll < 0.9 ? "REJECTED" : "RETURNED_FOR_CORRECTION";
-      
+          statusRoll < 0.4 ? "SUBMITTED" :
+            statusRoll < 0.5 ? "UNDER_REVIEW" :
+              statusRoll < 0.75 ? "APPROVED" :
+                statusRoll < 0.9 ? "REJECTED" : "RETURNED_FOR_CORRECTION";
+
       const submittedAt = status !== "DRAFT" ? randomDateInRange(30, 450) : null;
       const reviewedAt = ["APPROVED", "REJECTED", "RETURNED_FOR_CORRECTION"].includes(status) && submittedAt
         ? new Date(submittedAt.getTime() + randomInt(2, 14) * 24 * 60 * 60 * 1000)
         : null;
       const reviewedBy = reviewedAt ? randomItem(qctoUsers).user_id : null;
-      
+
       const submission = await prisma.submission.create({
         data: {
           institution_id: inst.id,
@@ -737,19 +737,19 @@ export async function main() {
         },
       });
       counts.submissions++;
-      
+
       // Add resources to submission
       const instReadiness = allReadiness.filter(r => r.institution_id === inst.id);
       const instLearners = allLearners.filter(l => l.institution_id === inst.id);
       const instEnrolments = allEnrolments.filter(e => e.institution_id === inst.id);
-      
+
       const numResources = randomInt(1, 4);
       const addedResources = new Set<string>();
-      
+
       for (let res = 0; res < numResources; res++) {
         let resourceType: "READINESS" | "LEARNER" | "ENROLMENT";
         let resourceId: string;
-        
+
         if (instReadiness.length > 0 && Math.random() < 0.4) {
           resourceType = "READINESS";
           resourceId = randomItem(instReadiness).readiness_id;
@@ -762,11 +762,11 @@ export async function main() {
         } else {
           continue;
         }
-        
+
         const key = `${resourceType}:${resourceId}`;
         if (addedResources.has(key)) continue;
         addedResources.add(key);
-        
+
         try {
           await prisma.submissionResource.create({
             data: {
@@ -791,7 +791,7 @@ export async function main() {
     const enr = allEnrolments.find(en => en.enrolment_id === e.enrolment_id);
     return enr; // We'll check status in the query
   });
-  
+
   const someEnrolments = await prisma.enrolment.findMany({
     where: {
       enrolment_id: { in: activeEnrolments.slice(0, 20).map(e => e.enrolment_id) },
@@ -799,28 +799,28 @@ export async function main() {
     },
     take: 20,
   });
-  
+
   const attendanceStatuses = ["PRESENT", "PRESENT", "PRESENT", "LATE", "EXCUSED", "ABSENT"] as const;
-  
+
   for (const enr of someEnrolments) {
     const inst = institutions.find(i => i.id === enr.institution_id);
     if (!inst) continue;
-    
+
     const markedBy = Math.random() < 0.5 || inst.staff.length === 0
       ? inst.admin.user_id
       : randomItem(inst.staff).user_id;
-    
+
     const start = Math.max(enr.start_date.getTime(), Date.now() - 21 * 24 * 60 * 60 * 1000);
     const end = enr.expected_completion_date
       ? Math.min(enr.expected_completion_date.getTime(), Date.now())
       : Date.now();
-    
+
     const numDays = randomInt(5, 15);
     for (let i = 0; i < numDays; i++) {
       const d = new Date(start + (i / Math.max(numDays - 1, 1)) * (end - start));
       d.setHours(0, 0, 0, 0);
       const status = randomItem(attendanceStatuses);
-      
+
       try {
         await prisma.attendanceRecord.create({
           data: {
@@ -836,7 +836,7 @@ export async function main() {
         // Skip duplicates
       }
     }
-    
+
     // Recompute attendance percentage
     try {
       await recomputeEnrolmentAttendancePercentage(prisma, enr.enrolment_id);
@@ -846,49 +846,31 @@ export async function main() {
   }
   console.log(`  ✅ Created ${counts.attendanceRecords} attendance records\n`);
 
-  // Default email templates
-  console.log("Ensuring default email templates...");
-  await prisma.emailTemplate.upsert({
-    where: { type: "INSTITUTION_ADMIN_INVITE" },
-    create: {
-      type: "INSTITUTION_ADMIN_INVITE",
-      name: "Institution Admin Invite",
-      subject: "You're invited to manage {{institution_name}} on Yiba Verified",
-      header_html: null,
-      body_sections: [
-        { type: "paragraph", content: "Hi {{recipient_name}}," },
-        { type: "paragraph", content: "{{inviter_name}} has invited you to manage {{institution_name}} on Yiba Verified — the QCTO-recognised platform for qualification verification and accreditation." },
-        { type: "paragraph", content: "Click the button below to review your invitation and get started. This link expires in 7 days." },
-      ],
-      cta_text: "Review invitation",
-      footer_html: "If you didn't expect this invitation, you can safely ignore this email. Questions? Contact support@yibaverified.co.za",
-      is_active: true,
-    },
-    update: {},
-  });
-  console.log("  ✅ Default email template (Institution Admin Invite) ready.\n");
+  // Default email templates - Seed ALL types
+  const { seedEmailTemplates } = await import("./seed.templates");
+  await seedEmailTemplates(prisma);
 
   // 11. Create Invites
   console.log("Creating invites...");
   for (const inst of institutions) {
     const numInvites = randomInt(3, 8);
     const instUsers = [inst.admin, ...inst.staff];
-    
+
     for (let i = 0; i < numInvites; i++) {
       const creator = randomItem(instUsers);
       const statusRoll = Math.random();
       const status: "QUEUED" | "SENT" | "DELIVERED" | "OPENED" | "ACCEPTED" | "DECLINED" | "FAILED" | "EXPIRED" =
         statusRoll < 0.2 ? "QUEUED" :
-        statusRoll < 0.32 ? "SENT" :
-        statusRoll < 0.42 ? "DELIVERED" :
-        statusRoll < 0.55 ? "OPENED" :
-        statusRoll < 0.75 ? "ACCEPTED" :
-        statusRoll < 0.82 ? "DECLINED" :
-        statusRoll < 0.9 ? "FAILED" : "EXPIRED";
-      
+          statusRoll < 0.32 ? "SENT" :
+            statusRoll < 0.42 ? "DELIVERED" :
+              statusRoll < 0.55 ? "OPENED" :
+                statusRoll < 0.75 ? "ACCEPTED" :
+                  statusRoll < 0.82 ? "DECLINED" :
+                    statusRoll < 0.9 ? "FAILED" : "EXPIRED";
+
       const sentAt = status !== "QUEUED" && status !== "EXPIRED" ? randomDateInRange(14, 180) : null;
       const expiresAt = sentAt ? new Date(sentAt.getTime() + 7 * 24 * 60 * 60 * 1000) : daysAgo(randomInt(60, 200));
-      
+
       const declinedAt = status === "DECLINED" && sentAt ? new Date(sentAt.getTime() + 5400 * 1000) : null;
       await prisma.invite.create({
         data: {
@@ -919,22 +901,22 @@ export async function main() {
   const entityTypes = ["INSTITUTION", "USER", "LEARNER", "ENROLMENT", "READINESS", "DOCUMENT"] as const;
   const changeTypes = ["CREATE", "UPDATE", "DELETE", "STATUS_CHANGE"] as const;
   const numAuditLogs = randomInt(500, 1000);
-  
+
   const allUserIds = [
     ...platformAdmins.map(u => u.user_id),
     ...qctoUsers.map(u => u.user_id),
     ...institutions.flatMap(i => [i.admin.user_id, ...i.staff.map(s => s.user_id)]),
   ];
-  
+
   for (let a = 0; a < numAuditLogs; a++) {
     const inst = randomItem(institutions);
     const changedBy = randomItem(allUserIds);
     const user = await prisma.user.findUnique({ where: { user_id: changedBy }, select: { role: true } });
     const role = (user?.role ?? "PLATFORM_ADMIN") as any;
-    
+
     const entityType = randomItem(entityTypes);
     let entityId = inst.id;
-    
+
     if (entityType === "LEARNER") {
       const learner = randomItem(allLearners.filter(l => l.institution_id === inst.id));
       entityId = learner?.learner_id ?? inst.id;
@@ -945,7 +927,7 @@ export async function main() {
       const read = randomItem(allReadiness.filter(r => r.institution_id === inst.id));
       entityId = read?.readiness_id ?? inst.id;
     }
-    
+
     await prisma.auditLog.create({
       data: {
         entity_type: entityType,
@@ -989,7 +971,7 @@ export async function main() {
   console.log(`  Invites:          ${counts.invites}`);
   console.log(`  Audit Logs:       ${counts.auditLogs}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-  
+
   // Get all user emails for summary
   const allUsers = await prisma.user.findMany({
     select: { email: true, role: true, institution_id: true },
