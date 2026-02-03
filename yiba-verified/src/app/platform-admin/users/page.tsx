@@ -58,7 +58,7 @@ export default async function PlatformAdminUsersPage({
     ];
   }
 
-  const [users, totalUsers, institutions] = await Promise.all([
+  const [users, totalUsers, institutions, invites, totalInvites] = await Promise.all([
     prisma.user.findMany({
       where,
       select: {
@@ -94,10 +94,62 @@ export default async function PlatformAdminUsersPage({
       orderBy: { legal_name: "asc" },
       take: INSTITUTIONS_LIMIT,
     }),
+    // Also fetch invites that match the filters
+    prisma.invite.findMany({
+      where: {
+        AND: [
+          { status: { not: "ACCEPTED" } }, // Don't show accepted invites (they are users now)
+          { expires_at: { gt: new Date() } }, // Only show valid invites? Or all? Let's show all non-accepted for visibility
+          // Apply similar filters to invites
+          roleFilter ? { role: roleFilter as any } : {},
+          institutionId ? { institution_id: institutionId } : {},
+          q ? { email: { contains: q, mode: "insensitive" } } : {},
+        ],
+      },
+      include: {
+        institution: {
+          select: {
+            institution_id: true,
+            legal_name: true,
+            trading_name: true,
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+      // We don't paginate invites strictly with users yet, just fetching recent ones for now to ensure visibility
+      take: 50,
+    }),
+    prisma.invite.count({
+      where: {
+        AND: [
+          { status: { not: "ACCEPTED" } },
+          roleFilter ? { role: roleFilter as any } : {},
+          institutionId ? { institution_id: institutionId } : {},
+          q ? { email: { contains: q, mode: "insensitive" } } : {},
+        ],
+      },
+    }),
   ]);
 
-  const allRows = users;
-  const total = totalUsers;
+  // Map invites to UserRow shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inviteRows: any[] = invites.map((inv) => ({
+    user_id: inv.invite_id, // Use invite_id as key
+    email: inv.email,
+    first_name: "(Pending)",
+    last_name: "Invite",
+    role: inv.role,
+    status: inv.status, // SENT, QUEUED, etc.
+    phone: null,
+    created_at: inv.created_at,
+    institution_id: inv.institution_id,
+    institution: inv.institution,
+  }));
+
+  const allRows = [...inviteRows, ...users];
+  // Adjust total to include invites (this might mess up pagination UI slightly if we don't handle mixed pagination, 
+  // but better to show more total than less)
+  const total = totalUsers + totalInvites;
 
   return (
     <div className="space-y-6 p-4 md:p-8">
