@@ -34,7 +34,7 @@ export default async function AccountLayoutWrapper({
       select: { verification_level: true, image: true },
     });
     verificationLevel = (user?.verification_level as VerificationLevel) || "NONE";
-    // userImage is strictly typed in the component, so we default to null if undefined
+    userImageFromDb = user?.image || null;
   } catch (error) {
     console.error("Error fetching verification level:", error);
   }
