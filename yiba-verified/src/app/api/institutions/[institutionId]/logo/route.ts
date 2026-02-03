@@ -130,6 +130,7 @@ export async function POST(request: NextRequest, { params }: Props) {
         return ok({ url: logoUrl });
 
     } catch (error) {
+        console.error("Logo upload error:", error);
         return fail(error);
     }
 }

@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ url: imageUrl }, { status: 200 });
 
     } catch (error) {
+        console.error("Profile upload error:", error);
         return fail(error);
     }
 }
