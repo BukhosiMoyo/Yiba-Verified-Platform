@@ -4,6 +4,7 @@
 import { useState, useRef } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageCropperModal } from "@/components/ui/ImageCropperModal";
 
 type LogoUploaderProps = {
     institutionId: string;
@@ -13,6 +14,8 @@ type LogoUploaderProps = {
 
 export function LogoUploader({ institutionId, currentLogo, className }: LogoUploaderProps) {
     const [uploading, setUploading] = useState(false);
+    const [cropperOpen, setCropperOpen] = useState(false);
+    const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,7 +26,22 @@ export function LogoUploader({ institutionId, currentLogo, className }: LogoUplo
             alert("Please select an image file.");
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
+
+        // Read file for cropping
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            setSelectedImageSrc(reader.result?.toString() || null);
+            setCropperOpen(true);
+        });
+        reader.readAsDataURL(file);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        if (croppedBlob.size > 5 * 1024 * 1024) {
             alert("Image size must be less than 5MB.");
             return;
         }
@@ -31,7 +49,7 @@ export function LogoUploader({ institutionId, currentLogo, className }: LogoUplo
         setUploading(true);
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("file", croppedBlob, "logo.jpg");
 
             const res = await fetch(`/api/institutions/${institutionId}/logo`, {
                 method: "POST",
@@ -51,9 +69,6 @@ export function LogoUploader({ institutionId, currentLogo, className }: LogoUplo
             alert(err.message || "Failed to upload logo.");
         } finally {
             setUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
         }
     };
 
@@ -83,6 +98,16 @@ export function LogoUploader({ institutionId, currentLogo, className }: LogoUplo
                     <Camera className="h-4 w-4" />
                 )}
             </button>
+
+            {selectedImageSrc && (
+                <ImageCropperModal
+                    open={cropperOpen}
+                    onOpenChange={setCropperOpen}
+                    imageSrc={selectedImageSrc}
+                    onCropComplete={handleCropComplete}
+                    aspect={1}
+                />
+            )}
         </>
     );
 }

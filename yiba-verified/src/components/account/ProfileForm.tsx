@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Clock, X, CheckCircle, Camera, Loader2, User } from "lucide-react";
 import { ChangeEmailModal } from "./ChangeEmailModal";
+
+import { ImageCropperModal } from "@/components/ui/ImageCropperModal";
 import { cn } from "@/lib/utils";
 
 type ProfileFormProps = {
@@ -31,6 +33,8 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
     requestId: string;
   } | null>(null);
 
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check for error query param
@@ -96,17 +100,30 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate
     if (!file.type.startsWith("image/")) {
       setMessage({ type: "error", text: "Please select an image file." });
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: "error", text: "Image size must be less than 5MB." });
+    // We can do a preliminary size check, but cropping might reduce it. 
+    // Let's just create object URL and open cropper.
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      setSelectedImageSrc(reader.result?.toString() || null);
+      setCropperOpen(true);
+    });
+    reader.readAsDataURL(file);
+    // Reset input so same file triggers change
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    // Check size after crop
+    if (croppedBlob.size > 5 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Image size too large (max 5MB)." });
       return;
     }
 
@@ -115,7 +132,8 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      // Append as a file
+      formData.append("file", croppedBlob, "profile-pic.jpg");
 
       const res = await fetch("/api/account/profile/image", {
         method: "POST",
@@ -134,10 +152,6 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
       setMessage({ type: "error", text: err.message || "Failed to upload image." });
     } finally {
       setUploading(false);
-      // Reset input so same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -311,8 +325,8 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
       {message && (
         <p
           className={`text-sm ${message.type === "success"
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
+            ? "text-green-600 dark:text-green-400"
+            : "text-red-600 dark:text-red-400"
             }`}
         >
           {message.text}
@@ -323,6 +337,16 @@ export function ProfileForm({ firstName, lastName, email, emailVerified, image }
           {saving ? "Saving…" : "Save Changes"}
         </Button>
       </div>
+
+      {selectedImageSrc && (
+        <ImageCropperModal
+          open={cropperOpen}
+          onOpenChange={setCropperOpen}
+          imageSrc={selectedImageSrc}
+          onCropComplete={handleCropComplete}
+          aspect={1}
+        />
+      )}
     </form>
   );
 }
