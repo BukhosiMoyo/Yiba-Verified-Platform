@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(bytes);
 
         const storage = getStorageService();
-        const result = await storage.upload(buffer, storageKey, file.type);
+        const result = await storage.upload(buffer, storageKey, file.type, true);
 
         // In a real S3 setup without a CDN/CNAME, we might need a signed URL, 
         // but for public buckets or simple setups, we often construct the URL.
