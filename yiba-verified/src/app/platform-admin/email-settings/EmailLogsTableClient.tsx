@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type LogEntry = {
   id: string;
@@ -103,8 +105,6 @@ export function EmailLogsTableClient() {
 
   const totalPages = Math.ceil(total / limit);
 
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
   // ... (keep state)
 
