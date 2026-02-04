@@ -30,7 +30,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { QualificationPicker } from "@/components/institution/QualificationPicker";
+import { QualificationPicker, type QualificationRegistryItem } from "@/components/institution/QualificationPicker";
 
 type Qualification = {
     qualification_id: string;
@@ -46,7 +46,7 @@ interface CreateCohortModalProps {
 
 export function CreateCohortModal({ open, onOpenChange, onSuccess }: CreateCohortModalProps) {
     const [name, setName] = useState("");
-    const [selectedQualification, setSelectedQualification] = useState<{ id: string } | null>(null);
+    const [selectedQualification, setSelectedQualification] = useState<QualificationRegistryItem | null>(null);
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
     const [loading, setLoading] = useState(false);
@@ -116,7 +116,7 @@ export function CreateCohortModal({ open, onOpenChange, onSuccess }: CreateCohor
                             <Label>Qualification</Label>
                             <QualificationPicker
                                 value={selectedQualification}
-                                onChange={setSelectedQualification}
+                                onSelect={setSelectedQualification}
                             />
                         </div>
 
