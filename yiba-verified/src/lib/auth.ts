@@ -112,7 +112,8 @@ export const authOptions: NextAuthOptions = {
             throw new Error("2FA_REQUIRED");
           }
           const { verifyTwoFactorToken } = await import("@/lib/auth/2fa");
-          if (!verifyTwoFactorToken(token, user.two_factor_secret!)) {
+          const isValidToken = await verifyTwoFactorToken(token, user.two_factor_secret!);
+          if (!isValidToken) {
             throw new Error("Invalid 2FA Code");
           }
         }

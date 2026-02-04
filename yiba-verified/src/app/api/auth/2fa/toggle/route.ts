@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
             if (!token) return NextResponse.json({ error: "Token required" }, { status: 400 });
             if (!user.two_factor_secret) return NextResponse.json({ error: "Setup required" }, { status: 400 });
 
-            const isValid = verifyTwoFactorToken(token, user.two_factor_secret);
+            const isValid = await verifyTwoFactorToken(token, user.two_factor_secret);
             if (!isValid) return NextResponse.json({ error: "Invalid token" }, { status: 400 });
 
             await prisma.user.update({
