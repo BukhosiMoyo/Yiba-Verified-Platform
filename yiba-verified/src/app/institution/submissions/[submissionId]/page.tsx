@@ -59,6 +59,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
   const submission = await prisma.submission.findFirst({
     where,
     select: {
+      submission_id: true,
       reference_code: true,
       institution_id: true,
       title: true,
