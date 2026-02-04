@@ -58,12 +58,10 @@ export default function ForgotPasswordPage() {
         subtitle="Enter your email and we'll send a reset link."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FormItem
-            label="Email"
-            required
-            error={error && !error.includes("Failed") ? error : undefined}
-          >
+          <FormItem>
+            <Label htmlFor="email" className="text-foreground">Email <span className="text-red-500">*</span></Label>
             <Input
+              id="email"
               type="email"
               placeholder="name@example.com"
               value={email}
@@ -72,6 +70,7 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="h-10"
             />
+            {error && !error.includes("Failed") && <FormErrorMessage>{error}</FormErrorMessage>}
           </FormItem>
 
           {error && error.includes("Failed") && (
