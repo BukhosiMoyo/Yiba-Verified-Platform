@@ -17,7 +17,7 @@ export function calculateUserCompleteness(user: User): CompletenessResult {
     ];
 
     let score = 0;
-    const maxScore = fields.reduce((acc, f) => acc + f.weight, 0);
+    let maxScore = fields.reduce((acc, f) => acc + f.weight, 0);
     const missing: string[] = [];
 
     for (const field of fields) {
@@ -26,6 +26,21 @@ export function calculateUserCompleteness(user: User): CompletenessResult {
             score += field.weight;
         } else {
             missing.push(field.label);
+        }
+    }
+
+    if (user.role === "PLATFORM_ADMIN") {
+        // Platform admins don't need province or address usually
+        // Remove province from required fields
+        // Adjust score and maxScore if province was considered missing for admin
+        const provinceField = fields.find(f => f.key === 'default_province');
+        if (provinceField) {
+            // If province was missing for admin, remove it from missing fields and adjust maxScore
+            const index = missing.indexOf(provinceField.label);
+            if (index > -1) {
+                missing.splice(index, 1);
+            }
+            maxScore -= provinceField.weight; // Reduce maxScore as this field is not required for admin
         }
     }
 

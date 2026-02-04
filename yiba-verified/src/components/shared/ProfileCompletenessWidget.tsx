@@ -1,83 +1,109 @@
-"use client";
+import React from 'react';
+import useSWR from 'swr';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, ChevronRight, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-import { useState, useEffect } from "react";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertCircle } from "lucide-react";
-import Link from "next/link";
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function CircularProgress({ percentage, size = 40, strokeWidth = 3, className }: { percentage: number, size?: number, strokeWidth?: number, className?: string }) {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (percentage / 100) * circumference;
+
+    const colorClass = percentage === 100 ? "text-green-500" : percentage >= 80 ? "text-primary" : "text-amber-500";
+
+    return (
+        <div className={cn("relative flex items-center justify-center", className)} style={{ width: size, height: size }}>
+            <svg className="transform -rotate-90 w-full h-full">
+                <circle
+                    className="text-muted/20"
+                    strokeWidth={strokeWidth}
+                    stroke="currentColor"
+                    fill="transparent"
+                    r={radius}
+                    cx={size / 2}
+                    cy={size / 2}
+                />
+                <circle
+                    className={cn("transition-all duration-1000 ease-out", colorClass)}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r={radius}
+                    cx={size / 2}
+                    cy={size / 2}
+                />
+            </svg>
+            <span className={cn("absolute text-[10px] font-bold", colorClass)}>
+                {percentage}%
+            </span>
+        </div>
+    );
+}
 
 export function ProfileCompletenessWidget() {
-    const [completeness, setCompleteness] = useState<{ percentage: number; missingFields: string[] } | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { data, error, isLoading } = useSWR('/api/profile/completeness', fetcher);
 
-    useEffect(() => {
-        fetch("/api/profile/completeness")
-            .then((res) => res.json())
-            .then((data) => {
-                if (!data.error) setCompleteness(data);
-            })
-            .catch((err) => console.error(err))
-            .finally(() => setLoading(false));
-    }, []);
+    if (isLoading || error || !data) return null;
 
-    if (loading || !completeness) return null;
-
-    const { percentage, missingFields } = completeness;
+    const { percentage, missingFields } = data;
     const isComplete = percentage === 100;
 
-    // Simple Circular Progress SVG
-    const radius = 16;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (percentage / 100) * circumference;
-    const strokeColor = percentage < 50 ? "#ef4444" : percentage < 80 ? "#eab308" : "#22c55e";
+    if (isComplete) return null;
 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
-                    <div className="relative flex items-center justify-center">
-                        <svg className="h-8 w-8 -rotate-90 transform" viewBox="0 0 40 40">
-                            <circle cx="20" cy="20" r={radius} stroke="currentColor" strokeWidth="3" fill="transparent" className="text-muted/20" />
-                            <circle cx="20" cy="20" r={radius} stroke={strokeColor} strokeWidth="3" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
-                        </svg>
-                        <span className="absolute text-[9px] font-bold">{percentage}%</span>
-                    </div>
+                <Button
+                    variant="ghost"
+                    className="relative h-12 w-12 rounded-full p-0 hover:bg-transparent"
+                >
+                    <CircularProgress percentage={percentage} size={42} strokeWidth={4} />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-4" align="end">
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h4 className="font-medium leading-none">Profile Completeness</h4>
-                        <span className={`text-sm font-bold ${percentage < 100 ? "text-amber-500" : "text-green-500"}`}>
+            <PopoverContent className="w-80 p-0" align="end">
+                <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold text-lg">Profile Completeness</h4>
+                        <span className={cn("text-lg font-bold", percentage === 100 ? "text-green-600" : "text-primary")}>
                             {percentage}%
                         </span>
                     </div>
 
-                    {isComplete ? (
-                        <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-md">
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="text-sm">All set! Great job.</span>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground">Complete your profile to increase trust.</p>
-                            <div className="flex flex-col gap-1">
-                                {missingFields.map((field) => (
-                                    <div key={field} className="flex items-center gap-2 text-sm text-red-500">
-                                        <AlertCircle className="h-3 w-3" />
-                                        <span>{field} is missing</span>
-                                    </div>
-                                ))}
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            {isComplete
+                                ? "Great job! Your profile is fully complete."
+                                : "Complete your profile to unlock all features and improve account visibility."}
+                        </p>
+
+                        {!isComplete && missingFields.length > 0 && (
+                            <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
+                                <p className="text-xs font-semibold uppercase text-amber-600 mb-2 tracking-wide">Pending items</p>
+                                <ul className="text-sm space-y-2">
+                                    {missingFields.map((field: string) => (
+                                        <li key={field} className="flex items-start text-amber-900/80">
+                                            <AlertCircle className="h-4 w-4 mr-2 text-amber-500 shrink-0 mt-0.5" />
+                                            <span>{field}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                            <Button size="sm" className="w-full mt-2" asChild>
-                                <Link href="/settings/profile">Update Profile</Link>
-                            </Button>
-                        </div>
-                    )}
+                        )}
+                    </div>
+                </div>
+                <div className="bg-muted/30 p-4 border-t flex justify-end">
+                    <Button size="default" className="w-full font-medium" asChild>
+                        <Link href="/account/profile">
+                            {isComplete ? "Edit Profile" : "Complete Profile"} <ChevronRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
                 </div>
             </PopoverContent>
         </Popover>

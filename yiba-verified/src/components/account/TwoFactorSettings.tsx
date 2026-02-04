@@ -8,15 +8,16 @@ import { toast } from "sonner";
 import { Loader2, ShieldCheck, ShieldAlert, QrCode } from "lucide-react";
 import Image from "next/image";
 
-export function TwoFactorSettings() {
+interface Props {
+    initialEnabled: boolean;
+}
+
+export function TwoFactorSettings({ initialEnabled }: Props) {
     const [step, setStep] = useState<"idle" | "setup" | "verify">("idle");
     const [loading, setLoading] = useState(false);
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [token, setToken] = useState("");
-    const [isEnabled, setIsEnabled] = useState(false); // Should props init this?
-
-    // For now, simpler to assume fetching status or optimistically updating
-    // Ideally we pass `enabled` as prop.
+    const [isEnabled, setIsEnabled] = useState(initialEnabled);
 
     const handleStartSetup = async () => {
         setLoading(true);
@@ -52,6 +53,27 @@ export function TwoFactorSettings() {
         }
     };
 
+    const handleDisable = async () => {
+        if (!confirm("Are you sure you want to disable Two-Factor Authentication? This will reduce your account security.")) return;
+        setLoading(true);
+        try {
+            const res = await fetch("/api/auth/2fa/toggle", {
+                method: "POST",
+                body: JSON.stringify({ action: "disable" }),
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            toast.success("2FA Disabled Successfully");
+            setIsEnabled(false);
+            setQrCode(null);
+            setToken("");
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -62,18 +84,23 @@ export function TwoFactorSettings() {
                     </p>
                 </div>
                 {isEnabled ? (
-                    <Button variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                        <ShieldCheck className="mr-2 h-4 w-4" /> Enabled
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" className="text-green-600 border-green-200 bg-green-50 pointer-events-none">
+                            <ShieldCheck className="mr-2 h-4 w-4" /> Enabled
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleDisable} disabled={loading}>
+                            Disable
+                        </Button>
+                    </div>
                 ) : (
                     <Button onClick={handleStartSetup} disabled={step !== "idle" || loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Setup 2FA
                     </Button>
                 )}
             </div>
 
-            {step === "setup" && qrCode && (
+            {step === "setup" && qrCode && !isEnabled && (
                 <div className="border p-4 rounded-lg bg-muted/50 space-y-4">
                     <div className="flex flex-col items-center gap-4">
                         <div className="bg-white p-2 rounded-lg">

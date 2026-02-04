@@ -3,8 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TwoFactorSettings } from "@/components/account/TwoFactorSettings";
 import { Label } from "@/components/ui/label";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
-export default function SecurityPage() {
+export default async function SecurityPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) redirect("/login");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { two_factor_enabled: true }
+  });
+
   return (
     <AccountPage
       title="Security"
@@ -14,7 +26,7 @@ export default function SecurityPage() {
         title="Two-Factor Authentication"
         description="Add an extra layer of security to your account"
       >
-        <TwoFactorSettings />
+        <TwoFactorSettings initialEnabled={user?.two_factor_enabled ?? false} />
       </AccountSection>
 
       <AccountSection

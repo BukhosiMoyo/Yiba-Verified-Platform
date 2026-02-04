@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
           type: true,
           status: true,
           updated_at: true,
+          credits: true,
         },
         orderBy: { name: "asc" },
         skip: offset,
