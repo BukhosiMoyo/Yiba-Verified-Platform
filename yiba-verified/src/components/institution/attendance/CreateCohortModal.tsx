@@ -46,7 +46,7 @@ interface CreateCohortModalProps {
 
 export function CreateCohortModal({ open, onOpenChange, onSuccess }: CreateCohortModalProps) {
     const [name, setName] = useState("");
-    const [selectedQualification, setSelectedQualification] = useState<string | null>(null);
+    const [selectedQualification, setSelectedQualification] = useState<{ id: string } | null>(null);
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
     const [loading, setLoading] = useState(false);
@@ -65,7 +65,7 @@ export function CreateCohortModal({ open, onOpenChange, onSuccess }: CreateCohor
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    qualification_id: selectedQualification,
+                    qualification_id: selectedQualification.id,
                     start_date: startDate ? startDate.toISOString() : null,
                     end_date: endDate ? endDate.toISOString() : null,
                 }),
