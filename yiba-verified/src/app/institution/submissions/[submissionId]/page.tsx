@@ -8,6 +8,7 @@ import Link from "next/link";
 import { SubmissionEditForm } from "@/components/institution/SubmissionEditForm";
 import { AddResourceForm } from "@/components/institution/AddResourceForm";
 import { RemoveResourceButton } from "@/components/institution/RemoveResourceButton";
+import { SubmissionItemCard } from "@/components/institution/submissions/SubmissionItemCard";
 
 interface PageProps {
   params: Promise<{
@@ -267,7 +268,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
         </CardContent>
       </Card>
 
-      import {SubmissionItemCard} from "@/components/institution/submissions/SubmissionItemCard";
+
 
       {/* NEW: Submission Items */}
       {submission.items && submission.items.length > 0 && (
