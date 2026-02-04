@@ -7,6 +7,12 @@ import { usePathname } from "next/navigation";
 import { LogIn, LayoutDashboard, ChevronDown, BookOpen, Menu, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AccountMenu } from "@/components/account/AccountMenu";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import type { Role } from "@/lib/rbac";
@@ -71,12 +77,17 @@ export function MarketingNav() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/institutions", label: "Find institutions" },
+    {
+      label: "Talent",
+      href: "/talent",
+      children: [
+        { href: "/talent", label: "Browse Candidates" },
+        { href: "/contact", label: "For Employers" },
+      ]
+    },
     { href: "/features", label: "Features" },
-    { href: "/how-it-works", label: "How it works" },
-    { href: "/security", label: "Security" },
     { href: "/pricing", label: "Pricing" },
     { href: "/blog", label: "Blog" },
-    { href: "/contact", label: "Contact" },
   ];
 
   return (
@@ -90,16 +101,40 @@ export function MarketingNav() {
             </Link>
 
             <div className="hidden md:flex md:items-center md:gap-0.5">
-              {navLinks.map(({ href, label }) => {
-                const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+              {navLinks.map((link) => {
+                const active = link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
+
+                if (link.children) {
+                  return (
+                    <DropdownMenu key={link.label}>
+                      <DropdownMenuTrigger className={`flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200 outline-none ${active ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        }`}>
+                        {link.label}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-[160px]">
+                        {link.children.map((child) => (
+                          <DropdownMenuItem key={child.href} asChild>
+                            <Link href={child.href} className="w-full cursor-pointer">
+                              {child.label}
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  );
+                }
+
                 return (
                   <Link
-                    key={href}
-                    href={href}
+                    key={link.href}
+                    href={link.href}
                     className={`rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200 ${active ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       }`}
                   >
-                    {label}
+                    {link.label}
                   </Link>
                 );
               })}
@@ -183,18 +218,44 @@ export function MarketingNav() {
             }`}
         >
           <div className="px-4 py-6 space-y-1">
-            {navLinks.map(({ href, label }) => {
-              const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+            {navLinks.map((link) => {
+              const active = link.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(link.href);
+
+              if (link.children) {
+                return (
+                  <div key={link.label} className="space-y-1">
+                    <div className="px-4 py-2 text-sm font-semibold text-muted-foreground">
+                      {link.label}
+                    </div>
+                    <div className="pl-4 border-l border-border ml-4 space-y-1">
+                      {link.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className="block rounded-lg px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60 transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <Link
-                  key={href}
-                  href={href}
+                  key={link.href}
+                  href={link.href}
                   className={`block rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 ${active
-                      ? "bg-primary/10 text-primary"
-                      : "text-foreground hover:bg-muted/60"
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/60"
                     }`}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  {label}
+                  {link.label}
                 </Link>
               );
             })}
