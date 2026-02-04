@@ -241,31 +241,7 @@ export async function middleware(req: NextRequest) {
     response = applySecurityHeaders(response);
     return response;
   }
-  if (
-    area === "institution" &&
-    (pathname === "/institution" || pathname.startsWith("/institution/")) &&
-    !pathname.startsWith("/institution/onboarding") &&
-    role === "INSTITUTION_ADMIN"
-  ) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/institution/onboarding";
-    let response = NextResponse.redirect(url);
-    response = applySecurityHeaders(response);
-    return response;
-  }
-  if (
-    area === "qcto" &&
-    (pathname === "/qcto" || pathname.startsWith("/qcto/")) &&
-    !pathname.startsWith("/qcto/onboarding") &&
-    (role as string) !== "QCTO_SUPER_ADMIN" &&
-    (role as string) !== "PLATFORM_ADMIN"
-  ) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/qcto/onboarding";
-    let response = NextResponse.redirect(url);
-    response = applySecurityHeaders(response);
-    return response;
-  }
+
   // All protected area routes: forward pathname on request so layouts can avoid redirect loops
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
