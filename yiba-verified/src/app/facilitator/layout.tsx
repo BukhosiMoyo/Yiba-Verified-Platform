@@ -2,21 +2,15 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AppShell } from "@/components/layout/AppShell";
-import {
-    LayoutDashboard,
-    FileText,
-    Calendar,
-    User,
-    Settings
-} from "lucide-react";
+import { type NavItem } from "@/components/layout/nav";
 import { prisma } from "@/lib/prisma";
 
-const FACILITATOR_NAVIGATION = [
-    { label: "Dashboard", href: "/facilitator/dashboard", icon: LayoutDashboard },
-    { label: "My Profile", href: "/facilitator/profile", icon: User },
-    { label: "Assessments", href: "/facilitator/assessments", icon: FileText },
-    { label: "Schedule", href: "/facilitator/schedule", icon: Calendar },
-    { label: "Settings", href: "/account", icon: Settings },
+const FACILITATOR_NAVIGATION: NavItem[] = [
+    { label: "Dashboard", href: "/facilitator/dashboard", iconKey: "layout-dashboard" },
+    { label: "My Profile", href: "/facilitator/profile", iconKey: "user" },
+    { label: "Assessments", href: "/facilitator/assessments", iconKey: "file-text" },
+    { label: "Schedule", href: "/facilitator/schedule", iconKey: "calendar" },
+    { label: "Settings", href: "/account", iconKey: "settings" },
 ];
 
 export default async function FacilitatorLayout({

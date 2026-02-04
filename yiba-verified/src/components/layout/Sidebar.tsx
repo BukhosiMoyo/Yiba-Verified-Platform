@@ -35,6 +35,7 @@ import {
   BookOpen,
   Globe,
   Inbox,
+  Calendar,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ const ICONS: Record<string, LucideIcon> = {
   "book-open": BookOpen,
   globe: Globe,
   inbox: Inbox,
+  calendar: Calendar,
 };
 
 // Map role to home dashboard path
