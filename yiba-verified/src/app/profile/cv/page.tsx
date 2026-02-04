@@ -21,7 +21,7 @@ export default async function CVManagerPage() {
         redirect("/login?callbackUrl=/profile/cv");
     }
 
-    const userId = session.user.id; // Confirm if session.user.id exists or we need to map from email
+    const userId = session.user.userId; // Confirm if session.user.id exists or we need to map from email
 
     // Fetch CVs
     const cvs = await prisma.cvVersion.findMany({
