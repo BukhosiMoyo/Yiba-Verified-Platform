@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RequestApprovalForm } from "@/components/institution/RequestApprovalForm";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     requestId: string;
-  };
+  }>;
 }
 
 /**
@@ -22,7 +22,7 @@ interface PageProps {
  * - Ignores soft-deleted requests (deleted_at must be null)
  */
 export default async function InstitutionRequestDetailsPage({ params }: PageProps) {
-  const { requestId } = params;
+  const { requestId } = await params;
 
   // Get session (layout already ensures auth, but we need role/institutionId for scoping)
   const session = await getServerSession(authOptions);

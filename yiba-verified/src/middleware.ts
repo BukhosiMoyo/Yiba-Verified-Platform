@@ -35,13 +35,13 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   // Content Security Policy (Google Maps / Places Autocomplete: allow script + connect)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com",
-    "script-src-elem 'self' 'unsafe-inline' https://maps.googleapis.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: https: blob:",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
-    "frame-src 'self' https://maps.googleapis.com https://*.googleapis.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://vercel.live https://vercel.com",
+    "script-src-elem 'self' 'unsafe-inline' https://maps.googleapis.com https://vercel.live https://vercel.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://vercel.com",
+    "img-src 'self' data: https: blob: https://vercel.live https://vercel.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://vercel.com",
+    "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://vercel.live https://vercel.com",
+    "frame-src 'self' https://maps.googleapis.com https://*.googleapis.com https://vercel.live https://vercel.com",
     "frame-ancestors 'none'",
   ].join("; ");
 

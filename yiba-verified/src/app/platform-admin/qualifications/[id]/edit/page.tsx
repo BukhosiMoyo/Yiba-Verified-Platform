@@ -4,15 +4,10 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-interface EditQualificationPageProps {
-    params: {
-        id: string;
-    };
-}
-
-export default async function EditQualificationPage({ params }: EditQualificationPageProps) {
+export default async function EditQualificationPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const qualification = await prisma.qualification.findUnique({
-        where: { qualification_id: params.id },
+        where: { qualification_id: id },
     });
 
     if (!qualification) {

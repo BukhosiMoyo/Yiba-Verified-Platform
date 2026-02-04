@@ -10,9 +10,9 @@ import { AddResourceForm } from "@/components/institution/AddResourceForm";
 import { RemoveResourceButton } from "@/components/institution/RemoveResourceButton";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     submissionId: string;
-  };
+  }>;
 }
 
 /**
@@ -26,7 +26,7 @@ interface PageProps {
  * - Ignores soft-deleted submissions (deleted_at must be null)
  */
 export default async function InstitutionSubmissionDetailsPage({ params }: PageProps) {
-  const { submissionId } = params;
+  const { submissionId } = await params;
 
   // Get session (layout already ensures auth, but we need role/institutionId for scoping)
   const session = await getServerSession(authOptions);

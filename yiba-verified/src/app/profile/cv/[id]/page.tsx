@@ -7,7 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 
 interface PageProps {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -18,8 +18,9 @@ export default async function EditCVPage({ params }: PageProps) {
     const session = await getServerSession(authOptions);
     if (!session?.user) redirect("/login");
 
+    const { id } = await params;
     const cv = await prisma.cvVersion.findUnique({
-        where: { id: params.id }
+        where: { id }
     });
 
     if (!cv || cv.user_id !== session.user.userId) {

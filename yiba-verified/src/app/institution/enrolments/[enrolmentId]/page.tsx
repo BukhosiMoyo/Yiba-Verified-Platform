@@ -7,9 +7,9 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     enrolmentId: string;
-  };
+  }>;
 }
 
 /**
@@ -23,7 +23,7 @@ interface PageProps {
  * - Ignores soft-deleted enrolments (deleted_at must be null)
  */
 export default async function EnrolmentDetailsPage({ params }: PageProps) {
-  const { enrolmentId } = params;
+  const { enrolmentId } = await params;
 
   // Get session (layout already ensures auth, but we need role/institutionId for scoping)
   const session = await getServerSession(authOptions);
@@ -139,15 +139,14 @@ export default async function EnrolmentDetailsPage({ params }: PageProps) {
           <CardDescription>
             Status:{" "}
             <span
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                enrolment.enrolment_status === "ACTIVE"
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${enrolment.enrolment_status === "ACTIVE"
                   ? "bg-green-100 text-green-800"
                   : enrolment.enrolment_status === "COMPLETED"
-                  ? "bg-blue-100 text-blue-800"
-                  : enrolment.enrolment_status === "TRANSFERRED"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
+                    ? "bg-blue-100 text-blue-800"
+                    : enrolment.enrolment_status === "TRANSFERRED"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
+                }`}
             >
               {formatStatus(enrolment.enrolment_status)}
             </span>
