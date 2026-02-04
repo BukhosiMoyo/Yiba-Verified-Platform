@@ -23,8 +23,6 @@ export async function GET(
                         image: true,
                         email: true, // Select but filter conditionally below
                         phone: true, // Select but filter conditionally below
-                        headline: false, // Use profile headline
-                        bio: false, // Use profile bio
                     },
                 },
                 public_cv: {
