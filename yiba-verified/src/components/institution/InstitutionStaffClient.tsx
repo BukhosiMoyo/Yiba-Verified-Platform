@@ -26,6 +26,7 @@ const roleLabel = (r: string) => {
   const m: Record<string, string> = {
     INSTITUTION_ADMIN: "Institution Admin",
     INSTITUTION_STAFF: "Staff",
+    FACILITATOR: "Facilitator",
   };
   return m[r] || r.replace(/_/g, " ");
 };
@@ -205,11 +206,10 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId, curren
                         <TableCell className="py-4">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold text-sm ${
-                                u.role === "INSTITUTION_ADMIN"
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold text-sm ${u.role === "INSTITUTION_ADMIN"
                                   ? "bg-violet-500/15 text-violet-700"
                                   : "bg-slate-200/80 text-slate-600"
-                              }`}
+                                }`}
                             >
                               {initial}
                             </div>
@@ -219,11 +219,12 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId, curren
                         <TableCell className="py-4 text-slate-600">{u.email}</TableCell>
                         <TableCell className="py-4">
                           <span
-                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                              u.role === "INSTITUTION_ADMIN"
+                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${u.role === "INSTITUTION_ADMIN"
                                 ? "bg-violet-500/12 text-violet-700 border border-violet-200/60"
-                                : "bg-slate-100 text-slate-600 border border-slate-200/60"
-                            }`}
+                                : u.role === "FACILITATOR"
+                                  ? "bg-pink-100 text-pink-700 border border-pink-200/60"
+                                  : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                              }`}
                           >
                             {roleLabel(u.role)}
                           </span>
@@ -268,11 +269,10 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId, curren
                         </TableCell>
                         <TableCell className="py-4">
                           <span
-                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                              u.status === "ACTIVE"
+                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${u.status === "ACTIVE"
                                 ? "bg-emerald-500/12 text-emerald-700 border border-emerald-200/60"
                                 : "bg-amber-500/10 text-amber-700 border border-amber-200/60"
-                            }`}
+                              }`}
                           >
                             {u.status === "ACTIVE" ? "Active" : "Inactive"}
                           </span>
@@ -372,6 +372,7 @@ export function InstitutionStaffClient({ staff, canManage, currentUserId, curren
                   <Select id="add-role" value={addRole} onChange={(e) => setAddRole(e.target.value)}>
                     <option value="INSTITUTION_STAFF">Institution Staff</option>
                     <option value="INSTITUTION_ADMIN">Institution Admin</option>
+                    <option value="FACILITATOR">Facilitator</option>
                   </Select>
                 </div>
               </div>

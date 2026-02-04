@@ -64,7 +64,7 @@ export default function InstitutionInvitesPage() {
       params.set("offset", offset.toString());
 
       const response = await fetch(`/api/institution/invites?${params}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch invites");
@@ -295,6 +295,7 @@ export default function InstitutionInvitesPage() {
                 <option value="INSTITUTION_ADMIN">Institution Admin</option>
                 <option value="INSTITUTION_STAFF">Institution Staff</option>
                 <option value="STUDENT">Student</option>
+                <option value="FACILITATOR">Facilitator</option>
               </Select>
             </div>
             {hasActiveFilters && (
@@ -359,26 +360,26 @@ export default function InstitutionInvitesPage() {
                           <TableCell className="font-medium text-foreground py-4">{invite.email}</TableCell>
                           <TableCell className="py-4">
                             <span
-                              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                                invite.role === "INSTITUTION_ADMIN"
+                              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${invite.role === "INSTITUTION_ADMIN"
                                   ? "bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-900/50 dark:text-violet-300 dark:border-violet-800"
                                   : invite.role === "INSTITUTION_STAFF"
                                     ? "bg-muted text-muted-foreground border border-border"
-                                    : "bg-sky-100 text-sky-700 border border-sky-200 dark:bg-sky-900/50 dark:text-sky-300 dark:border-sky-800"
-                              }`}
+                                    : invite.role === "FACILITATOR"
+                                      ? "bg-pink-100 text-pink-700 border border-pink-200 dark:bg-pink-900/50 dark:text-pink-300 dark:border-pink-800"
+                                      : "bg-sky-100 text-sky-700 border border-sky-200 dark:bg-sky-900/50 dark:text-sky-300 dark:border-sky-800"
+                                }`}
                             >
                               {invite.role.replace(/_/g, " ")}
                             </span>
                           </TableCell>
                           <TableCell className="py-4">
                             <span
-                              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                                status.label === "Pending"
+                              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${status.label === "Pending"
                                   ? "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800"
                                   : status.label === "Used"
                                     ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800"
                                     : "bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800"
-                              }`}
+                                }`}
                             >
                               {status.label}
                             </span>
@@ -567,9 +568,10 @@ export default function InstitutionInvitesPage() {
                     <option value="INSTITUTION_ADMIN">Institution Admin</option>
                     <option value="INSTITUTION_STAFF">Institution Staff</option>
                     <option value="STUDENT">Student</option>
+                    <option value="FACILITATOR">Facilitator</option>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Institution admins can invite admins, staff, or students
+                    Institution admins can invite admins, staff, students, or facilitators
                   </p>
                 </div>
               </div>
@@ -613,6 +615,7 @@ export default function InstitutionInvitesPage() {
                   <option value="INSTITUTION_ADMIN">Institution Admin</option>
                   <option value="INSTITUTION_STAFF">Institution Staff</option>
                   <option value="STUDENT">Student</option>
+                  <option value="FACILITATOR">Facilitator</option>
                 </Select>
               </div>
               <Checkbox

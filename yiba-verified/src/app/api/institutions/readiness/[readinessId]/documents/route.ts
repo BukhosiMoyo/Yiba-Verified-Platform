@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { mutateWithAudit } from "@/lib/api/mutateWithAudit";
 import { fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { getStorageService } from "@/lib/storage";
 
 interface RouteParams {
   params: Promise<{
@@ -89,12 +90,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const criterionKey = formData.get("criterion_key") as string | null;
     const suggestedFileName = formData.get("suggested_file_name") as string | null;
 
-    // TODO: Implement actual file upload to storage (S3, etc.)
-    // For now, create document record with file metadata
-    // In production, you would:
-    // 1. Upload file to storage (S3, Azure Blob, etc.)
-    // 2. Get storage URL/key
-    // 3. Create document record with storage reference
+
+    // Convert file to buffer
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Generate storage key
+    // Format: READINESS/{readinessId}/{document_type}/{timestamp}-{filename}
+    const timestamp = Date.now();
+    const storageKey = `READINESS/${readinessId}/${documentType}/${timestamp}-${file.name}`;
+
+    // Upload using storage service
+    const storage = getStorageService();
+    const mimeType = file.type || "application/octet-stream";
+    await storage.upload(buffer, storageKey, mimeType);
 
     const document = await mutateWithAudit(ctx, {
       action: "DOCUMENT_CREATE",
@@ -127,8 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             status: "UPLOADED",
             // Store section metadata (if schema supports it, otherwise use a JSON field or separate table)
             // For now, we'll store in a way that can be queried
-            // TODO: Set storage_key after actual file upload
-            storage_key: null,
+            storage_key: storageKey,
           },
         });
       },

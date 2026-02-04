@@ -13,6 +13,7 @@ const AREA_PREFIXES: Array<{ prefix: string; area: RouteArea }> = [
   { prefix: "/student", area: "student" },
   { prefix: "/account", area: "account" },
   { prefix: "/announcements", area: "announcements" },
+  { prefix: "/facilitator", area: "facilitator" },
 ];
 
 function getAreaFromPath(pathname: string): RouteArea | null {
@@ -236,40 +237,35 @@ export async function middleware(req: NextRequest) {
 
   // Redirect to role-specific onboarding when not completed (avoids dashboard flash)
   if (!onboardingCompleted && area) {
-    if (area === "student" && pathname === "/student" && role === "STUDENT") {
-      const url = req.nextUrl.clone();
-      url.pathname = "/student/onboarding";
-      let response = NextResponse.redirect(url);
-      response = applySecurityHeaders(response);
-      return response;
-    }
-    if (
-      area === "institution" &&
-      (pathname === "/institution" || pathname.startsWith("/institution/")) &&
-      !pathname.startsWith("/institution/onboarding") &&
-      role === "INSTITUTION_ADMIN"
-    ) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/institution/onboarding";
-      let response = NextResponse.redirect(url);
-      response = applySecurityHeaders(response);
-      return response;
-    }
-    if (
-      area === "qcto" &&
-      (pathname === "/qcto" || pathname.startsWith("/qcto/")) &&
-      !pathname.startsWith("/qcto/onboarding") &&
-      (role as string) !== "QCTO_SUPER_ADMIN" &&
-      (role as string) !== "PLATFORM_ADMIN"
-    ) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/qcto/onboarding";
-      let response = NextResponse.redirect(url);
-      response = applySecurityHeaders(response);
-      return response;
-    }
+    let response = NextResponse.next();
+    response = applySecurityHeaders(response);
+    return response;
   }
-
+  if (
+    area === "institution" &&
+    (pathname === "/institution" || pathname.startsWith("/institution/")) &&
+    !pathname.startsWith("/institution/onboarding") &&
+    role === "INSTITUTION_ADMIN"
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/institution/onboarding";
+    let response = NextResponse.redirect(url);
+    response = applySecurityHeaders(response);
+    return response;
+  }
+  if (
+    area === "qcto" &&
+    (pathname === "/qcto" || pathname.startsWith("/qcto/")) &&
+    !pathname.startsWith("/qcto/onboarding") &&
+    (role as string) !== "QCTO_SUPER_ADMIN" &&
+    (role as string) !== "PLATFORM_ADMIN"
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/qcto/onboarding";
+    let response = NextResponse.redirect(url);
+    response = applySecurityHeaders(response);
+    return response;
+  }
   // All protected area routes: forward pathname on request so layouts can avoid redirect loops
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
@@ -281,6 +277,7 @@ export async function middleware(req: NextRequest) {
   response = applyCORSHeaders(response, req);
   return response;
 }
+}
 
 export const config = {
   matcher: [
@@ -288,6 +285,7 @@ export const config = {
     "/qcto/:path*",
     "/institution/:path*",
     "/student/:path*",
+    "/facilitator/:path*",
     "/account",
     "/account/:path*",
     "/announcements",

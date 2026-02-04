@@ -59,8 +59,8 @@ export default async function InstitutionLayout({
   const displayRole = viewAsInfo?.viewingAsRole || role;
 
   // Allow access if original role can access institution OR viewing-as role can access institution
-  const originalCanAccess = role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "PLATFORM_ADMIN";
-  const viewingAsCanAccess = displayRole === "INSTITUTION_ADMIN" || displayRole === "INSTITUTION_STAFF" || displayRole === "PLATFORM_ADMIN";
+  const originalCanAccess = role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF" || role === "PLATFORM_ADMIN" || role === "FACILITATOR";
+  const viewingAsCanAccess = displayRole === "INSTITUTION_ADMIN" || displayRole === "INSTITUTION_STAFF" || displayRole === "PLATFORM_ADMIN" || displayRole === "FACILITATOR";
 
   if (!originalCanAccess && !viewingAsCanAccess) {
     redirect("/unauthorized");

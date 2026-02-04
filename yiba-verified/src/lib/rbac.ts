@@ -11,9 +11,10 @@ export type Role =
   | "INSTITUTION_ADMIN"
   | "INSTITUTION_STAFF"
   | "STUDENT"
-  | "ADVISOR";
+  | "ADVISOR"
+  | "FACILITATOR";
 
-export type RouteArea = "platform-admin" | "advisor" | "qcto" | "institution" | "student" | "account" | "announcements";
+export type RouteArea = "platform-admin" | "advisor" | "qcto" | "institution" | "student" | "account" | "announcements" | "facilitator";
 
 /** QCTO roles that can access /qcto area (including legacy QCTO_USER) */
 export const QCTO_ROLES: Role[] = [
@@ -56,6 +57,7 @@ export const ROLE_ROUTE_ACCESS: Record<Role, RouteArea[]> = {
   INSTITUTION_STAFF: ["institution", "account", "announcements"],
   STUDENT: ["student", "account", "announcements"],
   ADVISOR: ["advisor", "account", "announcements"],
+  FACILITATOR: ["facilitator", "institution", "account", "announcements"],
 };
 
 export function canAccessArea(role: Role, area: RouteArea): boolean {

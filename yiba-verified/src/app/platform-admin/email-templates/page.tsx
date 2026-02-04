@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { EmailTemplatesTableClient } from "./EmailTemplatesTableClient";
+import { EmailTemplatesPageContent } from "./EmailTemplatesPageContent";
 
 /**
  * Platform Admin → Email Templates
@@ -24,12 +25,17 @@ export default async function EmailTemplatesPage() {
       <div>
         <h1 className="text-3xl font-bold">Email Templates</h1>
         <p className="text-muted-foreground mt-2">
-          View, edit, and preview all transactional email templates used by the system.
+          Manage system email templates and configuration.
         </p>
       </div>
-      <Suspense fallback={<div className="text-muted-foreground">Loading…</div>}>
-        <EmailTemplatesTableClient />
-      </Suspense>
+
+      <EmailTemplatesPageContent
+        templatesTable={
+          <Suspense fallback={<div className="text-muted-foreground">Loading…</div>}>
+            <EmailTemplatesTableClient />
+          </Suspense>
+        }
+      />
     </div>
   );
 }

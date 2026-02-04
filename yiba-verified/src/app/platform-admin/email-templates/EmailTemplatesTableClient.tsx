@@ -151,9 +151,13 @@ export function EmailTemplatesTableClient() {
                 <TableCell>
                   {row.exists ? (
                     row.template?.is_active ? (
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-700">Active</Badge>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 hover:text-green-800">
+                        Active
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary">Disabled</Badge>
+                      <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100 hover:text-red-800">
+                        Inactive
+                      </Badge>
                     )
                   ) : (
                     <span className="text-muted-foreground text-sm">Not created yet</span>

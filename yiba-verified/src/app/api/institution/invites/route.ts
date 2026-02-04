@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       where.expires_at = { lte: new Date() };
     }
 
-    if (roleFilter && ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"].includes(roleFilter)) {
+    if (roleFilter && ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT", "FACILITATOR"].includes(roleFilter)) {
       where.role = roleFilter;
     }
 

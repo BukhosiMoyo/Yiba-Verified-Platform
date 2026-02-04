@@ -7,12 +7,14 @@ interface EmailLayoutProps {
   contentHtml: string;
   title?: string;
   previewText?: string;
+  logoUrl?: string | null;
 }
 
 export function getSharedEmailLayout({
   contentHtml,
   title = "Yiba Verified",
   previewText,
+  logoUrl,
 }: EmailLayoutProps): string {
   // Base styles for consistency across clients
   const styles = {
@@ -28,8 +30,9 @@ export function getSharedEmailLayout({
 
   const currentYear = new Date().getFullYear();
   const baseUrl = process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
-  const logoUrl = `${baseUrl}/images/logo-black.png`; // Fallback to text if missing, but typically we want a logo here. 
-  // NOTE: Ensure we have a public logo URL. For now we'll assume one exists or use text.
+
+  // Use provided logoUrl, or fallback to default
+  const finalLogoUrl = logoUrl || `${baseUrl}/Yiba%20Verified%20Logo.webp`;
 
   return `
 <!DOCTYPE html>
@@ -77,7 +80,7 @@ export function getSharedEmailLayout({
                 <tr>
                   <td style="${styles.header}" class="header">
                      <!-- Using text for reliability if logo fails, otherwise <img src="..." height="28" /> -->
-                     <img src="${baseUrl}/Yiba%20Verified%20Logo.webp" alt="Yiba Verified" height="40" style="display: block; border: 0; max-width: 200px; height: auto;" />
+                     <img src="${finalLogoUrl}" alt="Yiba Verified" height="40" style="display: block; border: 0; max-width: 200px; height: auto;" />
                   </td>
                 </tr>
 

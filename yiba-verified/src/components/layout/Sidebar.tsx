@@ -96,6 +96,8 @@ const getRoleHomePath = (role: Role): string => {
       return "/qcto";
     case "STUDENT":
       return "/student";
+    case "FACILITATOR":
+      return "/facilitator";
     default:
       return "/";
   }
@@ -267,9 +269,9 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div
       className={cn(
-        "flex h-full flex-col bg-gradient-to-b from-card via-card to-muted/20 transition-[width] duration-350 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden dark:from-card dark:via-card dark:to-muted/30",
+        "flex h-full flex-col bg-card transition-[width] duration-350 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-r border-border/40",
         collapsed && !isMobile ? "w-[72px]" : "w-[280px]",
-        !collapsed && !isMobile && "rounded-r-2xl border-r border-border/80"
+        !collapsed && !isMobile && "rounded-r-2xl"
       )}
     >
       {/* Logo/Brand - Clickable */}
@@ -359,7 +361,7 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
                       onClick={onClose}
                       onMouseEnter={prefetchOnHover(itemHref)}
                       className={cn(
-                        "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background",
+                        "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out focus:outline-none",
                         collapsed && !isMobile ? "justify-center px-0" : "gap-1 pr-1 pl-3",
                         active
                           ? collapsed && !isMobile
@@ -404,7 +406,7 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
                     <div
                       data-nav-item
                       className={cn(
-                        "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background",
+                        "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus:outline-none",
                         collapsed && !isMobile ? "justify-center px-0" : "gap-1 pr-1 pl-3",
                         active
                           ? collapsed && !isMobile
@@ -479,7 +481,7 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
                           toggleGroup(itemHref, item);
                         }}
                         className={cn(
-                          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+                          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none",
                           collapsed && !isMobile && "hidden"
                         )}
                         aria-expanded={groupOpen}
@@ -541,7 +543,7 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
                   <div
                     data-nav-item
                     className={cn(
-                      "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background",
+                      "group relative flex items-center rounded-lg h-10 text-sm font-medium transition-colors duration-150 ease-out z-10 focus:outline-none",
                       collapsed && !isMobile ? "justify-center px-0" : "gap-3 px-3",
                       active
                         ? collapsed && !isMobile

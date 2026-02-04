@@ -56,6 +56,7 @@ model Institution {
   contacts               InstitutionContact[]
   approvedQualifications InstitutionQualification[]
   complianceAuditLogs    ComplianceAuditLog[]
+  cohorts                Cohort[]
 
   @@unique([branch_code])
   @@index([registration_number])
@@ -535,6 +536,7 @@ model Qualification {
 
   enrolments       Enrolment[]
   readinessRecords Readiness[]
+  cohorts          Cohort[]
 
   @@index([code])
   @@index([status])
@@ -611,6 +613,7 @@ model Enrolment {
   readiness_status         String?
   flc_status               String?
   statement_number         String?
+  cohort_id                String? // Link to Cohort
   created_at               DateTime           @default(now())
   updated_at               DateTime           @updatedAt
   deleted_at               DateTime?
@@ -621,11 +624,65 @@ model Enrolment {
   attendanceRecords        AttendanceRecord[]
   assessments              Assessment[]
   moduleCompletions        ModuleCompletion[]
+  cohort                   Cohort?            @relation(fields: [cohort_id], references: [cohort_id])
 
   @@index([institution_id])
   @@index([learner_id])
   @@index([enrolment_status])
   @@index([qualification_id])
+  @@index([cohort_id])
+}
+
+model Cohort {
+  cohort_id        String   @id @default(uuid())
+  institution_id   String
+  qualification_id String
+  name             String
+  start_date       DateTime?
+  end_date         DateTime?
+  status           String   @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  
+  institution   Institution   @relation(fields: [institution_id], references: [institution_id])
+  qualification Qualification @relation(fields: [qualification_id], references: [qualification_id])
+  enrolments    Enrolment[] 
+  sessions      ClassSession[]
+  facilitators  Facilitator[] // Facilitators assigned to this cohort
+  
+  @@index([institution_id])
+  @@index([qualification_id])
+}
+
+model ClassSession {
+  session_id      String   @id @default(uuid())
+  cohort_id       String
+  date            DateTime
+  start_time      String?  // "08:00"
+  end_time        String?  // "10:00"
+  session_type    SessionType @default(THEORY)
+  location        String?
+  notes           String?
+  is_locked       Boolean  @default(false)
+  locked_at       DateTime?
+  locked_by_user_id String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  cohort          Cohort   @relation(fields: [cohort_id], references: [cohort_id])
+  attendanceRecords AttendanceRecord[]
+
+  @@index([cohort_id])
+  @@index([date])
+}
+
+enum SessionType {
+  THEORY
+  PRACTICAL
+  WBL
+  ASSESSMENT
+  ORIENTATION
+  OTHER
 }
 
 /// One row per learner per date per enrolment. PRESENT, LATE, EXCUSED count as attended for percentage.
@@ -633,6 +690,8 @@ model AttendanceRecord {
   record_id    String           @id @default(uuid())
   enrolment_id String
   record_date  DateTime         @db.Date
+  session_id   String?          // Link to ClassSession (Optional for legacy/migration)
+  minutes_late Int?             
   status       AttendanceStatus
   marked_at    DateTime         @default(now())
   marked_by    String
@@ -641,11 +700,17 @@ model AttendanceRecord {
   enrolment    Enrolment @relation(fields: [enrolment_id], references: [enrolment_id], onDelete: Cascade)
   markedByUser User      @relation("UserAttendanceMarkedBy", fields: [marked_by], references: [user_id])
   sickNote     SickNote?
+  classSession ClassSession? @relation(fields: [session_id], references: [session_id])
 
-  @@unique([enrolment_id, record_date])
+  @@unique([enrolment_id, record_date]) 
+  // Note: We keep the unique constraint on record_date for now to prevent duplicate daily records.
+  // Ideally, if session_id is present, we might want unique([enrolment_id, session_id]).
+  // But for compatibility, we enforce one record per day OR strict session handling in code.
+  
   @@index([enrolment_id])
   @@index([record_date])
   @@index([status])
+  @@index([session_id])
 }
 
 enum AttendanceStatus {
@@ -996,6 +1061,7 @@ model Facilitator {
   moduleCompletions ModuleCompletion[]
   certifications    FacilitatorCertification[]
   verifiedByUser    User?                      @relation("UserVerifiedFacilitator", fields: [verified_by], references: [user_id])
+  cohorts           Cohort[]
 
   @@index([readiness_id])
   @@index([user_id])
@@ -1191,6 +1257,7 @@ enum UserRole {
   INSTITUTION_STAFF
   STUDENT
   ADVISOR
+  FACILITATOR
 }
 
 /// Platform-level service request (accreditation help, accounting, marketing, etc.)
@@ -1597,6 +1664,7 @@ enum SubmissionResourceType {
   READINESS
   LEARNER
   ENROLMENT
+  ATTENDANCE_REGISTER
   DOCUMENT
   INSTITUTION
   FACILITATOR

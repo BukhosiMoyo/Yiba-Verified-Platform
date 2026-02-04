@@ -27,7 +27,6 @@ export default async function InstitutionAttendancePage({ searchParams }: PagePr
   const role = session.user.role;
   const institutionId = session.user.institutionId;
 
-  const where: Record<string, unknown> = {};
   if (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF") {
     if (!institutionId) {
       return (
@@ -41,6 +40,19 @@ export default async function InstitutionAttendancePage({ searchParams }: PagePr
       );
     }
     where.enrolment = { institution_id: institutionId };
+  } else if (role === "FACILITATOR") {
+    // Facilitators can only see records for their cohorts
+    const facilitator = await prisma.facilitator.findFirst({ where: { user_id: session.user.userId } });
+    if (!facilitator) {
+      return <div className="p-8">Access Denied: No facilitator profile found.</div>;
+    }
+    where.enrolment = {
+      cohort: {
+        facilitators: {
+          some: { id: facilitator.id }
+        }
+      }
+    };
   }
 
   const from = searchParams.from;
@@ -94,12 +106,20 @@ export default async function InstitutionAttendancePage({ searchParams }: PagePr
               </p>
             </div>
           </div>
-          <Link href="/institution/attendance/capture">
-            <Button className="bg-white text-emerald-700 hover:bg-emerald-50">
-              <Plus className="h-4 w-4 mr-2" />
-              Capture attendance
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/institution/attendance/cohorts">
+              <Button variant="secondary" className="gap-2">
+                <List className="h-4 w-4" />
+                Manage Cohorts
+              </Button>
+            </Link>
+            <Link href="/institution/attendance/capture">
+              <Button className="bg-white text-emerald-700 hover:bg-emerald-50">
+                <Plus className="h-4 w-4 mr-2" />
+                Capture daily
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

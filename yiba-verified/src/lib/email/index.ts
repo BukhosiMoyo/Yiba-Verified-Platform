@@ -168,7 +168,8 @@ export function getEmailTemplate(
     message: string,
     entityType?: string,
     entityId?: string,
-    baseUrl?: string
+    baseUrl?: string,
+    logoUrl?: string | null
 ): { subject: string; html: string; text: string } {
     // Import shared layout dynamically to avoid circular deps if any (though here it should be fine)
     const { getSharedEmailLayout } = require("./layout");
@@ -241,6 +242,7 @@ export function getEmailTemplate(
         contentHtml,
         title: `${title} - ${appName}`,
         previewText: config.previewText || "There’s an update waiting for you",
+        logoUrl,
     });
 
     const text = `
@@ -278,13 +280,30 @@ export async function sendEmailNotification(
         const emailService = getEmailService();
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
 
+        // Fetch System Logo
+        // We do this here because getEmailTemplate is synchronous but we want dynamic data.
+        // We import prisma dynamically or use a helper if this file is edge-compatible?
+        // Note: src/lib/email/index.ts is likely server-side.
+        let logoUrl: string | null = null;
+        try {
+            const { prisma } = require("@/lib/prisma");
+            const setting = await prisma.systemSetting.findUnique({
+                where: { key: "EMAIL_LOGO" },
+            });
+            logoUrl = setting?.value;
+        } catch (e) {
+            // Ignore DB errors for logo, fallback to default
+            console.warn("Failed to fetch email logo setting:", e);
+        }
+
         const template = getEmailTemplate(
             notificationType,
             title,
             message,
             entityType,
             entityId,
-            baseUrl
+            baseUrl,
+            logoUrl
         );
 
         const result = await emailService.send({

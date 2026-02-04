@@ -1,87 +1,102 @@
 
-import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/api/context";
-import { ok, fail } from "@/lib/api/response";
-import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api/context";
+import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { getStorageService } from "@/lib/storage";
-import { getSystemSetting } from "@/lib/settings";
-import { revalidateTag } from "next/cache";
+import { fail, ok } from "@/lib/api/response";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const SETTING_KEY = "EMAIL_LOGO";
 
 export async function POST(request: NextRequest) {
     try {
         const { ctx } = await requireAuth(request);
 
         if (ctx.role !== "PLATFORM_ADMIN") {
-            throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins can manage settings", 403);
+            throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins can manage system settings", 403);
         }
 
         const formData = await request.formData();
-        const file = formData.get("file") as File;
+        const file = formData.get("file") as File | null;
 
         if (!file) {
             throw new AppError(ERROR_CODES.VALIDATION_ERROR, "No file provided", 400);
         }
 
-        // Validate file type
-        if (!file.type.startsWith("image/")) {
-            throw new AppError(ERROR_CODES.VALIDATION_ERROR, "File must be an image", 400);
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            throw new AppError(
+                ERROR_CODES.VALIDATION_ERROR,
+                "Invalid file type. Allowed: JPEG, PNG, WebP",
+                400
+            );
         }
 
-        // Convert to buffer
+        if (file.size > MAX_FILE_SIZE) {
+            throw new AppError(
+                ERROR_CODES.VALIDATION_ERROR,
+                "File too large. Maximum size: 5MB",
+                400
+            );
+        }
+
+        const extension = file.type.split("/")[1] || "png";
+        const timestamp = Date.now();
+        const storageKey = `system/settings/email-logo-${timestamp}.${extension}`;
+
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Upload to storage (public)
-        const storageService = getStorageService();
-        const ext = file.name.split(".").pop() || "png";
-        const key = `system/email-logo-${Date.now()}.${ext}`;
+        const storage = getStorageService();
+        const result = await storage.upload(buffer, storageKey, file.type);
 
-        // Explicitly upload as public so it can be viewed in emails
-        const result = await storageService.upload(buffer, key, file.type, true);
+        let logoUrl = result.url;
 
-        // Save URL to settings
-        // Since StorageService returns s3:// for s3, we might need to convert to http url if using S3?
-        // The current StorageService.upload returns `url` which is `s3://...` for S3. 
-        // Email clients need HTTP(S).
-        // Let's check storage.ts again... 
-        // S3: `url: s3://${bucket}/${key}`. This is NOT good for emails.
-        // Local: `url: filePath`. NOT good for emails.
-
-        // START FIX for URL generation
-        let publicUrl = result.url;
         if (result.url?.startsWith("s3://")) {
-            // Construct public S3 URL (assuming bucket is public or we have a CDN)
-            // If we don't have a CDN domain in env, we fallback to virtual-hosted style or path-style
-            const bucket = process.env.AWS_S3_BUCKET_NAME || process.env.S3_BUCKET;
-            const region = process.env.AWS_REGION || process.env.S3_REGION || "us-east-1";
-            // Simple heuristic: https://{bucket}.s3.{region}.amazonaws.com/{key}
-            publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-        } else if (!result.url?.startsWith("http")) {
-            // Local handling? Base URL + serve route?
-            // If provider is local, we can't really "serve" it easily to external emails without a dedicated public route.
-            // Assuming user is in Prod with S3 for now as requested ("S3 upload").
-            // For local dev, we might mock it or just use the s3 path if they have s3 configured.
+            const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET_NAME;
+            const region = process.env.S3_REGION || process.env.AWS_REGION || "us-east-1";
+            logoUrl = `https://${bucket}.s3.${region}.amazonaws.com/${storageKey}`;
+        } else if (result.url && !result.url.startsWith("http")) {
+            logoUrl = `/api/storage/${storageKey}`;
         }
-        // END FIX
 
-        // Update System Setting
+        // Upsert the setting
         await prisma.systemSetting.upsert({
-            where: { key: "EMAIL_LOGO_URL" },
-            update: {
-                value: publicUrl ?? "",
-                updated_by: ctx.userId
-            },
+            where: { key: SETTING_KEY },
+            update: { value: logoUrl },
             create: {
-                key: "EMAIL_LOGO_URL",
-                value: publicUrl ?? "",
-                updated_by: ctx.userId
-            }
+                key: SETTING_KEY,
+                value: logoUrl,
+            },
         });
 
-        // revalidateTag("system-settings"); // FIXME: Type error on build (Expected 2 args)
+        return ok({ url: logoUrl });
 
-        return ok({ url: publicUrl });
+    } catch (error) {
+        console.error("System logo upload error:", error);
+        return fail(error);
+    }
+}
+
+export async function GET(request: NextRequest) {
+    try {
+        const { ctx } = await requireAuth(request);
+
+        // Allow any authenticated user to view? Or just admins?
+        // Since it's used in emails, it's public info effectively, but for the API...
+        // Let's restrict to admins for the "settings" view, but if we need a public endpoint for the image itself, the URL is public.
+
+        if (ctx.role !== "PLATFORM_ADMIN") {
+            // throw new AppError(ERROR_CODES.FORBIDDEN, "Forbidden", 403);
+            // Actually, "Settings" page might need it.
+        }
+
+        const setting = await prisma.systemSetting.findUnique({
+            where: { key: SETTING_KEY },
+        });
+
+        return ok({ logoUrl: setting?.value || null });
     } catch (error) {
         return fail(error);
     }
@@ -92,29 +107,19 @@ export async function DELETE(request: NextRequest) {
         const { ctx } = await requireAuth(request);
 
         if (ctx.role !== "PLATFORM_ADMIN") {
-            throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins can manage settings", 403);
+            throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins can manage system settings", 403);
         }
 
         await prisma.systemSetting.delete({
-            where: { key: "EMAIL_LOGO_URL" }
-        }).catch(() => { }); // Ignore if not found
+            where: { key: SETTING_KEY },
+        });
 
-        // revalidateTag("system-settings"); // FIXME: Type error on build (Expected 2 args)
-
-        return ok({ deleted: true });
+        return ok({ success: true });
     } catch (error) {
-        return fail(error);
-    }
-}
-
-export async function GET(request: NextRequest) {
-    try {
-        const { ctx } = await requireAuth(request);
-        if (ctx.role !== "PLATFORM_ADMIN") throw new AppError(ERROR_CODES.FORBIDDEN, "Forbidden", 403);
-
-        const logoUrl = await getSystemSetting("EMAIL_LOGO_URL");
-        return ok({ logoUrl });
-    } catch (error) {
+        // Ignore not found
+        if ((error as any).code === 'P2025') {
+            return ok({ success: true });
+        }
         return fail(error);
     }
 }

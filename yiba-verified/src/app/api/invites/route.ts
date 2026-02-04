@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (ctx.role === "INSTITUTION_ADMIN") {
       // INSTITUTION_ADMIN can invite INSTITUTION_ADMIN, INSTITUTION_STAFF, and STUDENT
-      const allowed = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"];
+      const allowed = ["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT", "FACILITATOR"];
       if (!allowed.includes(role)) {
         throw new AppError(
           ERROR_CODES.FORBIDDEN,
