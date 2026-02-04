@@ -70,7 +70,7 @@ export async function GET(req: Request) {
             qualification: {
                 select: {
                     code: true,
-                    title: true,
+                    name: true,
                 },
             },
             _count: {

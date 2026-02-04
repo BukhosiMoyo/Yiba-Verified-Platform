@@ -82,7 +82,7 @@ export async function GET(req: Request) {
             cohort: {
                 select: {
                     name: true,
-                    qualification: { select: { title: true } }
+                    qualification: { select: { name: true } }
                 },
             },
             _count: {

@@ -51,6 +51,9 @@ export async function POST(request: NextRequest) {
         const storage = getStorageService();
         const result = await storage.upload(buffer, storageKey, file.type);
 
+        if (!result.url) {
+            throw new AppError(ERROR_CODES.INTERNAL_ERROR, "Storage upload failed to return a URL", 500);
+        }
         let logoUrl = result.url;
 
         if (result.url?.startsWith("s3://")) {

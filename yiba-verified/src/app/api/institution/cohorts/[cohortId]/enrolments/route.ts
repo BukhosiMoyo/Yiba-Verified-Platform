@@ -39,11 +39,25 @@ export async function GET(req: Request, { params }: Props) {
     const enrolments = await prisma.enrolment.findMany({
         where: { cohort_id: cohortId },
         include: {
-            learner: { select: { first_name: true, last_name: true, national_id: true, email: true } }
+            learner: {
+                select: {
+                    first_name: true,
+                    last_name: true,
+                    national_id: true,
+                    user: { select: { email: true } }
+                }
+            }
         }
     });
 
-    return NextResponse.json(enrolments);
+    return NextResponse.json(enrolments.map(e => ({
+        ...e,
+        learner: {
+            ...e.learner,
+            email: e.learner.user?.email || null,
+            user: undefined
+        }
+    })));
 }
 
 // POST: Add learners to cohort

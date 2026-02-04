@@ -53,7 +53,7 @@ export async function GET(req: Request, { params }: Props) {
                     enrolments: {
                         where: { enrolment_status: "ACTIVE" }, // Only active learners
                         include: {
-                            learner: { select: { first_name: true, last_name: true, id_number: true } }
+                            learner: { select: { first_name: true, last_name: true, national_id: true } }
                         }
                     }
                 }
