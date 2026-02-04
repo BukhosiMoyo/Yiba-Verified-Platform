@@ -23,7 +23,7 @@ export default async function OpportunitiesPage() {
 
     const requests = await prisma.jobOpportunityRequest.findMany({
         where: {
-            candidate_user_id: session.user.id,
+            candidate_user_id: session.user.userId,
             status: { in: [JobRequestStatus.VERIFIED_SENT, JobRequestStatus.VIEWED] }
         },
         orderBy: { created_at: "desc" }
