@@ -48,6 +48,28 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
+type NavLink = {
+  label: string;
+  href: string;
+  children?: { label: string; href: string }[];
+};
+
+const navLinks: NavLink[] = [
+  { href: "/", label: "Home" },
+  { href: "/institutions", label: "Find institutions" },
+  {
+    label: "Talent",
+    href: "/talent",
+    children: [
+      { href: "/talent", label: "Browse Candidates" },
+      { href: "/contact", label: "For Employers" },
+    ]
+  },
+  { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/blog", label: "Blog" },
+];
+
 export function MarketingNav() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
@@ -73,22 +95,6 @@ export function MarketingNav() {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
-
-  const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/institutions", label: "Find institutions" },
-    {
-      label: "Talent",
-      href: "/talent",
-      children: [
-        { href: "/talent", label: "Browse Candidates" },
-        { href: "/contact", label: "For Employers" },
-      ]
-    },
-    { href: "/features", label: "Features" },
-    { href: "/pricing", label: "Pricing" },
-    { href: "/blog", label: "Blog" },
-  ];
 
   return (
     <>
