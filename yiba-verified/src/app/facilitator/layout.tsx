@@ -31,11 +31,9 @@ export default async function FacilitatorLayout({
     }
 
     // Double check role access
+    // Double check role access
     if (session.user.role !== "FACILITATOR" && session.user.role !== "PLATFORM_ADMIN") {
-        // Allow Platform Admin to view as well
-        if (session.user.role !== "PLATFORM_ADMIN") {
-            redirect("/unauthorized");
-        }
+        redirect("/unauthorized");
     }
 
     const user = await prisma.user.findUnique({
