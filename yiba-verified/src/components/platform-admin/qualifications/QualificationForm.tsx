@@ -71,7 +71,7 @@ export function QualificationForm({ initialData, isEditing = false }: Qualificat
     const [submitting, setSubmitting] = useState(false);
 
     const form = useForm<QualificationFormValues>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: initialData
             ? {
                 ...initialData,
