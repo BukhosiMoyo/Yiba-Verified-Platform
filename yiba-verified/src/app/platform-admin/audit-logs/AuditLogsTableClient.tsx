@@ -299,7 +299,7 @@ export function AuditLogsTableClient({
               className="overflow-x-auto overflow-y-auto"
               style={{ height: "60vh", minHeight: 320 }}
             >
-              <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
+              <Table className="min-w-[1000px] border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
                 <TableHeader>
                   <TableRow className="bg-muted/50 border-b border-border">
                     <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap py-2.5 w-12">
@@ -365,34 +365,34 @@ export function AuditLogsTableClient({
                     const relatedCell =
                       relatedLines.length > 0
                         ? [
-                            log.institution && (
-                              <Link
-                                key="i"
-                                href={`${institutionsPath}/${log.institution.institution_id}`}
-                                className="text-xs text-primary hover:underline block truncate"
-                              >
-                                {log.institution.trading_name || log.institution.legal_name}
-                              </Link>
-                            ),
-                            log.relatedSubmission && (
-                              <Link
-                                key="s"
-                                href={`${submissionsPath}/${log.relatedSubmission.submission_id}`}
-                                className="text-xs text-primary hover:underline block truncate"
-                              >
-                                Submission: {log.relatedSubmission.title || log.relatedSubmission.submission_id.slice(0, 8)}
-                              </Link>
-                            ),
-                            log.relatedQCTORequest && (
-                              <Link
-                                key="r"
-                                href={`/qcto/requests/${log.relatedQCTORequest.request_id}`}
-                                className="text-xs text-primary hover:underline block truncate"
-                              >
-                                Request: {log.relatedQCTORequest.title || log.relatedQCTORequest.request_id.slice(0, 8)}
-                              </Link>
-                            ),
-                          ].filter(Boolean)
+                          log.institution && (
+                            <Link
+                              key="i"
+                              href={`${institutionsPath}/${log.institution.institution_id}`}
+                              className="text-xs text-primary hover:underline block truncate"
+                            >
+                              {log.institution.trading_name || log.institution.legal_name}
+                            </Link>
+                          ),
+                          log.relatedSubmission && (
+                            <Link
+                              key="s"
+                              href={`${submissionsPath}/${log.relatedSubmission.submission_id}`}
+                              className="text-xs text-primary hover:underline block truncate"
+                            >
+                              Submission: {log.relatedSubmission.title || log.relatedSubmission.submission_id.slice(0, 8)}
+                            </Link>
+                          ),
+                          log.relatedQCTORequest && (
+                            <Link
+                              key="r"
+                              href={`/qcto/requests/${log.relatedQCTORequest.request_id}`}
+                              className="text-xs text-primary hover:underline block truncate"
+                            >
+                              Request: {log.relatedQCTORequest.title || log.relatedQCTORequest.request_id.slice(0, 8)}
+                            </Link>
+                          ),
+                        ].filter(Boolean)
                         : "—";
 
                     return (

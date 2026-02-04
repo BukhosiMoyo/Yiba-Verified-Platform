@@ -51,7 +51,7 @@ export function NotificationBell({ className, viewerRole }: NotificationBellProp
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen((prev) => !prev)}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
         className={cn(
           "relative h-9 w-9 rounded-lg border border-border/60 text-muted-foreground",

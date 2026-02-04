@@ -29,37 +29,37 @@ const categories: {
   description: string;
   icon: typeof Bug;
 }[] = [
-  {
-    id: "BUG",
-    label: "Bug",
-    description: "Something isn't working correctly",
-    icon: Bug,
-  },
-  {
-    id: "DATA_ISSUE",
-    label: "Data Issue",
-    description: "Incorrect or missing data",
-    icon: AlertCircle,
-  },
-  {
-    id: "ACCESS_ISSUE",
-    label: "Access Issue",
-    description: "Can't access something I should",
-    icon: Lock,
-  },
-  {
-    id: "FEATURE_REQUEST",
-    label: "Feature Request",
-    description: "Suggestion for improvement",
-    icon: Lightbulb,
-  },
-  {
-    id: "OTHER",
-    label: "Other",
-    description: "Something else",
-    icon: HelpCircle,
-  },
-];
+    {
+      id: "BUG",
+      label: "Bug",
+      description: "Something isn't working correctly",
+      icon: Bug,
+    },
+    {
+      id: "DATA_ISSUE",
+      label: "Data Issue",
+      description: "Incorrect or missing data",
+      icon: AlertCircle,
+    },
+    {
+      id: "ACCESS_ISSUE",
+      label: "Access Issue",
+      description: "Can't access something I should",
+      icon: Lock,
+    },
+    {
+      id: "FEATURE_REQUEST",
+      label: "Feature Request",
+      description: "Suggestion for improvement",
+      icon: Lightbulb,
+    },
+    {
+      id: "OTHER",
+      label: "Other",
+      description: "Something else",
+      icon: HelpCircle,
+    },
+  ];
 
 // Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -115,34 +115,34 @@ export function ReportIssueModal({ open, onOpenChange }: ReportIssueModalProps) 
     if (!files || files.length === 0) return;
 
     const newFiles: SelectedFile[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       // Validate file type
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         toast.error(`Invalid file type: ${file.name}. Only images and PDFs are allowed.`);
         continue;
       }
-      
+
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`File too large: ${file.name}. Max size is 10MB.`);
         continue;
       }
-      
+
       // Create preview for images
-      const preview = file.type.startsWith("image/") 
-        ? URL.createObjectURL(file) 
+      const preview = file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
         : undefined;
-      
+
       newFiles.push({ file, preview });
     }
 
     // Limit to 3 files total
     const combinedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
     setSelectedFiles(combinedFiles);
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -231,7 +231,7 @@ export function ReportIssueModal({ open, onOpenChange }: ReportIssueModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report an Issue</DialogTitle>
           <DialogDescription>
@@ -340,7 +340,7 @@ export function ReportIssueModal({ open, onOpenChange }: ReportIssueModalProps) 
               <Label className="text-muted-foreground">
                 Screenshots (optional)
               </Label>
-              
+
               {/* File previews */}
               {selectedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">

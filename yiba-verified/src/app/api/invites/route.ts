@@ -301,6 +301,8 @@ export async function POST(request: NextRequest) {
         // We can't easily access the `generateInviteEmail` helper from queue.ts without exporting it or duplicating.
         // Let's rely on buildBaseEmailHtml for fallback but cleaner.
         const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
+        const { getSystemSetting } = await import("@/lib/settings");
+        const logoUrl = await getSystemSetting("EMAIL_LOGO_URL");
 
         const fallbackHtml = `
             <p>You have been invited to join <strong>Yiba Verified</strong> as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
@@ -319,7 +321,8 @@ export async function POST(request: NextRequest) {
           subject,
           heading: "Invitation to Yiba Verified",
           bodyHtml: fallbackHtml,
-          previewText
+          previewText,
+          logoUrl
         });
         text = `You've been invited. Review here: ${reviewLink}`;
       }

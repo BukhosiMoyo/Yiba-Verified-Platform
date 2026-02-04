@@ -118,6 +118,9 @@ export class NotificationService {
                         const notificationConfig = EMAIL_CONFIG[EmailType.NOTIFICATION];
                         const previewText = notificationConfig.previewText;
 
+                        const { getSystemSetting } = await import("@/lib/settings");
+                        const logoUrl = await getSystemSetting("EMAIL_LOGO_URL");
+
                         // Build branded HTML
                         const bodyContent = `<p style="font-size: 16px;">${message}</p>`;
                         finalBodyHtml = buildBaseEmailHtml({
@@ -126,7 +129,8 @@ export class NotificationService {
                             actionLabel: actionLink ? "View Details" : undefined,
                             actionUrl: actionLink,
                             heading: "Notification",
-                            previewText // Inject into HTML
+                            previewText, // Inject into HTML
+                            logoUrl
                         });
 
                         const res = await emailService.send({

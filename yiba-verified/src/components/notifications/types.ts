@@ -256,6 +256,7 @@ const QCTO_ROLES: ViewerRoleForLink[] = [
 ];
 
 function isQctoRole(role?: string | null): boolean {
+  if (role === "PLATFORM_ADMIN") return true;
   return role != null && QCTO_ROLES.includes(role as ViewerRoleForLink);
 }
 

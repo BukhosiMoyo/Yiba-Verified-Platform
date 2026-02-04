@@ -24,6 +24,7 @@ interface BaseTemplateOptions {
   actionUrl?: string;
   footerText?: string;
   previewText?: string;
+  logoUrl?: string | null;
 }
 
 export function buildBaseEmailHtml(options: BaseTemplateOptions): string {
@@ -35,7 +36,8 @@ export function buildBaseEmailHtml(options: BaseTemplateOptions): string {
     actionLabel,
     actionUrl,
     footerText = "If you didn't expect this email, you can safely ignore it. Questions? support@yibaverified.co.za",
-    previewText
+    previewText,
+    logoUrl
   } = options;
 
   const buttonHtml = actionLabel && actionUrl
@@ -53,10 +55,31 @@ export function buildBaseEmailHtml(options: BaseTemplateOptions): string {
             ${previewText}
         </span>
         <span style="display:none;opacity:0;visibility:hidden;mso-hide:all;font-size:1px;line-height:1px;max-height:0;max-width:0;width:0;overflow:hidden;">
-            &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+            &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
         </span>
         `
     : '';
+
+  // Header content: Logo OR Title
+  let headerContent = '';
+  if (logoUrl) {
+    // If logo is present, center it and ensure good sizing.
+    // We assume transparent background might be needed, or user wants it over the gradient?
+    // User said: "webp logos... create dark backgrounds so i want a separate logo... that will apply to all templates"
+    // The current header background is a blue gradient.
+    // If they upload a logo, maybe they want it on a simpler background or just the logo itself?
+    // But preserving the branding (blue header) is usually desired unless they assume the logo replaces the header style entirely.
+    // For now, let's keep the header style but place the logo inside.
+    headerContent = `<img src="${logoUrl}" alt="Yiba Verified" style="max-height: 50px; width: auto; max-width: 100%; display: block; margin: 0 auto;" />`;
+    // If they also want the subtitle, we can keep it, or remove it?
+    // Typically logo replaces the text title. Subtitle might still be relevant?
+    // Let's keep subtitle for now as it says "QCTO-recognised platform".
+    if (subheading) {
+      headerContent += `<p style="${EMAIL_STYLES.headerSubtitle}">${subheading}</p>`;
+    }
+  } else {
+    headerContent = `<h1 style="${EMAIL_STYLES.headerTitle}">${heading}</h1><p style="${EMAIL_STYLES.headerSubtitle}">${subheading}</p>`;
+  }
 
   return `
 <!DOCTYPE html>
@@ -69,8 +92,7 @@ export function buildBaseEmailHtml(options: BaseTemplateOptions): string {
 <body style="${EMAIL_STYLES.container}">
   ${previewBlock}
   <div style="${EMAIL_STYLES.header}">
-    <h1 style="${EMAIL_STYLES.headerTitle}">${heading}</h1>
-    <p style="${EMAIL_STYLES.headerSubtitle}">${subheading}</p>
+    ${headerContent}
   </div>
   <div style="${EMAIL_STYLES.body}">
     ${bodyHtml}

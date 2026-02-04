@@ -10,7 +10,7 @@ import {
   getNotificationLink,
   formatTimeAgo,
 } from "./types";
-import { Archive } from "lucide-react";
+import { Archive, Trash2, Undo2 } from "lucide-react";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -18,6 +18,8 @@ interface NotificationItemProps {
   onMarkRead?: (id: string) => void;
   onNavigate?: (url: string) => void;
   onArchive?: (id: string) => void;
+  onRestore?: (id: string) => void;
+  onDelete?: (id: string) => void;
   /** Viewer role for role-aware links (QCTO vs institution paths) */
   viewerRole?: string | null;
 }
@@ -28,6 +30,8 @@ export function NotificationItem({
   onMarkRead,
   onNavigate,
   onArchive,
+  onRestore,
+  onDelete,
   viewerRole,
 }: NotificationItemProps) {
   const category = notification.category || getCategoryFromType(notification.notification_type);
@@ -44,7 +48,7 @@ export function NotificationItem({
     if (!notification.is_read && onMarkRead) {
       onMarkRead(notification.notification_id);
     }
-    if (link && onNavigate) {
+    if (link && onNavigate && !notification.is_archived) {
       onNavigate(link);
     }
   };
@@ -148,7 +152,7 @@ export function NotificationItem({
 
         {/* Hover action hint */}
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 self-center">
-          {onArchive && (
+          {onArchive && !notification.is_archived && (
             <button
               onClick={handleArchive}
               className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors"
@@ -156,6 +160,24 @@ export function NotificationItem({
             >
               <Archive className="h-4 w-4" />
             </button>
+          )}
+          {notification.is_archived && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRestore?.(notification.notification_id); }}
+                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors"
+                title="Restore"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete?.(notification.notification_id); }}
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors"
+                title="Delete Permanently"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
           )}
           {link && (
             <div className="text-xs text-muted-foreground mr-1">

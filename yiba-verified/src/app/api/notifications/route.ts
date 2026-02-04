@@ -21,14 +21,16 @@ export async function GET(request: NextRequest) {
     const ctx = await requireApiContext(request);
 
     const searchParams = request.nextUrl.searchParams;
+    const showArchived = searchParams.get("archived") === "true";
 
-    // Build where clause - always scope to current user (never from input; prevents cross-account leakage)
-    const where: { user_id: string; is_read?: boolean; deleted_at: null } = {
+    // Build where clause - always scope to current user
+    // If archived=true, we show ONLY deleted items. If false/undefined, we show ONLY non-deleted.
+    const where: any = {
       user_id: ctx.userId,
-      deleted_at: null,
+      deleted_at: showArchived ? { not: null } : null,
     };
 
-    // Filter by read status if provided
+    // Filter by read status if provided (usually ignored for archive, but supported)
     const isReadParam = searchParams.get("is_read");
     if (isReadParam === "true") {
       where.is_read = true;
@@ -48,8 +50,9 @@ export async function GET(request: NextRequest) {
         skip: offset,
       }),
       prisma.notification.count({ where }),
+      // Unread count usually refers to Inbox unread. We strictly count non-deleted unread items for badges.
       prisma.notification.count({
-        where: { user_id: ctx.userId, is_read: false },
+        where: { user_id: ctx.userId, is_read: false, deleted_at: null },
       }),
     ]);
 
@@ -64,6 +67,7 @@ export async function GET(request: NextRequest) {
         entity_type: notification.entity_type,
         entity_id: notification.entity_id,
         is_read: notification.is_read,
+        is_archived: !!notification.deleted_at,
         read_at: notification.read_at?.toISOString() || null,
         created_at: notification.created_at.toISOString(),
       })),

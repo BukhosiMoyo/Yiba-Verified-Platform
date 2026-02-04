@@ -39,6 +39,7 @@ export function NotificationPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
+  const [activeTab, setActiveTab] = useState<"inbox" | "archived">("inbox");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -52,7 +53,7 @@ export function NotificationPanel({
       if (page === 0) setIsLoading(true);
       try {
         const [notifRes, annRes] = await Promise.all([
-          fetch(`/api/notifications?limit=${LIMIT}&offset=${page * LIMIT}`),
+          fetch(`/api/notifications?limit=${LIMIT}&offset=${page * LIMIT}&archived=${activeTab === "archived"}`),
           page === 0 ? fetch("/api/announcements") : Promise.resolve(null),
         ]);
 
@@ -78,7 +79,14 @@ export function NotificationPanel({
     };
 
     loadData();
-  }, [open, page, onUnreadCountChange]);
+  }, [open, page, activeTab, onUnreadCountChange]);
+
+  // Reset pagination when tab changes
+  useEffect(() => {
+    setPage(0);
+    setNotifications([]);
+    setHasMore(true);
+  }, [activeTab]);
 
   const loadMore = useCallback(() => {
     if (!isLoading && hasMore) {
@@ -192,6 +200,33 @@ export function NotificationPanel({
     }
   }, [onUnreadCountChange]);
 
+  // Restore single
+  const handleRestore = useCallback(async (notificationId: string) => {
+    // Optimistic remove from archive list
+    setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
+
+    try {
+      await fetch(`/api/notifications/${notificationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restored: true }),
+      });
+    } catch (error) {
+      console.error("Failed to restore notification", error);
+    }
+  }, []);
+
+  // Permanent Delete
+  const handleDelete = useCallback(async (notificationId: string) => {
+    if (!confirm("Delete permanently?")) return;
+    setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
+    try {
+      await fetch(`/api/notifications/${notificationId}?permanent=true`, { method: "DELETE" });
+    } catch (error) {
+      console.error("Failed to delete notification", error);
+    }
+  }, []);
+
   // Navigate to link
   const handleNavigate = useCallback((url: string) => {
     router.push(url);
@@ -230,7 +265,8 @@ export function NotificationPanel({
       {/* Overlay */}
       <div
         className={cn(
-          "fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] transition-all duration-500 ease-out",
+          "fixed z-50 bg-black/30 backdrop-blur-[2px] transition-all duration-500 ease-out",
+          "inset-0 top-16 md:top-0", // Mobile: start below header. Desktop: full screen.
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={handleClose}
@@ -240,20 +276,40 @@ export function NotificationPanel({
       {/* Panel */}
       <div
         className={cn(
-          "fixed z-50 flex flex-col",
-          "inset-y-[10px] right-[10px] w-full sm:w-[440px] md:w-[480px]",
-          "h-[calc(100vh-20px)] rounded-2xl",
-          "bg-card border border-border shadow-2xl",
-          "transform-gpu transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "fixed z-50 flex flex-col bg-card border border-border shadow-2xl transform-gpu transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          // Mobile: Below header (top-16), full width, no rounded corners
+          "top-16 bottom-0 right-0 left-0 w-full",
+          // Desktop: Floating from right, rounded
+          "md:top-[10px] md:bottom-[10px] md:left-auto md:right-[10px] md:w-[480px] md:rounded-2xl md:h-[calc(100vh-20px)]",
           open
             ? "translate-x-0 opacity-100"
-            : "translate-x-[calc(100%+20px)] opacity-0 pointer-events-none"
+            : "translate-x-[100%] opacity-0 pointer-events-none"
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/60">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setActiveTab("inbox")}
+                className={cn(
+                  "text-lg font-semibold transition-colors",
+                  activeTab === "inbox" ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                )}
+              >
+                Inbox
+              </button>
+              <div className="h-4 w-px bg-border/60" />
+              <button
+                onClick={() => setActiveTab("archived")}
+                className={cn(
+                  "text-lg font-semibold transition-colors",
+                  activeTab === "archived" ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                )}
+              >
+                Archived
+              </button>
+            </div>
             {!isLoading && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
@@ -346,6 +402,8 @@ export function NotificationPanel({
                       onMarkRead={handleMarkRead}
                       onNavigate={handleNavigate}
                       onArchive={handleArchive}
+                      onRestore={handleRestore}
+                      onDelete={handleDelete}
                       viewerRole={viewerRole}
                     />
                   ))}
@@ -365,7 +423,7 @@ export function NotificationPanel({
         </div>
 
         {/* Footer */}
-        {notifications.length > 0 && (
+        {notifications.length > 0 && activeTab === "inbox" && (
           <div className="px-4 py-3 border-t border-border/60 bg-muted/30">
             <div className="flex items-center gap-2">
               <Button

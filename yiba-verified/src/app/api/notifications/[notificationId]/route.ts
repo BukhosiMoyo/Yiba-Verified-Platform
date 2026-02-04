@@ -20,6 +20,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const ctx = await requireApiContext(request);
     const { notificationId } = await params;
+    const body = await request.json().catch(() => null);
 
     // Find notification and verify it belongs to the user
     const notification = await prisma.notification.findUnique({
@@ -35,13 +36,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return fail(new AppError(ERROR_CODES.NOT_FOUND, "Notification not found", 404));
     }
 
-    // Users can only mark their own notifications as read
-    // (PLATFORM_ADMIN could mark any, but we'll keep it scoped for security)
+    // Check authorization
     if (notification.user_id !== ctx.userId && ctx.role !== "PLATFORM_ADMIN") {
       return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Cannot modify this notification", 403));
     }
 
-    // Mark as read if not already read
+    // Handle Restore
+    if (body?.restored) {
+      await prisma.notification.update({
+        where: { notification_id: notificationId },
+        data: { deleted_at: null },
+      });
+      return NextResponse.json({ message: "Notification restored" });
+    }
+
+    // Handle Mark Read (default behavior if no specific action provided, or if mark_read specified)
     if (!notification.is_read) {
       await prisma.notification.update({
         where: { notification_id: notificationId },
@@ -71,6 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const ctx = await requireApiContext(request);
     const { notificationId } = await params;
+    const permanent = request.nextUrl.searchParams.get("permanent") === "true";
 
     // Find notification
     const notification = await prisma.notification.findUnique({
@@ -87,20 +97,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     if (notification.user_id !== ctx.userId && ctx.role !== "PLATFORM_ADMIN") {
-      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Cannot archive this notification", 403));
+      return fail(new AppError(ERROR_CODES.FORBIDDEN, "Unauthorized: Cannot delete this notification", 403));
     }
 
-    // Soft delete
-    await prisma.notification.update({
-      where: { notification_id: notificationId },
-      data: {
-        deleted_at: new Date(),
-      },
-    });
-
-    return NextResponse.json({
-      message: "Notification archived",
-    });
+    if (permanent) {
+      await prisma.notification.delete({
+        where: { notification_id: notificationId },
+      });
+      return NextResponse.json({ message: "Notification deleted permanently" });
+    } else {
+      // Soft delete (Archive)
+      await prisma.notification.update({
+        where: { notification_id: notificationId },
+        data: {
+          deleted_at: new Date(),
+        },
+      });
+      return NextResponse.json({ message: "Notification archived" });
+    }
   } catch (error) {
     return fail(error);
   }
