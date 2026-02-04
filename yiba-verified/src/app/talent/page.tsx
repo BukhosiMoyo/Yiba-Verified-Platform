@@ -18,15 +18,16 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-    searchParams: {
+    searchParams: Promise<{
         search?: string;
         location?: string;
         work_type?: string;
         page?: string;
-    };
+    }>;
 }
 
-export default async function TalentDirectoryPage({ searchParams }: PageProps) {
+export default async function TalentDirectoryPage(props: PageProps) {
+    const searchParams = await props.searchParams;
     const page = parseInt(searchParams.page || "1");
     const pageSize = 20;
     const skip = (page - 1) * pageSize;

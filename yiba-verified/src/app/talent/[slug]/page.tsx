@@ -12,13 +12,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 interface PageProps {
-    params: {
+    params: Promise<{
         slug: string;
-    };
+    }>;
 }
 
 // Generate Metadata
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+    const params = await props.params;
     const profile = await prisma.publicTalentProfile.findUnique({
         where: { slug: params.slug, is_public: true },
         include: { user: true }
@@ -35,7 +36,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
 }
 
-export default async function TalentProfilePage({ params }: PageProps) {
+export default async function TalentProfilePage(props: PageProps) {
+    const params = await props.params;
     const profile = await prisma.publicTalentProfile.findUnique({
         where: { slug: params.slug, is_public: true },
         include: {
