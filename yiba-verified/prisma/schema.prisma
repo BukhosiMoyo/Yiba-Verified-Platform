@@ -2541,3 +2541,10 @@ enum JobRequestStatus {
   REJECTED
   FLAGGED
 }
+
+model SystemSetting {
+  key        String   @id
+  value      String   @db.Text
+  updated_by String?
+  updated_at DateTime @updatedAt
+}
