@@ -1106,31 +1106,46 @@ model FacilitatorCertification {
  * Supports submission-based QCTO access: QCTO can only view resources linked to submissions.
  * Workflow:
  * - Institution creates submission (status: DRAFT)
- * - Institution adds resources (readiness, documents, learners, enrolments) to submission
+ * - Institution adds items (SubmissionItems) which are snapshots of system data
  * - Institution submits to QCTO (status: SUBMITTED)
  * - QCTO reviews (status: UNDER_REVIEW)
  * - QCTO approves/rejects/requests corrections (status: APPROVED / REJECTED / RETURNED_FOR_CORRECTION)
  */
 model Submission {
-  submission_id   String           @id @default(uuid())
-  institution_id  String
-  title           String? // Optional title/description
-  submission_type String? // e.g., "READINESS", "COMPLIANCE_PACK", "ANNUAL_REPORT"
-  status          SubmissionStatus @default(DRAFT)
-  submitted_at    DateTime?
-  submitted_by    String? // Institution user who submitted
-  reviewed_at     DateTime?
-  reviewed_by     String? // QCTO user who reviewed
-  review_notes    String?
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
-  deleted_at      DateTime?
+  submission_id          String           @id @default(uuid())
+  institution_id         String
+  reference_code         String?          @unique // E.g. SUB-2026-000123. Optional only for legacy compat, required for new.
+  title                  String? // Optional title/description
+  submission_type        String? // DEPRECATED in v2: use items instead. e.g., "READINESS", "COMPLIANCE_PACK"
+  status                 SubmissionStatus @default(DRAFT)
+  
+  // Timeline
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @updatedAt
+  submitted_at           DateTime?
+  submitted_by           String? // Institution user who submitted
+  reviewed_at            DateTime?
+  reviewed_by            String? // QCTO user who reviewed
+  last_activity_at       DateTime?        @default(now())
+
+  // Review & Feedback
+  review_notes           String?          @db.Text
+  notes_to_qcto          String?          @db.Text
+  linked_qcto_request_id String?          // If this submission satisfies a specific request
+
+  deleted_at             DateTime?
 
   // Relations
   institution         Institution                  @relation(fields: [institution_id], references: [institution_id])
   submittedByUser     User?                        @relation("UserSubmitted", fields: [submitted_by], references: [user_id])
   reviewedByUser      User?                        @relation("UserReviewed", fields: [reviewed_by], references: [user_id])
+  
+  // New: Items (v2 architecture)
+  items               SubmissionItem[]
+  
+  // Legacy: Direct resources (v1 architecture - kept for backward compatibility if needed, or migration)
   submissionResources SubmissionResource[]
+  
   reviewAttachments   SubmissionReviewAttachment[]
   auditLogs           AuditLog[]                   @relation("SubmissionAuditLogs")
 
@@ -1139,12 +1154,68 @@ model Submission {
   @@index([submitted_at])
   @@index([submitted_by])
   @@index([reviewed_by])
+  @@index([reference_code])
+}
+
+/**
+ * SubmissionItem
+ * A "package" of data generated from the system for a specific purpose (Attendance, Results, etc.).
+ * Includes a snapshot of the data at generation time for audit/integrity.
+ */
+model SubmissionItem {
+  submission_item_id String               @id @default(uuid())
+  submission_id      String
+  type               SubmissionItemType
+  status             SubmissionItemStatus @default(DRAFT)
+  
+  // Configuration (What is this item?)
+  // Stores things like: { cohortId: "...", startDate: "...", endDate: "..." }
+  config_json        Json?
+
+  // Data Integrity (The Snapshot)
+  // Stores the calculated metrics or data summary at time of generation.
+  metrics_snapshot_json Json?
+  
+  // List of IDs included in this snapshot (e.g. list of AttendanceRecord IDs)
+  // For large datasets, this might be stored in a separate table or S3, but JSON is fine for v1 (<10k IDs)
+  included_record_ids_json Json?
+
+  // Tamper resistance
+  data_hash          String? // Hash of the included data + timestamp
+  generated_at       DateTime?
+
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  submission         Submission @relation(fields: [submission_id], references: [submission_id], onDelete: Cascade)
+  
+  @@index([submission_id])
+  @@index([type])
+  @@index([status])
+}
+
+enum SubmissionItemType {
+  ATTENDANCE
+  ENROLMENTS
+  ASSESSMENT_RESULTS
+  LEARNER_LIST
+  POLICIES_AND_EVIDENCE
+  OTHER
+}
+
+enum SubmissionItemStatus {
+  DRAFT       // Configured but not yet generated
+  GENERATED   // Snapshot created
+  NEEDS_INFO  // Missing required data/docs
+  READY       // Ready for submission
+  LOCKED      // Submitted/Approved (cannot be changed)
 }
 
 /**
  * SubmissionResource
  * Links resources (readiness, documents, learners, enrolments) to submissions.
  * This is how we track what QCTO can see - only resources linked to approved/submitted submissions.
+ * (Legacy/Compat: New flows should prefer SubmissionItem snapshots, but this is useful for direct document links)
  */
 model SubmissionResource {
   resource_id       String                 @id @default(uuid())

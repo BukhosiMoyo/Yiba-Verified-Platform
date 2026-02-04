@@ -58,7 +58,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
   const submission = await prisma.submission.findFirst({
     where,
     select: {
-      submission_id: true,
+      reference_code: true,
       institution_id: true,
       title: true,
       submission_type: true,
@@ -84,6 +84,17 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
           last_name: true,
           email: true,
         },
+      },
+      items: {
+        select: {
+          submission_item_id: true,
+          type: true,
+          status: true,
+          config_json: true,
+          metrics_snapshot_json: true,
+          updated_at: true,
+        },
+        orderBy: { created_at: "asc" }
       },
       submissionResources: {
         select: {
@@ -161,11 +172,20 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Submission Details</h1>
-        <p className="text-muted-foreground mt-2">
-          View and manage submission information and resources
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Submission Details</h1>
+            {submission.reference_code && (
+              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm font-mono border border-gray-200">
+                {submission.reference_code}
+              </span>
+            )}
+          </div>
+          <p className="text-muted-foreground mt-2">
+            View and manage submission information and resources
+          </p>
+        </div>
       </div>
 
       {/* Submission Information */}
@@ -247,10 +267,35 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
         </CardContent>
       </Card>
 
-      {/* Submission Resources */}
+      import {SubmissionItemCard} from "@/components/institution/submissions/SubmissionItemCard";
+
+      {/* NEW: Submission Items */}
+      {submission.items && submission.items.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Submission Content</CardTitle>
+            <CardDescription>
+              Data packages included in this submission
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {submission.items.map((item: any) => (
+                <SubmissionItemCard
+                  key={item.submission_item_id}
+                  item={item}
+                  isEditable={canEdit}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Submission Resources (Legacy) */}
       <Card>
         <CardHeader>
-          <CardTitle>Linked Resources</CardTitle>
+          <CardTitle>Legacy Resources</CardTitle>
           <CardDescription>
             {submission.submissionResources.length} resource
             {submission.submissionResources.length !== 1 ? "s" : ""} linked to this submission
@@ -258,7 +303,7 @@ export default async function InstitutionSubmissionDetailsPage({ params }: PageP
         </CardHeader>
         <CardContent>
           {submission.submissionResources.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No resources linked to this submission</p>
+            <p className="text-muted-foreground text-center py-4">No legacy resources linked.</p>
           ) : (
             <div className="space-y-3">
               {submission.submissionResources.map((resource) => (

@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreateSubmissionForm } from "@/components/institution/CreateSubmissionForm";
+import { CreateSubmissionWizard } from "@/components/institution/submissions/CreateSubmissionWizard";
 
 /**
  * Create New Submission Page
  * 
- * Server Component that displays the form for creating a new submission.
+ * Server Component that displays the wizard for creating a new submission.
  * - Enforces institution scoping (already handled by layout)
  */
 export default async function NewSubmissionPage() {
@@ -26,17 +25,7 @@ export default async function NewSubmissionPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>New Submission</CardTitle>
-          <CardDescription>
-            Create a new submission and optionally add resources immediately
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateSubmissionForm />
-        </CardContent>
-      </Card>
+      <CreateSubmissionWizard />
     </div>
   );
 }

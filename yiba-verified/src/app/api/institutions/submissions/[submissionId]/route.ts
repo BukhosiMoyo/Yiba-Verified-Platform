@@ -150,6 +150,9 @@ export async function GET(
             added_at: "desc",
           },
         },
+        items: {
+          orderBy: { created_at: "asc" }
+        },
       },
     });
 

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ExportButton } from "@/components/shared/ExportButton";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
@@ -206,36 +207,68 @@ function InstitutionSubmissionsContent() {
               <ResponsiveTable>
                 <Table className="border-collapse [&_th]:border [&_th]:border-gray-200 [&_td]:border [&_td]:border-gray-200">
                   <TableHeader>
-                  <TableRow className="bg-gray-50/40 hover:bg-gray-50/40">
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap w-12">#</TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Title</TableHead>
-                      <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Type</TableHead>
+                    <TableRow className="bg-gray-50/40 hover:bg-gray-50/40">
+                      <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap w-32">Ref</TableHead>
+                      <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Title</TableHead>
+                      <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Content</TableHead>
                       <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Status</TableHead>
                       <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Submitted</TableHead>
                       <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Reviewed</TableHead>
-                      <TableHead className="text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Resources</TableHead>
                       <TableHead className="sticky right-0 z-10 bg-gray-50 border-l border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.map((s, index) => {
+                    {submissions.map((s) => {
                       const statusInfo = formatStatus(s.status);
-                      const resCount = s._count?.submissionResources ?? s.submissionResources?.length ?? 0;
+
+                      // Determine "Content" to show
+                      let contentDisplay;
+                      if (s.items && s.items.length > 0) {
+                        contentDisplay = (
+                          <div className="flex flex-wrap gap-1">
+                            {s.items.map((item: any) => (
+                              <Badge key={item.submission_item_id} variant="outline" className="text-[10px] h-5 px-1.5 bg-white">
+                                {item.type.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        );
+                      } else if (s.submissionResources && s.submissionResources.length > 0) {
+                        // Legacy: count resources
+                        contentDisplay = (
+                          <span className="text-muted-foreground text-xs">
+                            {s.submissionResources.length} legacy resource{s.submissionResources.length !== 1 ? "s" : ""}
+                          </span>
+                        );
+                      } else {
+                        contentDisplay = <span className="text-muted-foreground text-xs">—</span>;
+                      }
+
                       return (
                         <TableRow key={s.submission_id} className="group hover:bg-sky-50/50 transition-colors duration-200">
-                          <TableCell className="py-3 whitespace-nowrap text-gray-800 w-12 font-bold">{offset + index + 1}</TableCell>
-                          <TableCell className="font-medium py-3 max-w-[220px] truncate" title={s.title || "Untitled"}>{s.title || "Untitled"}</TableCell>
-                          <TableCell className="py-3 whitespace-nowrap">{s.submission_type || "N/A"}</TableCell>
+                          <TableCell className="py-3 whitespace-nowrap text-gray-600 font-mono text-xs">
+                            {s.reference_code || <span className="text-gray-300 italic">No Ref</span>}
+                          </TableCell>
+                          <TableCell className="font-medium py-3 max-w-[220px] truncate" title={s.title || "Untitled"}>
+                            {s.title || <span className="text-muted-foreground italic">Untitled</span>}
+                            {s.submission_type && !s.items?.length && (
+                              <div className="text-[10px] text-gray-400 font-normal mt-0.5">{s.submission_type}</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 max-w-[200px]">
+                            {contentDisplay}
+                          </TableCell>
                           <TableCell className="py-3 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}>{statusInfo.label}</span>
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}>
+                              {statusInfo.label}
+                            </span>
                           </TableCell>
-                          <TableCell className="py-3 whitespace-nowrap text-muted-foreground">
-                            {s.submitted_at ? formatDateTime(s.submitted_at) : "Not submitted"}
+                          <TableCell className="py-3 whitespace-nowrap text-muted-foreground text-xs">
+                            {formatDateTime(s.submitted_at)}
                           </TableCell>
-                          <TableCell className="py-3 whitespace-nowrap text-muted-foreground">
-                            {s.reviewed_at ? formatDateTime(s.reviewed_at) : "Not reviewed"}
+                          <TableCell className="py-3 whitespace-nowrap text-muted-foreground text-xs">
+                            {formatDateTime(s.reviewed_at)}
                           </TableCell>
-                          <TableCell className="py-3 whitespace-nowrap">{resCount}</TableCell>
                           <TableCell className="sticky right-0 z-10 bg-white group-hover:bg-sky-50/50 border-l border-gray-200 py-3 whitespace-nowrap">
                             <Button variant="outline" size="sm" asChild className="h-6 min-w-0 px-1.5 text-[11px] gap-1 border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-400">
                               <Link href={`/institution/submissions/${s.submission_id}`}>
