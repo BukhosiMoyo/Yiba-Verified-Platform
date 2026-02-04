@@ -41,6 +41,7 @@ const roleLabels: Record<Role, string> = {
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Student",
   ADVISOR: "Advisor",
+  FACILITATOR: "Facilitator",
 };
 
 /** Slim pill styles per role: light uses role color; dark uses white pill so it doesn't match header bg */
@@ -56,6 +57,7 @@ const rolePillClasses: Record<Role, string> = {
   INSTITUTION_STAFF: "bg-slate-500/15 text-slate-600 dark:bg-white/10 dark:text-white dark:border dark:border-white/20",
   STUDENT: "bg-amber-500/20 text-amber-800 dark:bg-white/10 dark:text-white dark:border dark:border-white/20",
   ADVISOR: "bg-purple-500/20 text-purple-700 dark:bg-white/10 dark:text-white dark:border dark:border-white/20",
+  FACILITATOR: "bg-indigo-500/20 text-indigo-700 dark:bg-white/10 dark:text-white dark:border dark:border-white/20",
 };
 
 // Helper to get user initials for avatar

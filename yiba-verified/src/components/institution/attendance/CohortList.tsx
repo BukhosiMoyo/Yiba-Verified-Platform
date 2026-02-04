@@ -35,7 +35,7 @@ type Cohort = {
     end_date: string | null;
     qualification: {
         code: string;
-        title: string;
+        name: string;
     };
     _count: {
         enrolments: number;

@@ -41,6 +41,7 @@ const roleLabels: Record<Role, string> = {
   INSTITUTION_STAFF: "Institution Staff",
   STUDENT: "Student",
   ADVISOR: "Advisor",
+  FACILITATOR: "Facilitator",
 };
 
 /**

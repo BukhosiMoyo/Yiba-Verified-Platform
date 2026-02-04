@@ -50,7 +50,7 @@ export default async function InstitutionAttendancePage({ searchParams }: PagePr
     where.enrolment = {
       cohort: {
         facilitators: {
-          some: { id: facilitator.id }
+          some: { facilitator_id: facilitator.facilitator_id }
         }
       }
     };

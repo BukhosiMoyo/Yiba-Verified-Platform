@@ -30,6 +30,7 @@ export const roleLabels: Record<Role, string> = {
     INSTITUTION_STAFF: "Institution Staff",
     STUDENT: "Learner",
     ADVISOR: "Advisor",
+    FACILITATOR: "Facilitator",
 };
 
 export function getAccountNavItems(role: Role): AccountNavItem[] {

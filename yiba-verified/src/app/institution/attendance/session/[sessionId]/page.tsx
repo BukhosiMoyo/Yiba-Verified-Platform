@@ -33,7 +33,7 @@ export default async function RegisterPage({ params }: Props) {
     // Deeper checks happen in API
     const classSession = await prisma.classSession.findUnique({
         where: { session_id: sessionId },
-        select: { cohortId: true } // Just ensuring it exists
+        select: { cohort_id: true } // Just ensuring it exists
     });
 
     if (!classSession) return notFound();
