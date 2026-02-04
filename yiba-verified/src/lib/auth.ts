@@ -83,6 +83,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        twoFactorCode: { label: "2FA Code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -98,14 +99,25 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Verify Password
         const isValid = await verifyPassword(credentials.password, user.password_hash);
-
         if (!isValid) {
           return null;
         }
 
-        // Note: Email verification is disabled - users can log in immediately after signup
-        // Only check if user status is ACTIVE (not blocked/deactivated)
+        // 2FA Check
+        if (user.two_factor_enabled) {
+          const token = credentials.twoFactorCode;
+          if (!token) {
+            throw new Error("2FA_REQUIRED");
+          }
+          const { verifyTwoFactorToken } = await import("@/lib/auth/2fa");
+          if (!verifyTwoFactorToken(token, user.two_factor_secret!)) {
+            throw new Error("Invalid 2FA Code");
+          }
+        }
+
+        // Check Status
         if (user.status !== "ACTIVE") {
           return null;
         }

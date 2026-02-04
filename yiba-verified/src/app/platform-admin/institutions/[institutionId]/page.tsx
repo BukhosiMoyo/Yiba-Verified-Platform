@@ -258,6 +258,38 @@ export default function InstitutionDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
+            {/* Completeness Card */}
+            {institution.completeness && (
+              <Card className="col-span-full border-blue-200 bg-blue-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-blue-600" />
+                      <span>Profile Completeness</span>
+                    </div>
+                    <Badge variant={institution.completeness.percentage === 100 ? "default" : "secondary"} className="text-lg px-3 py-1">
+                      {institution.completeness.percentage}%
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    {institution.completeness.percentage === 100
+                      ? "This institution profile is fully complete."
+                      : "Complete the following fields to reach 100%."}
+                  </CardDescription>
+                </CardHeader>
+                {institution.completeness.percentage < 100 && (
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {institution.completeness.missingFields.map((field: string) => (
+                        <Badge key={field} variant="outline" className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100">
+                          Missing: {field}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            )}
             {/* Basic Information */}
             <Card>
               <CardHeader>

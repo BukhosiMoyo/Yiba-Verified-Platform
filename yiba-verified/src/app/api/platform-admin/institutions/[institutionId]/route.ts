@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api/context";
 import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
+import { calculateInstitutionCompleteness } from "@/lib/completeness";
 
 /**
  * GET /api/platform-admin/institutions/[institutionId]
@@ -46,6 +47,7 @@ export async function GET(
         province: true,
         delivery_modes: true,
         status: true,
+        profile_completeness: true,
         contact_person_name: true,
         contact_email: true,
         contact_number: true,
@@ -120,7 +122,17 @@ export async function GET(
       );
     }
 
-    return ok({ institution });
+    const completeness = calculateInstitutionCompleteness(institution as any);
+
+    // Fire-and-forget update if changed
+    if (institution.profile_completeness !== completeness.percentage) {
+      prisma.institution.update({
+        where: { institution_id: institutionId },
+        data: { profile_completeness: completeness.percentage },
+      }).catch(console.error);
+    }
+
+    return ok({ institution: { ...institution, completeness } });
   } catch (error) {
     return fail(error);
   }

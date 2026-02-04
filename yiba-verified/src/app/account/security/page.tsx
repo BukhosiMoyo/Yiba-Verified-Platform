@@ -1,6 +1,7 @@
 import { AccountPage, AccountSection } from "@/components/account/AccountPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TwoFactorSettings } from "@/components/account/TwoFactorSettings";
 import { Label } from "@/components/ui/label";
 
 export default function SecurityPage() {
@@ -9,6 +10,13 @@ export default function SecurityPage() {
       title="Security"
       subtitle="Manage your password and security settings"
     >
+      <AccountSection
+        title="Two-Factor Authentication"
+        description="Add an extra layer of security to your account"
+      >
+        <TwoFactorSettings />
+      </AccountSection>
+
       <AccountSection
         title="Change Password"
         description="Update your password to keep your account secure"

@@ -49,6 +49,7 @@ model Institution {
   publicPosts                     InstitutionPost[]
   reviews                         InstitutionReview[]
   leads                           InstitutionLead[]
+  profile_completeness Int @default(0)
 
   // QCTO Compliance & detailed data extension
   compliance             InstitutionCompliance?
@@ -183,6 +184,10 @@ model User {
   reviews_completed       Int               @default(0) // For QCTO Gold badge (need 3)
   violation_count         Int               @default(0)
   last_violation_at       DateTime?
+  // Security (2FA)
+  two_factor_secret      String?
+  two_factor_enabled     Boolean   @default(false)
+  two_factor_backup_codes String[]  @default([])
 
   // Online Status
   last_active_at DateTime? @default(now()) // Last activity timestamp for online status

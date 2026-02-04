@@ -43,6 +43,10 @@ function LoginContent() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 2FA State
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+
   // Redirect if user is already logged in
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role) {
@@ -123,11 +127,18 @@ function LoginContent() {
       const result = await signIn("credentials", {
         email,
         password,
+        twoFactorCode: requires2FA ? twoFactorCode : undefined,
         redirect: false,
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        if (result.error === "2FA_REQUIRED") {
+          setRequires2FA(true);
+          setError("");
+          setSuccess("Please enter your 2FA code.");
+        } else {
+          setError(requires2FA ? "Invalid 2FA Code" : "Invalid email or password");
+        }
         setLoading(false);
         return;
       }
@@ -198,57 +209,83 @@ function LoginContent() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
+            {!requires2FA ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                      Password
+                    </Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"
+                      }
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="h-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" strokeWidth={1.5} />
+                      ) : (
+                        <Eye className="h-4 w-4" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="2fa-code" className="text-sm font-medium text-foreground">
+                  Two-Factor Authentication Code
                 </Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="2fa-code"
+                  type="text"
+                  placeholder="123456"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
                   required
+                  maxLength={6}
                   disabled={loading}
-                  className="h-10 pr-10"
+                  className="h-10 text-center tracking-widest text-lg"
+                  autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" strokeWidth={1.5} />
-                  ) : (
-                    <Eye className="h-4 w-4" strokeWidth={1.5} />
-                  )}
-                </button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Enter the 6-digit code from your authenticator app.
+                </p>
               </div>
-            </div>
+            )}
             <div className="flex items-center">
               <Checkbox
                 id="remember-me"

@@ -9,6 +9,7 @@ import type { Role } from "@/lib/rbac";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { AccountMenu } from "@/components/account/AccountMenu";
+import { ProfileCompletenessWidget } from "@/components/shared/ProfileCompletenessWidget";
 import { NotificationBell } from "@/components/notifications";
 import { ReportIssueModal } from "@/components/shared/ReportIssueModal";
 import { InstitutionContextSwitcher } from "@/components/institution/InstitutionContextSwitcher";
@@ -198,6 +199,9 @@ export function Topbar({ userName, userId, userImage, userRole, onMenuClick, sid
             </Link>
           </Button>
         )}
+
+        {/* Profile Completeness */}
+        <ProfileCompletenessWidget />
 
         {/* User Profile - Account Menu */}
         <AccountMenu
