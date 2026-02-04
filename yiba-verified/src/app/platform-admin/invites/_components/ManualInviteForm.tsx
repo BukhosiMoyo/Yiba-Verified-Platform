@@ -51,7 +51,8 @@ export function ManualInviteForm({ institutions }: ManualInviteFormProps) {
 
         const needsInst =
             formData.role === "INSTITUTION_STAFF" ||
-            formData.role === "STUDENT";
+            formData.role === "STUDENT" ||
+            formData.role === "FACILITATOR";
         const needsProvince =
             ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"].includes(
                 formData.role
@@ -123,7 +124,8 @@ export function ManualInviteForm({ institutions }: ManualInviteFormProps) {
 
     const needsInst =
         formData.role === "INSTITUTION_STAFF" ||
-        formData.role === "STUDENT";
+        formData.role === "STUDENT" ||
+        formData.role === "FACILITATOR";
     const needsProvince =
         ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"].includes(
             formData.role
@@ -159,6 +161,7 @@ export function ManualInviteForm({ institutions }: ManualInviteFormProps) {
                                 <SelectItem value="INSTITUTION_ADMIN">Institution Admin</SelectItem>
                                 <SelectItem value="INSTITUTION_STAFF">Institution Staff</SelectItem>
                                 <SelectItem value="STUDENT">Student</SelectItem>
+                                <SelectItem value="FACILITATOR">Facilitator</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

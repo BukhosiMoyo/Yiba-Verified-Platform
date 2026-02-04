@@ -29,6 +29,7 @@ const roleRedirects: Partial<Record<Role, string>> = {
   INSTITUTION_STAFF: "/institution",
   STUDENT: "/student",
   ADVISOR: "/advisor",
+  FACILITATOR: "/facilitator",
 };
 
 function LoginContent() {

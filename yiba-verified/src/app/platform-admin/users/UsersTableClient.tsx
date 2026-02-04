@@ -156,6 +156,11 @@ function getRoleBadgeProps(role: string): {
       return { variant: "warning" };
     case "STUDENT":
       return { variant: "secondary" };
+    case "FACILITATOR":
+      return {
+        variant: "outline",
+        className: "bg-pink-100 text-pink-700 border-transparent dark:bg-pink-950/50 dark:text-pink-300",
+      };
     default:
       return { variant: "outline" };
   }
@@ -368,7 +373,8 @@ export function UsersTableClient({
     e.preventDefault();
     const needsInst =
       addUserFormData.role === "INSTITUTION_STAFF" ||
-      addUserFormData.role === "STUDENT";
+      addUserFormData.role === "STUDENT" ||
+      addUserFormData.role === "FACILITATOR";
     const needsProvince =
       ["QCTO_ADMIN", "QCTO_USER", "QCTO_REVIEWER", "QCTO_AUDITOR", "QCTO_VIEWER"].includes(
         addUserFormData.role
@@ -537,6 +543,7 @@ export function UsersTableClient({
             <option value="INSTITUTION_ADMIN">Institution Admin</option>
             <option value="INSTITUTION_STAFF">Institution Staff</option>
             <option value="STUDENT">Student</option>
+            <option value="FACILITATOR">Facilitator</option>
           </Select>
           <Select
             value={statusFilter}
@@ -979,6 +986,7 @@ export function UsersTableClient({
                   <option value="INSTITUTION_ADMIN">Institution Admin</option>
                   <option value="INSTITUTION_STAFF">Institution Staff</option>
                   <option value="STUDENT">Student</option>
+                  <option value="FACILITATOR">Facilitator</option>
                 </Select>
               </div>
               <div>
@@ -1059,9 +1067,10 @@ export function UsersTableClient({
                   <option value="INSTITUTION_ADMIN">Institution Admin</option>
                   <option value="INSTITUTION_STAFF">Institution Staff</option>
                   <option value="STUDENT">Student</option>
+                  <option value="FACILITATOR">Facilitator</option>
                 </Select>
               </div>
-              {["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT"].includes(addUserFormData.role) && (
+              {["INSTITUTION_ADMIN", "INSTITUTION_STAFF", "STUDENT", "FACILITATOR"].includes(addUserFormData.role) && (
                 <div>
                   <Label>Institution</Label>
                   <SearchableSelect
@@ -1110,7 +1119,7 @@ export function UsersTableClient({
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </>
   );
 }
