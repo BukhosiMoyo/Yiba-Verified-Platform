@@ -277,7 +277,7 @@ export async function middleware(req: NextRequest) {
   response = applyCORSHeaders(response, req);
   return response;
 }
-}
+
 
 export const config = {
   matcher: [

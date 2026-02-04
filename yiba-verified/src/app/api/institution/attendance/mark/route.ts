@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     if (role === "FACILITATOR") {
         const fac = await prisma.facilitator.findFirst({ where: { user_id: session.user.userId } });
         if (!fac) return new NextResponse("Forbidden", { status: 403 });
-        const isAssigned = classSession.cohort.facilitators.some(f => f.id === fac.id);
+        const isAssigned = classSession.cohort.facilitators.some(f => f.facilitator_id === fac.facilitator_id);
         if (!isAssigned) return new NextResponse("Forbidden: Not assigned to this cohort", { status: 403 });
     } else {
         if (!hasCap(role, "ATTENDANCE_CAPTURE")) {

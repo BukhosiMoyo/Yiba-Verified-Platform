@@ -205,13 +205,17 @@ const CAPS: Record<Role, Set<Capability>> = {
     "LEARNER_VIEW",
     "ATTENDANCE_VIEW",
   ]),
-  "SERVICE_REQUESTS_VIEW",
-  "SERVICE_REQUESTS_EDIT",
+  ADVISOR: new Set([
+    "SERVICE_REQUESTS_VIEW",
+    "SERVICE_REQUESTS_EDIT",
+    "ATTENDANCE_VIEW", // Optional, if they need to see attendance
+    "REPORTS_VIEW",
   ]),
-FACILITATOR: new Set([
-  "ATTENDANCE_VIEW",
-  "ATTENDANCE_CAPTURE",
-]),
+
+  FACILITATOR: new Set([
+    "ATTENDANCE_VIEW",
+    "ATTENDANCE_CAPTURE",
+  ]),
 };
 
 export function hasCap(role: Role, cap: Capability): boolean {

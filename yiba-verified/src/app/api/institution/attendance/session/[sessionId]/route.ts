@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: Props) {
             include: { cohort: { include: { facilitators: true } } }
         });
 
-        const isAssigned = sessionCheck?.cohort.facilitators.some(f => f.id === fac.id);
+        const isAssigned = sessionCheck?.cohort.facilitators.some(f => f.facilitator_id === fac.facilitator_id);
         if (!isAssigned) return new NextResponse("Forbidden: Not assigned to this cohort", { status: 403 });
 
     } else {
