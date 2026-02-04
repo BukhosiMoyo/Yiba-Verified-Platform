@@ -155,7 +155,7 @@ export function AppShell({
           <GradientShell as="div" decoration="none" className="min-h-full bg-transparent">
             <div
               className={cn(
-                "mx-auto w-[90%] py-8 px-6 sm:px-8 md:px-[2.5rem] box-border",
+                "mx-auto w-full py-8 px-[10px] sm:px-6 md:px-8 box-border",
                 isProfilePage ? "max-w-6xl" : "max-w-[1600px]"
               )}
             >

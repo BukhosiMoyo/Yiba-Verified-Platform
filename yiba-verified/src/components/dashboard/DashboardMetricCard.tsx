@@ -65,7 +65,7 @@ export function DashboardMetricCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border shadow-sm dark:shadow-none",
+        "overflow-hidden rounded-xl border shadow-sm dark:shadow-none min-w-0",
         cardStyleByVariant[colorVariant],
         compact ? "p-4" : "p-5",
         "flex flex-col gap-3",

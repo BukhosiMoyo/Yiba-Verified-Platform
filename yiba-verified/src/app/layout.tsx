@@ -80,7 +80,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${plusJakarta.variable} ${plusJakarta.className}`} suppressHydrationWarning>
+      <body className={`${plusJakarta.variable} ${plusJakarta.className} overflow-x-hidden`} suppressHydrationWarning>
         <Providers>{children}</Providers>
         <script
           type="application/ld+json"
