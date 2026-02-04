@@ -12,11 +12,11 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const FACILITATOR_NAVIGATION = [
-    { name: "Dashboard", href: "/facilitator/dashboard", icon: LayoutDashboard },
-    { name: "My Profile", href: "/facilitator/profile", icon: User },
-    { name: "Assessments", href: "/facilitator/assessments", icon: FileText },
-    { name: "Schedule", href: "/facilitator/schedule", icon: Calendar },
-    { name: "Settings", href: "/account", icon: Settings },
+    { label: "Dashboard", href: "/facilitator/dashboard", icon: LayoutDashboard },
+    { label: "My Profile", href: "/facilitator/profile", icon: User },
+    { label: "Assessments", href: "/facilitator/assessments", icon: FileText },
+    { label: "Schedule", href: "/facilitator/schedule", icon: Calendar },
+    { label: "Settings", href: "/account", icon: Settings },
 ];
 
 export default async function FacilitatorLayout({

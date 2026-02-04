@@ -54,7 +54,7 @@ export default async function CohortSessionsPage({ params }: Props) {
             <div>
                 <h1 className="text-2xl font-bold">{cohort.name}</h1>
                 <p className="text-muted-foreground">
-                    {cohort.qualification.title} ({cohort.qualification.code}) • {cohort._count.enrolments} Learners
+                    {cohort.qualification.name} ({cohort.qualification.code}) • {cohort._count.enrolments} Learners
                 </p>
             </div>
 

@@ -26,6 +26,7 @@ export default async function InstitutionAttendancePage({ searchParams }: PagePr
 
   const role = session.user.role;
   const institutionId = session.user.institutionId;
+  const where: any = {};
 
   if (role === "INSTITUTION_ADMIN" || role === "INSTITUTION_STAFF") {
     if (!institutionId) {

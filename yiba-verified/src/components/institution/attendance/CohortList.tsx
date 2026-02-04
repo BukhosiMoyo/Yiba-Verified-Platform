@@ -70,7 +70,7 @@ export function CohortList() {
 
     const filteredCohorts = cohorts.filter((c) =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.qualification.title.toLowerCase().includes(search.toLowerCase())
+        c.qualification.name.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -139,8 +139,8 @@ export function CohortList() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
-                                                <span className="truncate max-w-[200px]" title={cohort.qualification.title}>
-                                                    {cohort.qualification.title}
+                                                <span className="truncate max-w-[200px]" title={cohort.qualification.name}>
+                                                    {cohort.qualification.name}
                                                 </span>
                                                 <span className="text-xs text-muted-foreground">{cohort.qualification.code}</span>
                                             </div>
