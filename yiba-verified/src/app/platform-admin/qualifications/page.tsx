@@ -17,13 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingTable } from "@/components/shared/LoadingTable";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { QualificationDetailsSheet } from "@/components/platform-admin/qualifications/QualificationDetailsSheet";
 import { Search, GraduationCap, Plus, ChevronDown, ArrowUp, ArrowDown, Eye, Loader2, Edit, Archive } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -497,45 +491,19 @@ function QualificationsPageContent() {
             </div>
           </div>
 
-          <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-            <SheetContent side="right" className="inset-y-0 right-0 h-full w-full max-w-xl rounded-none border-l border-border bg-background shadow-xl overflow-y-auto">
-              {/* Details Content... (Existing logic is fine, maybe update to show more fields) */}
-              <SheetHeader className="text-left space-y-2 pb-6 border-b border-border">
-                <SheetTitle>Qualification Details</SheetTitle>
-                <SheetDescription>View full details including metadata.</SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                {detailsLoading && <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>}
-                {detailsData && !detailsLoading && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs font-semibold uppercase text-muted-foreground">Name</div>
-                        <div>{detailsData.name}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold uppercase text-muted-foreground">Code</div>
-                        <div>{detailsData.code || "—"}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold uppercase text-muted-foreground">Type</div>
-                        <div>{detailsData.type || "—"}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold uppercase text-muted-foreground">NQF Level</div>
-                        <div>{detailsData.nqf_level || "—"}</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+
+          <QualificationDetailsSheet
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            qualification={detailsData}
+            loading={detailsLoading}
+          />
         </>
       )}
     </div>
   );
 }
+
 
 export default function QualificationsPage() {
   return (

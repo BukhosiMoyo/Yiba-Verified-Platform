@@ -54,9 +54,11 @@ const formSchema = z.object({
     assessment_type: z.enum(["EXAM", "PRACTICAL", "PORTFOLIO", "MIXED"]).optional(),
     workplace_required: z.boolean().default(false),
     workplace_hours: z.coerce.number().nullable().optional(),
-    // language_of_delivery: z.string().optional(),
-    // career_outcomes: z.array(z.string()).optional(),
-    // modules: z.array(z.string()).optional(),
+    language_of_delivery: z.string().optional(),
+    career_outcomes: z.string().optional(), // We'll handle array conversion in submit
+    modules: z.string().optional(), // We'll handle array conversion in submit
+    saqa_id: z.string().optional(),
+    curriculum_code: z.string().optional(),
 });
 
 type QualificationFormValues = z.infer<typeof formSchema>;
@@ -79,6 +81,9 @@ export function QualificationForm({ initialData, isEditing = false }: Qualificat
                 status: initialData.status || "DRAFT",
                 study_mode: initialData.study_mode || "ON_SITE",
                 duration_unit: initialData.duration_unit || "MONTHS",
+                // Convert arrays to newline separated strings for editing
+                modules: Array.isArray(initialData.modules) ? initialData.modules.join("\n") : "",
+                career_outcomes: Array.isArray(initialData.career_outcomes) ? initialData.career_outcomes.join("\n") : "",
             }
             : {
                 name: "",
@@ -101,12 +106,17 @@ export function QualificationForm({ initialData, isEditing = false }: Qualificat
                 ? `/api/platform-admin/qualifications/${initialData.qualification_id}` // Assume ID is in initialData
                 : "/api/platform-admin/qualifications";
 
-            const method = isEditing ? "PATCH" : "POST"; // Use PATCH for edit
+            const method = isEditing ? "PATCH" : "POST";
 
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
+                body: JSON.stringify({
+                    ...data,
+                    // Convert newline separated strings back to arrays
+                    modules: data.modules ? data.modules.split("\n").map(s => s.trim()).filter(Boolean) : [],
+                    career_outcomes: data.career_outcomes ? data.career_outcomes.split("\n").map(s => s.trim()).filter(Boolean) : [],
+                }),
             });
 
             if (!res.ok) {
@@ -153,9 +163,35 @@ export function QualificationForm({ initialData, isEditing = false }: Qualificat
                                 name="code"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Code</FormLabel>
+                                        <FormLabel>Code (Internal)</FormLabel>
                                         <FormControl>
                                             <Input placeholder="e.g. OC-ELEC-01" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="saqa_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>SAQA ID</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. 12345" {...field} value={field.value || ""} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="curriculum_code"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Curriculum Code</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. 12345-01" {...field} value={field.value || ""} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -455,6 +491,61 @@ export function QualificationForm({ initialData, isEditing = false }: Qualificat
                                         )}
                                     />
                                 )}
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="language_of_delivery"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Language of Delivery</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. English" {...field} value={field.value || ""} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="modules"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Modules</FormLabel>
+                                            <FormDescription>One per line</FormDescription>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="List modules..."
+                                                    className="min-h-[120px]"
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="career_outcomes"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Career Outcomes</FormLabel>
+                                            <FormDescription>One per line</FormDescription>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="List outcomes..."
+                                                    className="min-h-[120px]"
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
 
                         </CardContent>
