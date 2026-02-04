@@ -467,7 +467,7 @@ function QualificationsPageContent() {
                             </TableCell>
                           );
                         }
-                        return <TableCell key={col.id} className={cellClass} style={stickyStyle} />;
+                        return <TableCell key={(col as any).id} className={cellClass} style={stickyStyle} />;
                       })}
                     </TableRow>
                   );
