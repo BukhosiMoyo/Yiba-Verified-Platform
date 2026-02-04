@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Briefcase, Globe } from "lucide-react";
 import { WorkType } from "@prisma/client";
+import { MarketingNav } from "@/components/marketing/MarketingNav";
 
 // Metadata
 export const metadata: Metadata = {
@@ -96,6 +97,7 @@ export default async function TalentDirectoryPage(props: PageProps) {
 
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+                <MarketingNav />
                 {/* Hero Section */}
                 <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 pb-12 pt-16">
                     <div className="container mx-auto px-4">

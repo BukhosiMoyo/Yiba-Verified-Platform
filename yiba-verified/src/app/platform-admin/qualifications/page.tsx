@@ -454,8 +454,10 @@ function QualificationsPageContent() {
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(qualification.qualification_id)}>
-                                  <Eye className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <Link href={`/platform-admin/qualifications/${qualification.qualification_id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
                                 </Button>
                               </div>
                             </TableCell>
