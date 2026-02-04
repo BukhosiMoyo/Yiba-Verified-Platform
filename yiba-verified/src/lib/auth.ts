@@ -71,6 +71,10 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          // Defaults for type satisfaction (will be overwritten by DB or Invite if present)
+          role: "STUDENT" as Role,
+          institutionId: null,
+          qctoId: null,
         };
       },
     }),
