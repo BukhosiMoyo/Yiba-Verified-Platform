@@ -24,22 +24,25 @@ export type CurrentInstitutionResult = {
  * 3. First by created_at
  *
  * If the user has no UserInstitution rows, falls back to User.institution_id (backward compatibility).
- * If prisma.userInstitution is missing (e.g. client not regenerated), uses legacy path only.
  */
 export async function getCurrentInstitutionForUser(
   userId: string,
   preferredIdFromCookie?: string | null
 ): Promise<CurrentInstitutionResult> {
-  const delegate = (prisma as { userInstitution?: { findMany: (args: unknown) => Promise<unknown[]> } }).userInstitution;
+  // Use standard type-safe access. If UserInstitution is in the schema, this key exists on prisma client.
+  // We avoid the unsafe casting/delegate pattern which might cause issues if types are out of sync at runtime.
   let userInstitutions: Array<{
     institution_id: string;
     is_primary: boolean;
     institution: { institution_id: string; legal_name: string; branch_code: string | null; registration_number: string };
   }> = [];
 
-  if (delegate?.findMany) {
-    try {
-      const rows = await delegate.findMany({
+  try {
+    // We check if the property exists strictly to be safe against partial client generation,
+    // though in a valid build it must exist.
+    // @ts-ignore
+    if (prisma.userInstitution) {
+      userInstitutions = await prisma.userInstitution.findMany({
         where: { user_id: userId },
         include: {
           institution: {
@@ -53,34 +56,41 @@ export async function getCurrentInstitutionForUser(
         },
         orderBy: [{ is_primary: "desc" }, { created_at: "asc" }],
       });
-      userInstitutions = rows as typeof userInstitutions;
-    } catch {
-      userInstitutions = [];
     }
+  } catch (error) {
+    console.error("Critical error in getCurrentInstitutionForUser - userInstitution fetch:", error);
+    // Fallback to empty -> will attempt legacy path
+    userInstitutions = [];
   }
 
   if (userInstitutions.length === 0) {
-    const user = await prisma.user.findUnique({
-      where: { user_id: userId },
-      select: { institution_id: true },
-    });
-    const legacyId = user?.institution_id ?? null;
-    if (legacyId) {
-      const inst = await prisma.institution.findUnique({
-        where: { institution_id: legacyId },
-        select: {
-          institution_id: true,
-          legal_name: true,
-          branch_code: true,
-          registration_number: true,
-        },
+    try {
+      const user = await prisma.user.findUnique({
+        where: { user_id: userId },
+        select: { institution_id: true },
       });
-      return {
-        currentInstitutionId: legacyId,
-        institutionIds: [legacyId],
-        institutions: inst ? [inst] : [],
-      };
+      const legacyId = user?.institution_id ?? null;
+      if (legacyId) {
+        const inst = await prisma.institution.findUnique({
+          where: { institution_id: legacyId },
+          select: {
+            institution_id: true,
+            legal_name: true,
+            branch_code: true,
+            registration_number: true,
+          },
+        });
+        return {
+          currentInstitutionId: legacyId,
+          institutionIds: [legacyId],
+          institutions: inst ? [inst] : [],
+        };
+      }
+    } catch (error) {
+      console.error("Critical error in getCurrentInstitutionForUser - legacy fetch:", error);
     }
+
+    // Final fallback
     return {
       currentInstitutionId: null,
       institutionIds: [],
