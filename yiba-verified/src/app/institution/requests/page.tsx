@@ -37,6 +37,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
   const userInstitutionId = session.user.institutionId;
 
   // Build where clause with institution scoping
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     deleted_at: null, // Only non-deleted requests
   };
@@ -47,25 +48,21 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
     if (userInstitutionId) {
       where.institution_id = userInstitutionId;
     } else {
-      // Return empty results if no institutionId (shouldn't happen in practice)
-      where.institution_id = "__NO_INSTITUTION__"; // This will return no results
+      // Return empty results if no institutionId
+      where.institution_id = "__NO_INSTITUTION__";
     }
   }
-  // PLATFORM_ADMIN sees ALL requests (no institution_id filter - app owners see everything! 🦸)
 
   // Filter by status if provided
   const statusParam = searchParams.status;
   if (statusParam) {
-    const validStatuses = ["PENDING", "APPROVED", "REJECTED"];
-    if (validStatuses.includes(statusParam)) {
-      where.status = statusParam;
-    }
+    where.status = statusParam;
   }
 
   // Parse limit
   const limit = Math.min(
     searchParams.limit ? parseInt(searchParams.limit, 10) : 50,
-    200 // Cap at 200
+    200
   );
 
   // Fetch requests
@@ -73,13 +70,13 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
     where,
     select: {
       request_id: true,
+      reference_code: true,
       title: true,
-      request_type: true,
+      type: true,
       status: true,
       requested_at: true,
-      response_deadline: true,
+      due_at: true,
       reviewed_at: true,
-      expires_at: true,
       created_at: true,
       requestedByUser: {
         select: {
@@ -97,7 +94,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
       },
       _count: {
         select: {
-          requestResources: true,
+          evidenceLinks: true,
         },
       },
     },
@@ -109,7 +106,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
 
   // Format dates for display
   const formatDate = (date: Date | null) => {
-    if (!date) return "N/A";
+    if (!date) return "—";
     return new Date(date).toLocaleDateString("en-ZA", {
       year: "numeric",
       month: "short",
@@ -118,7 +115,7 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
   };
 
   const formatDateTime = (date: Date | null) => {
-    if (!date) return "N/A";
+    if (!date) return "—";
     return new Date(date).toLocaleDateString("en-ZA", {
       year: "numeric",
       month: "short",
@@ -129,12 +126,29 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
   };
 
   const formatStatus = (status: string) => {
-    const statusMap: Record<string, { label: string; className: string }> = {
-      PENDING: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
-      APPROVED: { label: "Approved", className: "bg-green-100 text-green-800" },
-      REJECTED: { label: "Rejected", className: "bg-red-100 text-red-800" },
-    };
-    return statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
+    switch (status) {
+      case "APPROVED":
+        return { label: "Approved", className: "bg-green-100 text-green-800" };
+      case "REJECTED":
+        return { label: "Rejected", className: "bg-red-100 text-red-800" };
+      case "RETURNED_FOR_CORRECTION":
+        return { label: "Returned", className: "bg-orange-100 text-orange-800" };
+      case "SUBMITTED":
+        return { label: "Submitted", className: "bg-blue-100 text-blue-800" };
+      case "UNDER_REVIEW":
+        return { label: "Under Review", className: "bg-purple-100 text-purple-800" };
+      case "IN_PROGRESS":
+        return { label: "In Progress", className: "bg-yellow-100 text-yellow-800" };
+      case "SENT":
+      case "PENDING":
+        return { label: "New Request", className: "bg-white border text-blue-600" };
+      case "DRAFT":
+        return { label: "Draft", className: "bg-gray-100 text-gray-800" };
+      case "CANCELLED":
+        return { label: "Cancelled", className: "bg-gray-100 text-gray-600" };
+      default:
+        return { label: status, className: "bg-gray-100 text-gray-800" };
+    }
   };
 
   return (
@@ -142,13 +156,13 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">QCTO Requests</h1>
         <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-          Review and approve/reject QCTO requests for access to your institution's resources
+          Review and respond to requests from QCTO.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Requests</CardTitle>
+          <CardTitle>Request Inbox</CardTitle>
           <CardDescription>
             {requests.length} request{requests.length !== 1 ? "s" : ""} found
             {statusParam && ` with status "${statusParam}"`}
@@ -157,98 +171,90 @@ export default async function InstitutionRequestsPage({ searchParams }: PageProp
         <CardContent>
           <ResponsiveTable>
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Requested By</TableHead>
-                <TableHead>Requested</TableHead>
-                <TableHead>Response By</TableHead>
-                <TableHead>Reviewed</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead>Resources</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests.length === 0 ? (
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={10} className="py-12">
-                    <EmptyState
-                      title="No QCTO requests found"
-                      description={
-                        statusParam
-                          ? `No requests with status "${statusParam}" found.`
-                          : "QCTO requests will appear here when QCTO requests access to your institution's resources for review purposes."
-                      }
-                      icon={<FileQuestion className="h-6 w-6" strokeWidth={1.5} />}
-                      variant={statusParam ? "no-results" : "default"}
-                    />
-                  </TableCell>
+                  <TableHead>Ref</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Requested By</TableHead>
+                  <TableHead>Received</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Evidence</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                requests.map((request) => {
-                  const statusInfo = formatStatus(request.status);
-                  const isExpired = request.expires_at && new Date(request.expires_at) < new Date();
-                  const isOverdue = request.status === "PENDING" && request.response_deadline && new Date(request.response_deadline) < new Date();
-                  return (
-                    <TableRow key={request.request_id}>
-                      <TableCell className="font-medium">{request.title}</TableCell>
-                      <TableCell>{request.request_type || "N/A"}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}
-                        >
-                          {statusInfo.label}
-                        </span>
-                        {isOverdue && (
-                          <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                            Overdue
+              </TableHeader>
+              <TableBody>
+                {requests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-12">
+                      <EmptyState
+                        title="No requests found"
+                        description={
+                          statusParam
+                            ? `No requests with status "${statusParam}" found.`
+                            : "You have no requests from QCTO at this time."
+                        }
+                        icon={<FileQuestion className="h-6 w-6" strokeWidth={1.5} />}
+                        variant={statusParam ? "no-results" : "default"}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  requests.map((request) => {
+                    const statusInfo = formatStatus(request.status);
+                    const isOverdue =
+                      request.due_at &&
+                      new Date(request.due_at) < new Date() &&
+                      !["APPROVED", "REJECTED", "CANCELLED", "SUBMITTED", "UNDER_REVIEW"].includes(request.status);
+
+                    return (
+                      <TableRow key={request.request_id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {request.reference_code || "—"}
+                        </TableCell>
+                        <TableCell className="font-medium">{request.title}</TableCell>
+                        <TableCell className="text-xs">{request.type?.replace(/_/g, " ")}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}
+                          >
+                            {statusInfo.label}
                           </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser?.email || "N/A"}
-                      </TableCell>
-                      <TableCell>{formatDateTime(request.requested_at)}</TableCell>
-                      <TableCell>
-                        {request.response_deadline ? (
-                          <span className={isOverdue ? "text-amber-600 dark:text-amber-400" : ""}>
-                            {formatDate(request.response_deadline)}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {request.reviewed_at ? formatDateTime(request.reviewed_at) : "Not reviewed"}
-                      </TableCell>
-                      <TableCell>
-                        {request.expires_at ? (
-                          <span className={isExpired ? "text-red-600" : ""}>
-                            {formatDate(request.expires_at)}
-                            {isExpired && " (Expired)"}
-                          </span>
-                        ) : (
-                          "No expiry"
-                        )}
-                      </TableCell>
-                      <TableCell>{request._count.requestResources}</TableCell>
-                      <TableCell>
-                        <Link
-                          href={`/institution/requests/${request.request_id}`}
-                          className="text-primary hover:underline text-sm"
-                        >
-                          {request.status === "PENDING" ? "Review" : "View"}
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                          {isOverdue && (
+                            <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                              Overdue
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser?.email || "—"}
+                        </TableCell>
+                        <TableCell>{formatDateTime(request.requested_at)}</TableCell>
+                        <TableCell>
+                          {request.due_at ? (
+                            <span className={isOverdue ? "text-red-600 font-semibold" : ""}>
+                              {formatDate(request.due_at)}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell>{request._count?.evidenceLinks ?? 0} items</TableCell>
+                        <TableCell className="text-right">
+                          <Link
+                            href={`/institution/requests/${request.request_id}`}
+                            className="text-primary hover:underline text-sm font-medium"
+                          >
+                            {["SENT", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(request.status) ? "Respond" : "View"}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </ResponsiveTable>
         </CardContent>
       </Card>

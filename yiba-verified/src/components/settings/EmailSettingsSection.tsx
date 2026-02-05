@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,9 +25,13 @@ export function EmailSettingsSection() {
   const [error, setError] = useState<string | null>(null);
   const [testTo, setTestTo] = useState("");
   const [sending, setSending] = useState(false);
-  // New state for logo
+
+  // Logos
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [darkLogoUrl, setDarkLogoUrl] = useState<string | null>(null);
+
+  const [uploadingLight, setUploadingLight] = useState(false);
+  const [uploadingDark, setUploadingDark] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +48,6 @@ export function EmailSettingsSection() {
 
         if (emailData.error) {
           setError(emailData.error);
-          // Don't return, allow logo to load if email fails? No, block both for simplicity or handle gracefully
         } else {
           setConfig({
             provider: emailData.provider ?? "—",
@@ -54,8 +58,9 @@ export function EmailSettingsSection() {
           });
         }
 
-        if (logoData && logoData.logoUrl) {
-          setLogoUrl(logoData.logoUrl);
+        if (logoData) {
+          setLogoUrl(logoData.logoUrl || null);
+          setDarkLogoUrl(logoData.darkLogoUrl || null);
         }
       })
       .catch((e) => {
@@ -69,7 +74,7 @@ export function EmailSettingsSection() {
     };
   }, []);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "LIGHT" | "DARK") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -78,9 +83,12 @@ export function EmailSettingsSection() {
       return;
     }
 
-    setUploadingLogo(true);
+    if (type === "LIGHT") setUploadingLight(true);
+    else setUploadingDark(true);
+
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("type", type);
 
     try {
       const res = await fetch("/api/settings/logo", {
@@ -91,22 +99,26 @@ export function EmailSettingsSection() {
 
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
-      setLogoUrl(data.url);
-      toast.success("Logo uploaded successfully");
+      if (type === "LIGHT") setLogoUrl(data.url);
+      else setDarkLogoUrl(data.url);
+
+      toast.success(`${type === "LIGHT" ? "Light" : "Dark"} mode logo uploaded successfully`);
     } catch (err: any) {
       toast.error(err.message || "Failed to upload logo");
     } finally {
-      setUploadingLogo(false);
+      if (type === "LIGHT") setUploadingLight(false);
+      else setUploadingDark(false);
     }
   };
 
-  const handleRemoveLogo = async () => {
-    if (!confirm("Are you sure you want to remove the custom logo?")) return;
+  const handleRemoveLogo = async (type: "LIGHT" | "DARK") => {
+    if (!confirm(`Are you sure you want to remove the ${type.toLowerCase()} mode logo?`)) return;
 
     try {
-      const res = await fetch("/api/settings/logo", { method: "DELETE" });
+      const res = await fetch(`/api/settings/logo?type=${type}`, { method: "DELETE" });
       if (res.ok) {
-        setLogoUrl(null);
+        if (type === "LIGHT") setLogoUrl(null);
+        else setDarkLogoUrl(null);
         toast.success("Logo removed");
       } else {
         toast.error("Failed to remove logo");
@@ -128,7 +140,7 @@ export function EmailSettingsSection() {
       // const res = await fetch("/api/settings/email/test", { method: "POST", body: JSON.stringify({ to: testTo }) });
       // if (!res.ok) throw new Error("Failed to send");
 
-      // Mock success for build fix (backend api might not exist yet)
+      // Mock success for build fix
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success(`Test email sent to ${testTo}`);
     } catch (error) {
@@ -169,19 +181,21 @@ export function EmailSettingsSection() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-6 sm:grid-cols-2">
+        <CardContent className="space-y-6">
+          <div className="grid gap-8 sm:grid-cols-2">
+
+            {/* Light Mode Logo */}
             <div className="space-y-2">
-              <Label>Email Logo</Label>
+              <Label>Light Mode Logo</Label>
               <div className="flex flex-col gap-3">
                 {logoUrl ? (
                   <div className="relative w-full max-w-[200px] h-20 border rounded-md flex items-center justify-center bg-gray-50 p-2 overflow-hidden">
-                    <img src={logoUrl} alt="Email Logo" className="max-h-full max-w-full object-contain" />
+                    <img src={logoUrl} alt="Light Logo" className="max-h-full max-w-full object-contain" />
                     <Button
                       variant="destructive"
                       size="icon"
                       className="absolute top-1 right-1 h-6 w-6"
-                      onClick={handleRemoveLogo}
+                      onClick={() => handleRemoveLogo("LIGHT")}
                     >
                       <span className="sr-only">Remove</span>
                       &times;
@@ -197,17 +211,57 @@ export function EmailSettingsSection() {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={handleLogoUpload}
-                    disabled={uploadingLogo}
+                    onChange={(e) => handleLogoUpload(e, "LIGHT")}
+                    disabled={uploadingLight}
                     className="max-w-[250px]"
                   />
-                  {uploadingLogo && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {uploadingLight && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                 </div>
                 <p className="text-[0.8rem] text-muted-foreground">
-                  Upload a logo (PNG or JPG) to be used in email headers. Recommended height: 40-60px.
+                  Used in light mode. PNG/JPG, 40-60px height recommended.
                 </p>
               </div>
             </div>
+
+            {/* Dark Mode Logo */}
+            <div className="space-y-2">
+              <Label>Dark Mode Logo</Label>
+              <div className="flex flex-col gap-3">
+                {darkLogoUrl ? (
+                  <div className="relative w-full max-w-[200px] h-20 border rounded-md flex items-center justify-center bg-gray-900 p-2 overflow-hidden">
+                    <img src={darkLogoUrl} alt="Dark Logo" className="max-h-full max-w-full object-contain" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => handleRemoveLogo("DARK")}
+                    >
+                      <span className="sr-only">Remove</span>
+                      &times;
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-full max-w-[200px] h-20 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-xs bg-gray-900/10">
+                    No dark mode logo
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleLogoUpload(e, "DARK")}
+                    disabled={uploadingDark}
+                    className="max-w-[250px]"
+                  />
+                  {uploadingDark && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Used in dark mode. Should have transparency/light text.
+                </p>
+              </div>
+            </div>
+
           </div>
         </CardContent>
       </Card>

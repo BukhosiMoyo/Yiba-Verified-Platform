@@ -17,37 +17,43 @@ import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { ExportButton } from "@/components/shared/ExportButton";
-import { FileQuestion, Eye, Search, X } from "lucide-react";
+import { FileQuestion, Eye, Search, X, Clock, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE_KEY = "yv_table_page_size:qcto_requests";
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
-const DEFAULT_PAGE_SIZE = 25;
 const PREFETCH_VIEW_ROWS = 20;
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
-  { value: "PENDING", label: "Pending" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "SENT", label: "Sent / Pending" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
   { value: "APPROVED", label: "Approved" },
+  { value: "RETURNED_FOR_CORRECTION", label: "Returned" },
   { value: "REJECTED", label: "Rejected" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
-type RequestRow = {
+export type RequestRow = {
   request_id: string;
+  reference_code: string | null;
   institution_id: string;
-  title: string | null;
-  request_type: string | null;
+  title: string;
+  type: string;
   status: string;
-  requested_at: Date | string;
-  response_deadline: Date | string | null;
+  requested_at: Date | string | null;
+  due_at: Date | string | null;
   reviewed_at: Date | string | null;
-  expires_at: Date | string | null;
   institution: {
     institution_id: string;
     legal_name: string;
     trading_name: string | null;
     registration_number: string;
   } | null;
-  _count: { requestResources: number };
+  _count: { evidenceLinks: number };
 };
 
 export interface QctoRequestsClientProps {
@@ -61,41 +67,42 @@ export interface QctoRequestsClientProps {
 }
 
 function formatDate(d: Date | string | null) {
-  if (!d) return "N/A";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-ZA", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
-}
-
-function formatDateTime(d: Date | string | null) {
-  if (!d) return "N/A";
-  return new Date(d).toLocaleDateString("en-ZA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
 function formatStatus(status: string) {
-  const map: Record<string, { label: string; className: string }> = {
-    PENDING: {
-      label: "Pending",
-      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-    },
-    APPROVED: {
-      label: "Approved",
-      className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-    },
-    REJECTED: {
-      label: "Rejected",
-      className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-    },
-  };
-  return map[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
+  switch (status) {
+    case "APPROVED":
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">Approved</Badge>;
+    case "REJECTED":
+      return <Badge variant="destructive">Rejected</Badge>;
+    case "RETURNED_FOR_CORRECTION":
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400">Returned</Badge>;
+    case "SUBMITTED":
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">Submitted</Badge>;
+    case "UNDER_REVIEW":
+      return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400">Reviewing</Badge>;
+    case "IN_PROGRESS":
+      return <Badge className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400">In Progress</Badge>;
+    case "SENT":
+    case "PENDING":
+      return <Badge variant="outline" className="text-muted-foreground">Sent</Badge>;
+    case "DRAFT":
+      return <Badge variant="outline">Draft</Badge>;
+    case "CANCELLED":
+      return <Badge variant="secondary">Cancelled</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+}
+
+function formatType(type: string) {
+  return type.replace(/_/g, " ");
 }
 
 export function QctoRequestsClient({
@@ -207,7 +214,7 @@ export function QctoRequestsClient({
           <div className="relative w-48 sm:w-56">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search requests"
+              placeholder="Search reference or institution"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-10"
@@ -268,15 +275,13 @@ export function QctoRequestsClient({
               <Table className="border-collapse [&_th]:border [&_th]:border-border [&_td]:border [&_td]:border-border">
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap w-12">#</TableHead>
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap w-24">Ref</TableHead>
                     <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Institution</TableHead>
                     <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Title</TableHead>
                     <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Type</TableHead>
                     <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Status</TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Requested</TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Reviewed</TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Expires</TableHead>
-                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Resources</TableHead>
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Due Date</TableHead>
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">Evidence</TableHead>
                     <TableHead className="sticky right-0 z-10 bg-muted/40 border-l border-border text-[11px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap text-right">
                       Actions
                     </TableHead>
@@ -284,25 +289,28 @@ export function QctoRequestsClient({
                 </TableHeader>
                 <TableBody>
                   {requests.map((r, index) => {
-                    const statusInfo = formatStatus(r.status);
-                    const isExpired =
-                      r.expires_at && new Date(r.expires_at) < new Date();
-                    const resCount = r._count?.requestResources ?? 0;
+                    const isOverdue =
+                      r.due_at &&
+                      new Date(r.due_at) < new Date() &&
+                      !["APPROVED", "REJECTED", "CANCELLED", "SUBMITTED", "UNDER_REVIEW"].includes(r.status);
+
+                    const evidenceCount = r._count?.evidenceLinks ?? 0;
                     const inst = r.institution;
+
                     return (
                       <TableRow
                         key={r.request_id}
                         className="group hover:bg-accent/50 transition-colors"
                       >
-                        <TableCell className="py-3 whitespace-nowrap w-12 font-bold text-foreground">
-                          {offset + index + 1}
+                        <TableCell className="py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                          {r.reference_code || "—"}
                         </TableCell>
                         <TableCell className="font-medium py-3 whitespace-nowrap">
                           {inst?.trading_name || inst?.legal_name || "—"}
                           {inst?.registration_number && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({inst.registration_number})
-                            </span>
+                            <div className="text-xs text-muted-foreground">
+                              {inst.registration_number}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell
@@ -311,42 +319,36 @@ export function QctoRequestsClient({
                         >
                           {r.title || "Untitled"}
                         </TableCell>
-                        <TableCell className="py-3 whitespace-nowrap text-muted-foreground">
-                          {r.request_type || "N/A"}
+                        <TableCell className="py-3 whitespace-nowrap text-xs">
+                          {formatType(r.type)}
                         </TableCell>
                         <TableCell className="py-3 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3 whitespace-nowrap text-muted-foreground text-sm">
-                          {formatDateTime(r.requested_at)}
-                        </TableCell>
-                        <TableCell className="py-3 whitespace-nowrap text-muted-foreground text-sm">
-                          {r.reviewed_at
-                            ? formatDateTime(r.reviewed_at)
-                            : "Not reviewed"}
+                          {formatStatus(r.status)}
                         </TableCell>
                         <TableCell className="py-3 whitespace-nowrap text-sm">
-                          {r.expires_at ? (
+                          {r.due_at ? (
                             <span
                               className={
-                                isExpired
-                                  ? "text-destructive"
+                                isOverdue
+                                  ? "text-destructive flex items-center font-medium"
                                   : "text-muted-foreground"
                               }
                             >
-                              {formatDate(r.expires_at)}
-                              {isExpired && " (Expired)"}
+                              {isOverdue && <AlertCircle className="w-3 h-3 mr-1" />}
+                              {formatDate(r.due_at)}
                             </span>
                           ) : (
-                            "No expiry"
+                            <span className="text-muted-foreground text-xs">No deadline</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-3 whitespace-nowrap">
-                          {resCount}
+                        <TableCell className="py-3 whitespace-nowrap text-center">
+                          {evidenceCount > 0 ? (
+                            <Badge variant="secondary" className="font-normal">
+                              {evidenceCount} item{evidenceCount !== 1 ? "s" : ""}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="sticky right-0 z-10 bg-card border-l border-border group-hover:bg-accent/50 py-3 whitespace-nowrap text-right">
                           <Button variant="outline" size="sm" asChild>

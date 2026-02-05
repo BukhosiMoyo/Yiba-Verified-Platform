@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
     if (institutionId) where.institution_id = institutionId;
 
     const status = searchParams.get("status");
-    if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+    if (status) {
+      // Allow any status, or validate against new enum if strict
       where.status = status;
     }
 
@@ -60,18 +61,22 @@ export async function GET(request: NextRequest) {
           count: requests.length,
           qcto_requests: requests.map((r) => ({
             request_id: r.request_id,
+            reference_code: r.reference_code,
             institution_id: r.institution_id,
             institution_name: r.institution.trading_name || r.institution.legal_name,
             title: r.title,
             description: r.description,
-            request_type: r.request_type,
+            type: r.type,
             status: r.status,
-            requested_at: r.requested_at.toISOString(),
+            requested_at: r.requested_at?.toISOString() ?? null,
+            due_at: r.due_at?.toISOString() ?? null,
             requested_by: toName(r.requestedByUser),
             requested_by_email: r.requestedByUser?.email ?? null,
             reviewed_at: r.reviewed_at?.toISOString() ?? null,
             reviewed_by: toName(r.reviewedByUser),
             response_notes: r.response_notes,
+            decision: r.decision,
+            decision_notes: r.decision_notes,
             created_at: r.created_at.toISOString(),
             updated_at: r.updated_at.toISOString(),
           })),
@@ -86,23 +91,27 @@ export async function GET(request: NextRequest) {
     }
 
     const csvRows: string[] = [
-      "Request ID,Institution ID,Institution Name,Title,Description,Request Type,Status,Requested At,Requested By,Requested By Email,Reviewed At,Reviewed By,Response Notes,Created At,Updated At",
+      "Request ID,Reference Code,Institution ID,Institution Name,Title,Description,Type,Status,Requested At,Due At,Requested By,Requested By Email,Reviewed At,Reviewed By,Response Notes,Decision,Decision Notes,Created At,Updated At",
     ];
     for (const r of requests) {
       const row = [
         r.request_id,
+        r.reference_code || "",
         r.institution_id,
         (r.institution.trading_name || r.institution.legal_name || "").replace(/,/g, ";"),
         (r.title || "").replace(/,/g, ";"),
         (r.description || "").replace(/,/g, ";"),
-        r.request_type || "",
+        r.type || "",
         r.status,
-        r.requested_at.toISOString(),
+        r.requested_at?.toISOString() || "",
+        r.due_at?.toISOString() || "",
         toName(r.requestedByUser).replace(/,/g, ";"),
         r.requestedByUser?.email || "",
         r.reviewed_at?.toISOString() || "",
         toName(r.reviewedByUser).replace(/,/g, ";"),
         (r.response_notes || "").replace(/,/g, ";"),
+        r.decision || "",
+        (r.decision_notes || "").replace(/,/g, ";"),
         r.created_at.toISOString(),
         r.updated_at.toISOString(),
       ].map((f) => `"${String(f).replace(/"/g, '""')}"`);

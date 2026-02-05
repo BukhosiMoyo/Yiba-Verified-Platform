@@ -8,7 +8,14 @@ import { fail, ok } from "@/lib/api/response";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const SETTING_KEY = "EMAIL_LOGO";
+
+// Map types to DB keys
+const LOGO_KEYS = {
+    LIGHT: "EMAIL_LOGO",
+    DARK: "EMAIL_LOGO_DARK"
+} as const;
+
+type LogoType = keyof typeof LOGO_KEYS;
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,6 +27,13 @@ export async function POST(request: NextRequest) {
 
         const formData = await request.formData();
         const file = formData.get("file") as File | null;
+        const type = (formData.get("type") as LogoType) || "LIGHT";
+
+        if (!Object.keys(LOGO_KEYS).includes(type)) {
+            throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid logo type. Must be LIGHT or DARK", 400);
+        }
+
+        const settingKey = LOGO_KEYS[type];
 
         if (!file) {
             throw new AppError(ERROR_CODES.VALIDATION_ERROR, "No file provided", 400);
@@ -43,7 +57,8 @@ export async function POST(request: NextRequest) {
 
         const extension = file.type.split("/")[1] || "png";
         const timestamp = Date.now();
-        const storageKey = `system/settings/email-logo-${timestamp}.${extension}`;
+        // system/settings/email-logo-light-123456.png
+        const storageKey = `system/settings/email-logo-${type.toLowerCase()}-${timestamp}.${extension}`;
 
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
@@ -66,15 +81,15 @@ export async function POST(request: NextRequest) {
 
         // Upsert the setting
         await prisma.systemSetting.upsert({
-            where: { key: SETTING_KEY },
+            where: { key: settingKey },
             update: { value: logoUrl },
             create: {
-                key: SETTING_KEY,
+                key: settingKey,
                 value: logoUrl,
             },
         });
 
-        return ok({ url: logoUrl });
+        return ok({ url: logoUrl, type });
 
     } catch (error) {
         console.error("System logo upload error:", error);
@@ -86,20 +101,25 @@ export async function GET(request: NextRequest) {
     try {
         const { ctx } = await requireAuth(request);
 
-        // Allow any authenticated user to view? Or just admins?
-        // Since it's used in emails, it's public info effectively, but for the API...
-        // Let's restrict to admins for the "settings" view, but if we need a public endpoint for the image itself, the URL is public.
-
         if (ctx.role !== "PLATFORM_ADMIN") {
             // throw new AppError(ERROR_CODES.FORBIDDEN, "Forbidden", 403);
-            // Actually, "Settings" page might need it.
         }
 
-        const setting = await prisma.systemSetting.findUnique({
-            where: { key: SETTING_KEY },
+        const settings = await prisma.systemSetting.findMany({
+            where: {
+                key: {
+                    in: [LOGO_KEYS.LIGHT, LOGO_KEYS.DARK]
+                }
+            }
         });
 
-        return ok({ logoUrl: setting?.value || null });
+        const lightLogo = settings.find((s: { key: string; value: string }) => s.key === LOGO_KEYS.LIGHT)?.value || null;
+        const darkLogo = settings.find((s: { key: string; value: string }) => s.key === LOGO_KEYS.DARK)?.value || null;
+
+        return ok({
+            logoUrl: lightLogo,
+            darkLogoUrl: darkLogo
+        });
     } catch (error) {
         return fail(error);
     }
@@ -113,8 +133,17 @@ export async function DELETE(request: NextRequest) {
             throw new AppError(ERROR_CODES.FORBIDDEN, "Only platform admins can manage system settings", 403);
         }
 
+        const { searchParams } = new URL(request.url);
+        const type = (searchParams.get("type") as LogoType) || "LIGHT";
+
+        if (!Object.keys(LOGO_KEYS).includes(type)) {
+            throw new AppError(ERROR_CODES.VALIDATION_ERROR, "Invalid logo type. Must be LIGHT or DARK", 400);
+        }
+
+        const settingKey = LOGO_KEYS[type];
+
         await prisma.systemSetting.delete({
-            where: { key: SETTING_KEY },
+            where: { key: settingKey },
         });
 
         return ok({ success: true });

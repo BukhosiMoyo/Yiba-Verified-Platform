@@ -64,7 +64,9 @@ export function buildInviteEmailFromTemplate(
   trackedLink: string,
   trackingPixelUrl: string,
   customMessage?: string | null,
-  reviewLink?: string // New optional parameter for "Review Invitation"
+  reviewLink?: string, // New optional parameter for "Review Invitation"
+  logoUrl?: string | null,
+  darkLogoUrl?: string | null
 ): { subject: string; html: string; text: string } {
   // removed require
 
@@ -154,10 +156,13 @@ export function buildInviteEmailFromTemplate(
     contentHtml,
     title: subject,
     previewText: replacePlaceholders(previewText, context),
+    logoUrl,
+    darkLogoUrl,
   });
 
   // Inject tracking pixel at the end (outside layout or inside? Layout returns full <html>, so we append before </body>)
   const htmlWithPixel = html.replace("</body>", `<img src="${trackingPixelUrl}" width="1" height="1" style="display: none;" alt="" /></body>`);
+
 
   // Text version
   const textParts: string[] = [];

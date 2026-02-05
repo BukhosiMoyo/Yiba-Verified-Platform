@@ -1,3 +1,4 @@
+
 /**
  * Shared Email Layout
  * Enforces a centered "card" design with consistent header, footer, and mobile responsiveness.
@@ -8,6 +9,7 @@ interface EmailLayoutProps {
   title?: string;
   previewText?: string;
   logoUrl?: string | null;
+  darkLogoUrl?: string | null;
 }
 
 export function getSharedEmailLayout({
@@ -15,6 +17,7 @@ export function getSharedEmailLayout({
   title = "Yiba Verified",
   previewText,
   logoUrl,
+  darkLogoUrl,
 }: EmailLayoutProps): string {
   // Base styles for consistency across clients
   const styles = {
@@ -33,6 +36,25 @@ export function getSharedEmailLayout({
 
   // Use provided logoUrl, or fallback to default
   const finalLogoUrl = logoUrl || `${baseUrl}/Yiba%20Verified%20Logo.webp`;
+
+  // Custom CSS for Dark Mode Logo Support
+  const logoCss = darkLogoUrl ? `
+    @media (prefers-color-scheme: dark) {
+      .light-mode-logo { display: none !important; }
+      .dark-mode-logo { display: block !important; }
+    }
+  ` : "";
+
+  // Logo HTML construction
+  const logoHtml = darkLogoUrl
+    ? `
+      <!-- Light Mode Logo -->
+      <img src="${finalLogoUrl}" alt="${title}" height="40" class="light-mode-logo" style="display: block; border: 0; max-width: 200px; height: auto;" />
+      <!-- Dark Mode Logo (Hidden by default) -->
+      <img src="${darkLogoUrl}" alt="${title}" height="40" class="dark-mode-logo" style="display: none; border: 0; max-width: 200px; height: auto;" />
+      `
+    : `<img src="${finalLogoUrl}" alt="${title}" height="40" style="display: block; border: 0; max-width: 200px; height: auto;" />`;
+
 
   return `
 <!DOCTYPE html>
@@ -60,6 +82,8 @@ export function getSharedEmailLayout({
       .btn { width: 100% !important; display: block !important; margin-bottom: 12px !important; text-align: center !important; }
       .btn-container { text-align: center !important; }
     }
+
+    ${logoCss}
   </style>
 </head>
 <body style="${styles.body}">
@@ -80,7 +104,7 @@ export function getSharedEmailLayout({
                 <tr>
                   <td style="${styles.header}" class="header">
                      <!-- Using text for reliability if logo fails, otherwise <img src="..." height="28" /> -->
-                     <img src="${finalLogoUrl}" alt="Yiba Verified" height="40" style="display: block; border: 0; max-width: 200px; height: auto;" />
+                     ${logoHtml}
                   </td>
                 </tr>
 

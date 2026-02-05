@@ -9,6 +9,7 @@ import { getProvinceFilterForQCTO } from "@/lib/api/qctoAccess";
 import type { ApiContext } from "@/lib/api/context";
 import { QctoRequestsClient } from "./QctoRequestsClient";
 import { LoadingTable } from "@/components/shared/LoadingTable";
+import { CreateQctoRequestDialog } from "@/components/qcto/CreateQctoRequestDialog";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
@@ -115,14 +116,14 @@ export default async function QctoRequestsPage({ searchParams }: PageProps) {
       where,
       select: {
         request_id: true,
+        reference_code: true,
         institution_id: true,
         title: true,
-        request_type: true,
+        type: true,
         status: true,
         requested_at: true,
-        response_deadline: true,
+        due_at: true,
         reviewed_at: true,
-        expires_at: true,
         institution: {
           select: {
             institution_id: true,
@@ -131,7 +132,7 @@ export default async function QctoRequestsPage({ searchParams }: PageProps) {
             registration_number: true,
           },
         },
-        _count: { select: { requestResources: true } },
+        _count: { select: { evidenceLinks: true } },
       },
       orderBy: { requested_at: "desc" },
       skip: offset,
@@ -142,6 +143,7 @@ export default async function QctoRequestsPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4 md:space-y-8 p-4 md:p-8">
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex flex-wrap items-center gap-2">
@@ -156,6 +158,10 @@ export default async function QctoRequestsPage({ searchParams }: PageProps) {
             Manage requests for access to institution resources
           </p>
         </div>
+
+        {effectiveRole !== "INSTITUTION_ADMIN" && (
+          <CreateQctoRequestDialog />
+        )}
       </div>
 
       <Suspense fallback={<LoadingTable columns={10} rows={6} />}>

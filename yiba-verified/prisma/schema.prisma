@@ -224,6 +224,7 @@ model User {
   reviewAttachmentsUploaded SubmissionReviewAttachment[] @relation("UserUploadedReviewAttachments")
   requestedQCTORequests     QCTORequest[]                @relation("QCTORequested")
   reviewedQCTORequests      QCTORequest[]                @relation("InstitutionReviewed")
+  assignedQctoRequests      QCTORequest[]                @relation("QctoRequestReviewer")
   createdInvites            Invite[]                     @relation("UserCreatedInvites")
   createdCampaigns          InviteCampaign[]             @relation("UserCreatedCampaigns")
   createdQctoInvites        QCTOInvite[]                 @relation("QCTOInviteInvitedBy")
@@ -885,6 +886,7 @@ model Document {
   documentFlags          DocumentFlag[]
   sickNoteAttachment     SickNote?                 @relation("SickNoteDocument")
   pastQualification      PastQualification?        @relation("PastQualificationDocument")
+  evidenceLinks          QctoRequestResponseEvidenceLink[]
 
   @@index([related_entity, related_entity_id])
   @@index([uploaded_by])
@@ -1148,6 +1150,8 @@ model Submission {
   
   reviewAttachments   SubmissionReviewAttachment[]
   auditLogs           AuditLog[]                   @relation("SubmissionAuditLogs")
+  linkedQctoRequests  QCTORequest[]
+  evidenceLinks       QctoRequestResponseEvidenceLink[]
 
   @@index([institution_id])
   @@index([status])
@@ -1188,6 +1192,7 @@ model SubmissionItem {
   updated_at         DateTime @updatedAt
 
   submission         Submission @relation(fields: [submission_id], references: [submission_id], onDelete: Cascade)
+  evidenceLinks      QctoRequestResponseEvidenceLink[]
   
   @@index([submission_id])
   @@index([type])
@@ -1253,46 +1258,140 @@ model SubmissionReviewAttachment {
   @@index([submission_id])
 }
 
+enum QctoRequestType {
+  DOCUMENTS
+  ATTENDANCE
+  ENROLMENTS
+  ASSESSMENT_RESULTS
+  READINESS_CLARIFICATION
+  CUSTOM
+}
+
+enum QctoRequestStatus {
+  DRAFT
+  SENT
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  RETURNED_FOR_CORRECTION
+  REJECTED
+  CANCELLED
+  PENDING
+}
+
 /**
  * QCTORequest
  * Tracks QCTO requests to institutions for specific data/information.
- * Supports request-based QCTO access: Institutions approve requests, which grants QCTO access to requested resources.
- * Workflow:
- * - QCTO creates request (status: PENDING)
- * - Institution reviews request
- * - Institution approves/rejects (status: APPROVED / REJECTED)
- * - If approved, QCTO can access requested resources
  */
 model QCTORequest {
   request_id        String            @id @default(uuid())
   institution_id    String
   requested_by      String // QCTO user who requested
-  request_type      String? // e.g., "READINESS_REVIEW", "COMPLIANCE_CHECK", "DATA_EXPORT"
+  
+  // Revised fields
+  reference_code    String?           @unique // Human readable e.g. REQ-2026-001
+  type              QctoRequestType   @default(CUSTOM) // was request_type String
+  status            QctoRequestStatus @default(DRAFT)
+  
   title             String
   description       String?
-  status            QCTORequestStatus @default(PENDING)
-  requested_at      DateTime          @default(now())
-  response_deadline DateTime? // Optional: institution should respond by this date (for PENDING)
-  reviewed_at       DateTime? // When institution reviewed the request
-  reviewed_by       String? // Institution user who reviewed
+  config_json       Json?             // Stores config like { docTypes: [...], dates: [...] }
+  
+  // Lifecycle
+  requested_at      DateTime?         // When moved to SENT
+  due_at            DateTime?         // Deadline
+  
+  // Response
+  submitted_at      DateTime?
+  linked_submission_id String?        // FK to Submission
+  
+  // Review/Decision
+  assigned_reviewer_user_id String?   // FK to User
+  reviewed_at       DateTime?         // When QCTO made decision
+  decision          QctoRequestStatus? // APPROVED, REJECTED, RETURNED
+  decision_notes    String?           @db.Text
+  
+  // Legacy/Migration (Keeping these for safety during migration, but might be deprecated)
+  request_type      String? // Deprecated in favor of type
+  response_deadline DateTime? // Deprecated in favor of due_at
+  confirmed_status  String? // Deprecated
   response_notes    String?
   expires_at        DateTime? // Optional: QCTO access expires after this date (for APPROVED)
+
   created_at        DateTime          @default(now())
   updated_at        DateTime          @updatedAt
   deleted_at        DateTime?
 
   // Relations
-  institution      Institution           @relation(fields: [institution_id], references: [institution_id])
-  requestedByUser  User                  @relation("QCTORequested", fields: [requested_by], references: [user_id])
-  reviewedByUser   User?                 @relation("InstitutionReviewed", fields: [reviewed_by], references: [user_id])
+  institution       Institution       @relation(fields: [institution_id], references: [institution_id])
+  requestedByUser   User              @relation("QCTORequested", fields: [requested_by], references: [user_id])
+  reviewedByUser    User?             @relation("InstitutionReviewed", fields: [reviewed_by], references: [user_id])
+  reviewed_by       String? // Institution user who reviewed (Legacy)
+  
+  linkedSubmission  Submission?       @relation(fields: [linked_submission_id], references: [submission_id])
+  assignedReviewer  User?             @relation("QctoRequestReviewer", fields: [assigned_reviewer_user_id], references: [user_id])
+  
+  // Attachments & Evidence
+  attachments       QctoRequestAttachment[]
+  evidenceLinks     QctoRequestResponseEvidenceLink[]
+  
+  // Legacy
   requestResources QCTORequestResource[]
+
   auditLogs        AuditLog[]            @relation("QCTORequestAuditLogs")
 
   @@index([institution_id])
   @@index([requested_by])
   @@index([status])
   @@index([requested_at])
-  @@index([reviewed_by])
+  @@index([due_at])
+}
+
+/**
+ * QctoRequestAttachment
+ * Files attached by QCTO when creating the request (e.g. templates, explanation docs).
+ */
+model QctoRequestAttachment {
+  attachment_id      String   @id @default(uuid())
+  qcto_request_id    String
+  document_id        String?  // If reusing system docs
+  file_url           String?  // If direct S3 link
+  file_name          String
+  file_size          Int?
+  created_by_user_id String?
+  created_at         DateTime @default(now())
+  
+  request            QCTORequest @relation(fields: [qcto_request_id], references: [request_id], onDelete: Cascade)
+  
+  @@index([qcto_request_id])
+}
+
+/**
+ * QctoRequestResponseEvidenceLink
+ * Polymorphic link to Evidence (Submission, SubmissionItem, or Document)
+ * This replaces the legacy QCTORequestResource approach.
+ */
+model QctoRequestResponseEvidenceLink {
+  link_id            String   @id @default(uuid())
+  qcto_request_id    String
+  
+  // Polymorphic evidence
+  submission_id      String?
+  submission_item_id String?
+  document_id        String?
+  
+  created_at         DateTime @default(now())
+  
+  request            QCTORequest     @relation(fields: [qcto_request_id], references: [request_id], onDelete: Cascade)
+  submission         Submission?     @relation(fields: [submission_id], references: [submission_id])
+  submissionItem     SubmissionItem? @relation(fields: [submission_item_id], references: [submission_item_id])
+  document           Document?       @relation(fields: [document_id], references: [document_id])
+  
+  @@index([qcto_request_id])
+  @@index([submission_id])
+  @@index([submission_item_id])
+  @@index([document_id])
 }
 
 /**
@@ -1723,13 +1822,7 @@ enum SubmissionStatus {
   RETURNED_FOR_CORRECTION
 }
 
-enum QCTORequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  EXPIRED
-  WITHDRAWN
-}
+
 
 enum SubmissionResourceType {
   READINESS

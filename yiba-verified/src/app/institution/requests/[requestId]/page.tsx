@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RequestApprovalForm } from "@/components/institution/RequestApprovalForm";
+import { RequestResponseUI } from "@/components/qcto/RequestResponseUI";
 
 interface PageProps {
   params: Promise<{
@@ -23,8 +23,6 @@ interface PageProps {
  */
 export default async function InstitutionRequestDetailsPage({ params }: PageProps) {
   const { requestId } = await params;
-
-  // Get session (layout already ensures auth, but we need role/institutionId for scoping)
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -35,299 +33,192 @@ export default async function InstitutionRequestDetailsPage({ params }: PageProp
   const userInstitutionId = session.user.institutionId;
 
   // Build where clause with institution scoping
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     request_id: requestId,
-    deleted_at: null, // Only non-deleted
+    deleted_at: null,
   };
 
-  // Enforce institution scoping rules
   if (userRole === "INSTITUTION_ADMIN" || userRole === "INSTITUTION_STAFF") {
-    // Institution roles can only view requests from their own institution
     if (!userInstitutionId) {
       redirect("/unauthorized");
     }
     where.institution_id = userInstitutionId;
   }
-  // PLATFORM_ADMIN can view ALL requests (no institution scoping check - app owners see everything! 🦸)
 
-  // Fetch request from database
+  // Fetch request
   const request = await prisma.qCTORequest.findFirst({
     where,
     select: {
       request_id: true,
+      reference_code: true,
       institution_id: true,
       title: true,
       description: true,
-      request_type: true,
+      type: true,
       status: true,
       requested_at: true,
-      response_deadline: true,
+      due_at: true,
       reviewed_at: true,
+      decision: true,
+      decision_notes: true,
       response_notes: true,
-      expires_at: true,
+      config_json: true,
       created_at: true,
       updated_at: true,
-      deleted_at: true, // Include to check soft-delete
+      deleted_at: true,
       institution: {
         select: {
           institution_id: true,
           legal_name: true,
-          trading_name: true,
-          institution_type: true,
-          registration_number: true,
         },
       },
       requestedByUser: {
         select: {
-          user_id: true,
           first_name: true,
           last_name: true,
           email: true,
         },
       },
-      reviewedByUser: {
+      evidenceLinks: {
         select: {
-          user_id: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-        },
-      },
-      requestResources: {
-        select: {
-          resource_id: true,
-          resource_type: true,
-          resource_id_value: true,
-          added_at: true,
-          notes: true,
-        },
-        orderBy: {
-          added_at: "desc",
-        },
-      },
+          link_id: true,
+          document: { select: { document_id: true, file_name: true, mime_type: true } },
+          submission: { select: { submission_id: true, title: true } },
+        }
+      }
     },
   });
 
-  // Check if request exists and is not soft-deleted
   if (!request || request.deleted_at !== null) {
     notFound();
   }
 
-  // Format dates for display
-  const formatDate = (date: Date | null) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-ZA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const formatDateTime = (date: Date | null) => {
-    if (!date) return "N/A";
+    if (!date) return "—";
     return new Date(date).toLocaleDateString("en-ZA", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
-  const formatStatus = (status: string) => {
-    const statusMap: Record<string, { label: string; className: string }> = {
-      PENDING: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
-      APPROVED: { label: "Approved", className: "bg-green-100 text-green-800" },
-      REJECTED: { label: "Rejected", className: "bg-red-100 text-red-800" },
-    };
-    return statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
+  const formatDate = (date: Date | null) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString("en-ZA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  const formatResourceType = (type: string) => {
-    const typeMap: Record<string, string> = {
-      READINESS: "Readiness Assessment",
-      LEARNER: "Learner",
-      ENROLMENT: "Enrolment",
-      DOCUMENT: "Document",
-      INSTITUTION: "Institution",
-    };
-    return typeMap[type] || type;
+  // Status Badge Logic
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "APPROVED": return <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Approved</span>;
+      case "REJECTED": return <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">Rejected</span>;
+      case "RETURNED_FOR_CORRECTION": return <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-bold">Returned</span>;
+      case "SUBMITTED": return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">Submitted</span>;
+      default: return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">{status}</span>;
+    }
   };
 
-  const statusInfo = formatStatus(request.status);
-  const isExpired = request.expires_at && new Date(request.expires_at) < new Date();
-  const isOverdue = request.status === "PENDING" && request.response_deadline && new Date(request.response_deadline) < new Date();
-  const canApprove = request.status === "PENDING";
+  const isOverdue = request.due_at && new Date(request.due_at) < new Date() && !["APPROVED", "REJECTED", "CANCELLED", "SUBMITTED", "UNDER_REVIEW"].includes(request.status);
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Request Details</h1>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-mono text-muted-foreground">{request.reference_code || "NO-REF"}</span>
+          {getStatusBadge(request.status)}
+          {isOverdue && <span className="text-destructive text-sm font-bold">Overdue</span>}
+        </div>
+        <h1 className="text-3xl font-bold">{request.title}</h1>
         <p className="text-muted-foreground mt-2">
-          Review QCTO request and approve or reject access to resources
+          {request.type?.replace(/_/g, " ")} Request
         </p>
       </div>
 
-      {/* Request Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Request Information</CardTitle>
-          <CardDescription>
-            Status:{" "}
-            <span
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}
-            >
-              {statusInfo.label}
-            </span>
-            {isExpired && (
-              <span className="ml-2 text-xs text-red-600">(Expired)</span>
-            )}
-            {isOverdue && (
-              <span className="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400">(Response overdue)</span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Title</p>
-              <p className="text-base">{request.title}</p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Description & Instructions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="whitespace-pre-wrap">{request.description || "No description provided."}</div>
 
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Request Type</p>
-              <p className="text-base">{request.request_type || "N/A"}</p>
-            </div>
-
-            {request.description && (
-              <div className="md:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-base whitespace-pre-wrap">{request.description}</p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Requested By</p>
-              <p className="text-base">
-                {[request.requestedByUser.first_name, request.requestedByUser.last_name].filter(Boolean).join(" ") || request.requestedByUser.email}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Requested At</p>
-              <p className="text-base">{formatDateTime(request.requested_at)}</p>
-            </div>
-
-            {request.response_deadline && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Response By</p>
-                <p className={`text-base ${isOverdue ? "text-amber-600 dark:text-amber-400 font-medium" : ""}`}>
-                  {formatDate(request.response_deadline)}
-                  {isOverdue && " (Overdue)"}
-                </p>
-              </div>
-            )}
-
-            {request.expires_at && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Expires At</p>
-                <p className={`text-base ${isExpired ? "text-red-600" : ""}`}>
-                  {formatDate(request.expires_at)}
-                  {isExpired && " (Expired)"}
-                </p>
-              </div>
-            )}
-
-            {request.reviewed_at && (
-              <>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Reviewed At</p>
-                  <p className="text-base">{formatDateTime(request.reviewed_at)}</p>
+              {/* Render specific config if needed, e.g. doc types */}
+              {request.config_json && (
+                <div className="mt-4 bg-muted p-4 rounded-md">
+                  <pre className="text-xs overflow-auto">{JSON.stringify(request.config_json, null, 2)}</pre>
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                {request.reviewedByUser && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Reviewed By</p>
-                    <p className="text-base">
-                      {[request.reviewedByUser.first_name, request.reviewedByUser.last_name].filter(Boolean).join(" ") || request.reviewedByUser.email}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Response & Evidence</CardTitle>
+              <CardDescription>Upload documents or link submissions to fulfill this request.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RequestResponseUI
+                requestId={request.request_id}
+                institutionId={request.institution_id}
+                status={request.status}
+                evidenceLinks={request.evidenceLinks}
+                existingNotes={request.response_notes}
+              />
+            </CardContent>
+          </Card>
+        </div>
 
-            {request.response_notes && (
-              <div className="md:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">Response Notes</p>
-                <p className="text-base whitespace-pre-wrap">{request.response_notes}</p>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <span className="text-sm text-muted-foreground block">Requested By</span>
+                <span className="font-medium">
+                  {[request.requestedByUser?.first_name, request.requestedByUser?.last_name].filter(Boolean).join(" ") || request.requestedByUser.email}
+                </span>
               </div>
-            )}
+              <div>
+                <span className="text-sm text-muted-foreground block">Requested Date</span>
+                <span>{formatDateTime(request.requested_at)}</span>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground block">Due Date</span>
+                <span className={isOverdue ? "text-destructive font-bold" : ""}>
+                  {formatDate(request.due_at)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Created At</p>
-              <p className="text-base">{formatDateTime(request.created_at)}</p>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Updated At</p>
-              <p className="text-base">{formatDateTime(request.updated_at)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Requested Resources */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Requested Resources</CardTitle>
-          <CardDescription>
-            {request.requestResources.length} resource
-            {request.requestResources.length !== 1 ? "s" : ""} requested
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {request.requestResources.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No resources requested</p>
-          ) : (
-            <div className="space-y-3">
-              {request.requestResources.map((resource) => (
-                <div
-                  key={resource.resource_id}
-                  className="p-3 border rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{formatResourceType(resource.resource_type)}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({resource.resource_id_value})
-                    </span>
-                  </div>
-                  {resource.notes && (
-                    <p className="text-sm text-muted-foreground mt-1">{resource.notes}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Added: {formatDateTime(resource.added_at)}
-                  </p>
+          {request.decision && (
+            <Card className={request.decision === "REJECTED" ? "border-red-200 bg-red-50 dark:bg-red-900/10" : "border-green-200 bg-green-50 dark:bg-green-900/10"}>
+              <CardHeader>
+                <CardTitle>Review Outcome</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="font-bold mb-2">{request.decision}</div>
+                <p className="text-sm">{request.decision_notes}</p>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Reviewed: {formatDateTime(request.reviewed_at)}
                 </div>
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Approval Form (only if pending) */}
-      {canApprove && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Approve or Reject Request</CardTitle>
-            <CardDescription>
-              Review the request and provide a response. Approved requests grant QCTO access to the requested resources.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RequestApprovalForm requestId={request.request_id} />
-          </CardContent>
-        </Card>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -162,6 +162,9 @@ export function getEmailService(): EmailService {
 /**
  * Generate email templates for different notification types
  */
+/**
+ * Generate email templates for different notification types
+ */
 export function getEmailTemplate(
     notificationType: NotificationType,
     title: string,
@@ -169,7 +172,8 @@ export function getEmailTemplate(
     entityType?: string,
     entityId?: string,
     baseUrl?: string,
-    logoUrl?: string | null
+    logoUrl?: string | null,
+    darkLogoUrl?: string | null
 ): { subject: string; html: string; text: string } {
     // Import shared layout dynamically to avoid circular deps if any (though here it should be fine)
     const { getSharedEmailLayout } = require("./layout");
@@ -243,6 +247,7 @@ export function getEmailTemplate(
         title: `${title} - ${appName}`,
         previewText: config.previewText || "There’s an update waiting for you",
         logoUrl,
+        darkLogoUrl,
     });
 
     const text = `
@@ -280,20 +285,19 @@ export async function sendEmailNotification(
         const emailService = getEmailService();
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "https://yibaverified.co.za";
 
-        // Fetch System Logo
-        // We do this here because getEmailTemplate is synchronous but we want dynamic data.
-        // We import prisma dynamically or use a helper if this file is edge-compatible?
-        // Note: src/lib/email/index.ts is likely server-side.
+        // Fetch System Logos
         let logoUrl: string | null = null;
+        let darkLogoUrl: string | null = null;
         try {
             const { prisma } = require("@/lib/prisma");
-            const setting = await prisma.systemSetting.findUnique({
-                where: { key: "EMAIL_LOGO" },
+            const settings = await prisma.systemSetting.findMany({
+                where: { key: { in: ["EMAIL_LOGO", "EMAIL_LOGO_DARK"] } },
             });
-            logoUrl = setting?.value;
+            logoUrl = settings.find((s: any) => s.key === "EMAIL_LOGO")?.value || null;
+            darkLogoUrl = settings.find((s: any) => s.key === "EMAIL_LOGO_DARK")?.value || null;
         } catch (e) {
             // Ignore DB errors for logo, fallback to default
-            console.warn("Failed to fetch email logo setting:", e);
+            console.warn("Failed to fetch email logo settings:", e);
         }
 
         const template = getEmailTemplate(
@@ -303,7 +307,8 @@ export async function sendEmailNotification(
             entityType,
             entityId,
             baseUrl,
-            logoUrl
+            logoUrl,
+            darkLogoUrl
         );
 
         const result = await emailService.send({

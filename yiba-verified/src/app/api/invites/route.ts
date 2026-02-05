@@ -235,25 +235,20 @@ export async function POST(request: NextRequest) {
       const { buildInviteEmailFromTemplate, getTemplateTypeForInviteRole } = await import("@/lib/email/templates/inviteTemplates");
       const { EMAIL_CONFIG } = await import("@/lib/email/types");
 
+      const { getSystemSetting } = await import("@/lib/settings");
+
       const emailService = getEmailService();
+
+      // Fetch logos
+      const [logoUrl, darkLogoUrl] = await Promise.all([
+        getSystemSetting("EMAIL_LOGO"),
+        getSystemSetting("EMAIL_LOGO_DARK")
+      ]);
 
       // 1. Generate URLs
       const reviewLink = `${baseUrl}/invites/${rawToken}/review`;
       const trackingPixelUrl = `${baseUrl}/api/invites/track/open?token=${encodeURIComponent(rawToken)}`;
       const trackedLink = `${baseUrl}/api/invites/track/click?token=${encodeURIComponent(rawToken)}&redirect=${encodeURIComponent(inviteLink)}`; // Point main CTA to direct accept
-      // User likely wants "Review" as part of the flow. 
-      // If we use buildInviteEmailFromTemplate with `reviewLink`, it generates TWO buttons: Accept (trackedLink) and Review (reviewLink).
-      // Ideally, the "Accept" button should PROBABLY go to the review page too if that's the new flow?
-      // But let's stick to the prompt: "Review experience... before an institution accepts or declines".
-      // So maybe "Accept" goes to direct accept (login/signup) and "Review" goes to review? 
-      // BUT the Review page HAS an accept button. 
-      // Let's set trackedLink (Primary CTA) to `reviewLink` as well if we want to force the review flow?
-      // Actually, if we pass `reviewLink`, the template generates a "Review Invitation" button. 
-      // Let's keep trackedLink as the direct "/invite?token=..." (or API accept) for now so the "Accept" button works as a shortcut, 
-      // OR update trackedLink to point to the review page if we want to force distinct flow.
-      // The user said: "Invites... used inside a step-by-step invitation review flow...".
-      // Let's Point trackedLink to the review page too? 
-      // No, let's just pass reviewLink to enable the dual button or "Review" option.
 
       // 2. Fetch Template
       const templateType = getTemplateTypeForInviteRole(role as any); // role validated above
@@ -287,7 +282,9 @@ export async function POST(request: NextRequest) {
           trackedLink, // "Accept" button link
           trackingPixelUrl,
           null,
-          reviewLink // "Review" button link
+          reviewLink, // "Review" button link
+          logoUrl,
+          darkLogoUrl
         );
         subject = built.subject;
         html = built.html;
@@ -301,8 +298,6 @@ export async function POST(request: NextRequest) {
         // We can't easily access the `generateInviteEmail` helper from queue.ts without exporting it or duplicating.
         // Let's rely on buildBaseEmailHtml for fallback but cleaner.
         const { buildBaseEmailHtml } = await import("@/lib/email/templates/base");
-        const { getSystemSetting } = await import("@/lib/settings");
-        const logoUrl = await getSystemSetting("EMAIL_LOGO_URL");
 
         const fallbackHtml = `
             <p>You have been invited to join <strong>Yiba Verified</strong> as a <strong>${role.replace(/_/g, " ")}</strong>.</p>
