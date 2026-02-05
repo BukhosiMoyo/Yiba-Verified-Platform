@@ -29,8 +29,6 @@ export async function getCurrentInstitutionForUser(
   userId: string,
   preferredIdFromCookie?: string | null
 ): Promise<CurrentInstitutionResult> {
-  // Use standard type-safe access. If UserInstitution is in the schema, this key exists on prisma client.
-  // We avoid the unsafe casting/delegate pattern which might cause issues if types are out of sync at runtime.
   let userInstitutions: Array<{
     institution_id: string;
     is_primary: boolean;
@@ -38,27 +36,22 @@ export async function getCurrentInstitutionForUser(
   }> = [];
 
   try {
-    // We check if the property exists strictly to be safe against partial client generation,
-    // though in a valid build it must exist.
-    // @ts-ignore
-    if (prisma.userInstitution) {
-      userInstitutions = await prisma.userInstitution.findMany({
-        where: { user_id: userId },
-        include: {
-          institution: {
-            select: {
-              institution_id: true,
-              legal_name: true,
-              branch_code: true,
-              registration_number: true,
-            },
+    userInstitutions = await prisma.userInstitution.findMany({
+      where: { user_id: userId },
+      include: {
+        institution: {
+          select: {
+            institution_id: true,
+            legal_name: true,
+            branch_code: true,
+            registration_number: true,
           },
         },
-        orderBy: [{ is_primary: "desc" }, { created_at: "asc" }],
-      });
-    }
+      },
+      orderBy: [{ is_primary: "desc" }, { created_at: "asc" }],
+    });
   } catch (error) {
-    console.error("Critical error in getCurrentInstitutionForUser - userInstitution fetch:", error);
+    console.error("Error in getCurrentInstitutionForUser - userInstitution fetch:", error);
     // Fallback to empty -> will attempt legacy path
     userInstitutions = [];
   }
@@ -87,7 +80,7 @@ export async function getCurrentInstitutionForUser(
         };
       }
     } catch (error) {
-      console.error("Critical error in getCurrentInstitutionForUser - legacy fetch:", error);
+      console.error("Error in getCurrentInstitutionForUser - legacy fetch:", error);
     }
 
     // Final fallback
