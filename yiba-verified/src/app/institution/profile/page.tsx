@@ -77,12 +77,13 @@ export default async function InstitutionProfilePage() {
 
   return (
     <div className="space-y-6 md:space-y-10 p-4 md:p-8">
-      {/* Header with gradient accent */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 px-6 py-8 md:px-8 md:py-10 text-white shadow-lg">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNiI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTR2MkgyNHYtMmgxMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-40" aria-hidden />
+      {/* Header with modern gradient accent */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-8 md:px-8 md:py-10 text-white shadow-xl border border-slate-700/50">
+        <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 via-transparent to-emerald-600/10" aria-hidden />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" aria-hidden />
         <div className="relative">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Institution Profile</h1>
-          <p className="mt-2 text-indigo-100 text-sm md:text-base">
+          <p className="mt-2 text-slate-300 text-sm md:text-base">
             Your organisation&apos;s details as registered
           </p>
         </div>
@@ -94,7 +95,7 @@ export default async function InstitutionProfilePage() {
         <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-6 py-5 md:px-8 md:py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 <Building2 className="h-6 w-6" strokeWidth={1.8} />
               </div>
               <div>
@@ -113,27 +114,27 @@ export default async function InstitutionProfilePage() {
         </div>
 
         <div className="px-6 py-6 md:px-8 md:py-8 space-y-8">
-          {/* Core details – indigo tint */}
-          <section className="rounded-xl bg-indigo-50/60 border border-indigo-100/80 p-4 md:p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-700/90 mb-4">Registration & type</h3>
+          {/* Core details – slate tint */}
+          <section className="rounded-xl bg-slate-50/60 border border-slate-200/80 p-4 md:p-5 dark:bg-slate-900/20 dark:border-slate-700/50">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-4">Registration & type</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm font-medium text-indigo-700/80 flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-indigo-500" /> Registration number
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-slate-500" /> Registration number
                 </p>
-                <p className="mt-1 text-base font-medium text-slate-900">{institution.registration_number}</p>
+                <p className="mt-1 text-base font-medium text-slate-900 dark:text-slate-100">{institution.registration_number}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-indigo-700/80">Type</p>
-                <p className="mt-1 text-base font-medium text-slate-900">{institutionType}</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Type</p>
+                <p className="mt-1 text-base font-medium text-slate-900 dark:text-slate-100">{institutionType}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-indigo-700/80">Delivery modes</p>
-                <p className="mt-1 text-base font-medium text-slate-900">{deliveryModes}</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Delivery modes</p>
+                <p className="mt-1 text-base font-medium text-slate-900 dark:text-slate-100">{deliveryModes}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-indigo-700/80">Province</p>
-                <p className="mt-1 text-base font-medium text-slate-900">{institution.province}</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Province</p>
+                <p className="mt-1 text-base font-medium text-slate-900 dark:text-slate-100">{institution.province}</p>
               </div>
             </div>
           </section>
