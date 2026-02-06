@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { EngagementState } from "@prisma/client";
+import { EngagementState, Prisma } from "@prisma/client";
 
 export async function GET() {
     try {
@@ -56,7 +56,7 @@ export async function GET() {
             // Recent state transitions (from engagement_history JSON)
             prisma.invite.findMany({
                 where: {
-                    engagement_history: { not: null },
+                    engagement_history: { not: Prisma.JsonNull },
                 },
                 select: {
                     invite_id: true,
