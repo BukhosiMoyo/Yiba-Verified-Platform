@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InvitesOverview } from "./_components/InvitesOverview";
 import { CampaignsList } from "./_components/CampaignsList";
 import { CsvUploadWizard } from "./_components/CsvUploadWizard";
+import { EngagementTab } from "./_components/EngagementTab";
 // import { TemplatesTab } from "./_components/TemplatesTab";
 // import { EmailTemplatesTableClient } from "../email-templates/EmailTemplatesTableClient";
 import { DeliverabilityTab } from "./_components/DeliverabilityTab";
@@ -48,6 +49,7 @@ export default function InvitesPageClient({ institutions }: InvitesPageClientPro
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="engagement">Engagement</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
           <TabsTrigger value="manual">Manual Send</TabsTrigger>
           <TabsTrigger value="upload">Bulk Import</TabsTrigger>
@@ -57,6 +59,10 @@ export default function InvitesPageClient({ institutions }: InvitesPageClientPro
 
         <TabsContent value="overview" className="space-y-4">
           <InvitesOverview />
+        </TabsContent>
+
+        <TabsContent value="engagement" className="space-y-4">
+          <EngagementTab />
         </TabsContent>
 
         <TabsContent value="campaigns" className="space-y-4">
