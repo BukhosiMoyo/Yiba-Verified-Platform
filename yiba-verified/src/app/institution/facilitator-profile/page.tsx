@@ -74,6 +74,10 @@ export default async function FacilitatorProfilePage() {
     },
   });
 
+  if (!user) {
+    redirect("/login");
+  }
+
   const profileDocs = await prisma.document.findMany({
     where: {
       related_entity: "USER_FACILITATOR_PROFILE",
