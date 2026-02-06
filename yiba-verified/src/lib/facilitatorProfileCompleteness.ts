@@ -13,17 +13,25 @@ export async function computeFacilitatorProfileCompleteness(userId: string): Pro
   hasRequiredFields: boolean;
   hasRequiredDocs: boolean;
 }> {
-  const user = await prisma.user.findUnique({
-    where: { user_id: userId },
-    select: {
-      facilitator_id_number: true,
-      facilitator_qualifications: true,
-      facilitator_industry_experience: true,
-      documents: {
-        select: { document_type: true },
+  const [user, documents] = await Promise.all([
+    prisma.user.findUnique({
+      where: { user_id: userId },
+      select: {
+        facilitator_id_number: true,
+        facilitator_qualifications: true,
+        facilitator_industry_experience: true,
       },
-    },
-  });
+    }),
+    prisma.document.findMany({
+      where: {
+        related_entity: "USER_FACILITATOR_PROFILE",
+        related_entity_id: userId,
+      },
+      select: {
+        document_type: true,
+      },
+    }),
+  ]);
 
   if (!user) {
     return { complete: false, percentage: 0, hasRequiredFields: false, hasRequiredDocs: false };
@@ -34,7 +42,7 @@ export async function computeFacilitatorProfileCompleteness(userId: string): Pro
   const hasIndustryExperience = !!user.facilitator_industry_experience?.trim();
   const hasRequiredFields = hasIdNumber && hasQualifications && hasIndustryExperience;
 
-  const docTypes = new Set(user.documents.map((d) => d.document_type));
+  const docTypes = new Set(documents.map((d) => d.document_type));
   const hasCv = docTypes.has("FACILITATOR_CV") || docTypes.has("CV");
   const hasContract = docTypes.has("FACILITATOR_CONTRACT") || docTypes.has("CONTRACT");
   const hasRequiredDocs = hasCv && hasContract;
