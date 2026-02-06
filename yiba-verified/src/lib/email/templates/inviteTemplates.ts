@@ -66,16 +66,19 @@ export function buildInviteEmailFromTemplate(
   customMessage?: string | null,
   reviewLink?: string, // New optional parameter for "Review Invitation"
   logoUrl?: string | null,
-  darkLogoUrl?: string | null
+  darkLogoUrl?: string | null,
+  aiOverride?: { subject: string; body_html: string; preview_text: string } | null
 ): { subject: string; html: string; text: string } {
   // removed require
 
 
-  const subject = replacePlaceholders(template.subject, context);
+  const subject = aiOverride?.subject || replacePlaceholders(template.subject, context);
 
   // Build Body Content
-  const bodyHtml = buildBodyHtml(template.body_sections, context);
-  const customBlock = customMessage
+  // If AI override is present, use it directly. Otherwise build from template.
+  const bodyHtml = aiOverride?.body_html || buildBodyHtml(template.body_sections, context);
+
+  const customBlock = customMessage && !aiOverride // If AI wrote the email, custom message is likely redundant or should be part of context
     ? `<p style="margin: 16px 0; font-style: italic; border-left: 3px solid #e5e7eb; padding-left: 12px; color: #4b5563;">${replacePlaceholders(customMessage, context)}</p>`
     : "";
 
@@ -135,7 +138,7 @@ export function buildInviteEmailFromTemplate(
   // Compose Inner Content
   const contentHtml = `
     <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 24px;">
-      ${replacePlaceholders(template.subject.replace("You're invited", "Invitation"), context)}
+      ${replacePlaceholders(subject.replace("You're invited", "Invitation"), context)}
     </h1>
     
     ${bodyHtml}
@@ -150,12 +153,13 @@ export function buildInviteEmailFromTemplate(
   `;
 
   // Resolve central preview text
-  const previewText = EMAIL_CONFIG[EmailType.INVITE].previewText;
+  // AI override takes precedence
+  const previewText = aiOverride?.preview_text || replacePlaceholders(EMAIL_CONFIG[EmailType.INVITE].previewText, context);
 
   const html = getSharedEmailLayout({
     contentHtml,
     title: subject,
-    previewText: replacePlaceholders(previewText, context),
+    previewText: previewText,
     logoUrl,
     darkLogoUrl,
   });
@@ -168,14 +172,19 @@ export function buildInviteEmailFromTemplate(
   const textParts: string[] = [];
   textParts.push(subject.toUpperCase());
   textParts.push("---");
-  if (Array.isArray(template.body_sections)) {
+
+  if (aiOverride) {
+    // Basic strip HTML for text version (very crude, but robust enough for this context or use aiOverride.body_text if we had it)
+    textParts.push(aiOverride.body_html.replace(/<[^>]*>?/gm, ""));
+  } else if (Array.isArray(template.body_sections)) {
     (template.body_sections as { content?: string }[]).forEach((block) => {
       if (block && typeof block.content === "string") {
         textParts.push(replacePlaceholders(block.content, context));
       }
     });
   }
-  if (customMessage) {
+
+  if (customMessage && !aiOverride) {
     textParts.push(`Note: ${replacePlaceholders(customMessage, context)}`);
   }
   textParts.push(`Accept: ${context.invite_link}`);

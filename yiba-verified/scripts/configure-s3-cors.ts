@@ -34,7 +34,7 @@ async function configureCors() {
                     AllowedMethods: ["GET", "PUT", "POST", "DELETE", "HEAD"],
                     AllowedOrigins: [
                         "http://localhost:3000",
-                        "https://yibaverified-platform.vercel.app",
+                        "https://yibaverified.co.za",
                         "https://*.vercel.app"
                     ],
                     ExposeHeaders: ["ETag"],

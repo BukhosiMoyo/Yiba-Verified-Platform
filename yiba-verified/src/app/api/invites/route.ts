@@ -7,6 +7,8 @@ import { ok, fail } from "@/lib/api/response";
 import { AppError, ERROR_CODES } from "@/lib/api/errors";
 import { randomBytes, createHash } from "crypto";
 import { createAuditLog, serializeValue } from "@/services/audit.service";
+import { EngagementState } from "@prisma/client";
+import { generateEmailCopy } from "@/lib/ai/generateEmailCopy";
 
 /**
  * POST /api/invites
@@ -157,6 +159,9 @@ export async function POST(request: NextRequest) {
     const rawToken = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 
+    // Generate Engagement Token (long-lived)
+    const engagementToken = randomBytes(32).toString("hex");
+
     // Set expiry to 7 days from now
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -191,6 +196,11 @@ export async function POST(request: NextRequest) {
           created_by_user_id: ctx.userId,
           status: "QUEUED",
           max_attempts: parseInt(process.env.INVITE_MAX_ATTEMPTS || "3", 10),
+
+          // Intelligent Outreach Initialization
+          engagement_token: engagementToken,
+          engagement_state: EngagementState.UNCONTACTED,
+          engagement_score_raw: 0,
         },
         select: {
           invite_id: true,
@@ -257,6 +267,24 @@ export async function POST(request: NextRequest) {
         template = await prisma.emailTemplate.findUnique({ where: { type: templateType as any } });
       }
 
+      // AI Content Generation (Institution Admin Only)
+      let aiContent: any = null;
+      if (role === "INSTITUTION_ADMIN") {
+        try {
+          // We await here, adding ~1-3s latency. Acceptable for admin action.
+          // In production, move to background worker.
+          aiContent = await generateEmailCopy({
+            institutionName: institution?.trading_name || institution?.legal_name || "your institution",
+            recipientName: email.split("@")[0], // Fallback if no name provided
+            role: "Institution Administrator",
+            senderName: "Yiba Verified Platform",
+            engagementState: "UNCONTACTED"
+          });
+        } catch (aiErr) {
+          console.warn("AI Email Generation Failed, falling back to template:", aiErr);
+        }
+      }
+
       // 3. Build Email Content
       let subject: string;
       let html: string;
@@ -284,7 +312,8 @@ export async function POST(request: NextRequest) {
           null,
           reviewLink, // "Review" button link
           logoUrl,
-          darkLogoUrl
+          darkLogoUrl,
+          aiContent // Pass AI override
         );
         subject = built.subject;
         html = built.html;
@@ -334,9 +363,16 @@ export async function POST(request: NextRequest) {
 
       if (emailResult.success) {
         // Update status to SENT only if email actually sent
+        // Also advance Engagement State to CONTACTED
         await prisma.invite.update({
           where: { invite_id: invite.invite_id },
-          data: { status: "SENT", sent_at: new Date() }
+          data: {
+            status: "SENT",
+            sent_at: new Date(),
+            engagement_state: EngagementState.CONTACTED,
+            last_interaction_at: new Date(),
+            engagement_score_raw: { increment: 5 } // Basic points for "Received Email" equivalent to Open? Or just generic
+          }
         });
 
         // Update return object status
