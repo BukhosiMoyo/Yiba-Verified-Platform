@@ -19,7 +19,7 @@ export async function computeFacilitatorProfileCompleteness(userId: string): Pro
       facilitator_id_number: true,
       facilitator_qualifications: true,
       facilitator_industry_experience: true,
-      facilitatorProfileDocuments: {
+      documents: {
         select: { document_type: true },
       },
     },
@@ -34,7 +34,7 @@ export async function computeFacilitatorProfileCompleteness(userId: string): Pro
   const hasIndustryExperience = !!user.facilitator_industry_experience?.trim();
   const hasRequiredFields = hasIdNumber && hasQualifications && hasIndustryExperience;
 
-  const docTypes = new Set(user.facilitatorProfileDocuments.map((d) => d.document_type));
+  const docTypes = new Set(user.documents.map((d) => d.document_type));
   const hasCv = docTypes.has("FACILITATOR_CV") || docTypes.has("CV");
   const hasContract = docTypes.has("FACILITATOR_CONTRACT") || docTypes.has("CONTRACT");
   const hasRequiredDocs = hasCv && hasContract;

@@ -1,6 +1,7 @@
 
 import { determineNextState } from '../stateMachine';
 import { EngagementState, EngagementEventType, ENGAGEMENT_THRESHOLD } from '../types';
+import { describe, it, expect } from 'vitest';
 
 describe('State Machine Logic', () => {
     describe('determineNextState', () => {
