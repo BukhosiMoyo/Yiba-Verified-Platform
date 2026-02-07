@@ -1,3 +1,11 @@
+import {
+    OutreachEventType,
+    TemplateStatus,
+    QuestionType,
+    EngagementStage,
+    DeclineReason,
+} from './types';
+
 import type {
     OutreachMetrics,
     TrendDataPoint,
@@ -16,11 +24,6 @@ import type {
     AIDraft,
     AIPolicy,
     AIAuditLog,
-    EngagementStage,
-    DeclineReason,
-    OutreachEventType,
-    TemplateStatus,
-    QuestionType,
     OversightMetrics,
     GeneratedContentLog,
     FlaggedContent,
