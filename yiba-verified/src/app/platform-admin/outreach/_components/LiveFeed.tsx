@@ -12,8 +12,8 @@ interface LiveFeedProps {
 
 export function LiveFeed({ logs }: LiveFeedProps) {
     return (
-        <Card className="h-full">
-            <CardHeader>
+        <Card className="h-full flex flex-col">
+            <CardHeader className="flex-none">
                 <CardTitle className="flex items-center gap-2">
                     <span className="relative flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -22,8 +22,8 @@ export function LiveFeed({ logs }: LiveFeedProps) {
                     Live Generation Feed
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-                <ScrollArea className="h-[400px]">
+            <CardContent className="p-0 flex-1 min-h-0">
+                <ScrollArea className="h-full">
                     <div className="divide-y">
                         {logs.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground">
@@ -42,7 +42,7 @@ export function LiveFeed({ logs }: LiveFeedProps) {
                                             </span>
                                         </div>
                                         <span className="text-xs text-muted-foreground">
-                                            {new Date(log.generated_at).toLocaleTimeString()}
+                                            {new Date(log.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                     <div className="relative bg-slate-50 dark:bg-slate-900 rounded p-3 text-xs font-mono text-muted-foreground line-clamp-2">

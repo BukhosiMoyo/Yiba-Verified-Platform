@@ -41,14 +41,19 @@ export default function AIOversightPage() {
         }
     };
 
-    const handleReview = async (id: string, action: "approve" | "reject") => {
+    const handleReview = async (id: string, action: "approve" | "reject", feedback?: string) => {
         try {
             // Optimistic update
             setFlagged((prev) => prev.filter((item) => item.flag_id !== id));
-            toast.success(`Content ${action}ed`);
+
+            if (action === 'reject' && feedback) {
+                toast.success("Content rejected. AI guidelines updated based on feedback.");
+            } else {
+                toast.success(`Content ${action}ed`);
+            }
 
             // Simulate API call
-            // await awarenessApi.reviewFlaggedContent(id, action);
+            await awarenessApi.reviewFlaggedContent(id, action, feedback);
         } catch (error) {
             toast.error(`Failed to ${action} content`);
         }

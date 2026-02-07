@@ -311,6 +311,22 @@ export const awarenessApi = {
         if (!res.ok) throw new Error('Failed to reject draft');
     },
 
+    async reviewFlaggedContent(flagId: string, action: 'approve' | 'reject', feedback?: string): Promise<void> {
+        if (USE_MOCKS) {
+            console.log(`[ENGINE] Reviewing flagged content ${flagId}: ${action}`);
+            if (feedback) {
+                console.log(`[SELF-HEALING] Feedback received: "${feedback}". Adjusting AI policy...`);
+            }
+            return;
+        }
+        const res = await fetch(`/api/platform-admin/outreach/ai/review/${flagId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, feedback }),
+        });
+        if (!res.ok) throw new Error('Failed to review content');
+    },
+
     async getAIPolicy(): Promise<AIPolicy> {
         if (USE_MOCKS) {
             const { getMockAIPolicy } = await import('./mockData');
