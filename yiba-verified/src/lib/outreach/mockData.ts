@@ -21,6 +21,9 @@ import type {
     OutreachEventType,
     TemplateStatus,
     QuestionType,
+    OversightMetrics,
+    GeneratedContentLog,
+    FlaggedContent,
 } from './types';
 
 // Mock data for Awareness Engine UI development
