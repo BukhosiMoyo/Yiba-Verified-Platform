@@ -10,8 +10,8 @@ interface OutreachLayoutProps {
 }
 
 export default async function OutreachLayout({ children }: OutreachLayoutProps) {
-    // Feature flag check
-    const featureEnabled = process.env.NEXT_PUBLIC_FEATURE_AWARENESS_ENGINE_UI === 'true';
+    // Feature flag check (Default to true for rollout)
+    const featureEnabled = process.env.NEXT_PUBLIC_FEATURE_AWARENESS_ENGINE_UI === 'true' || true;
     if (!featureEnabled) {
         redirect('/platform-admin');
     }
