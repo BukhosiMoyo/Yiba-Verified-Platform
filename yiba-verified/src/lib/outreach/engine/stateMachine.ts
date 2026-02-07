@@ -20,19 +20,19 @@ export async function transitionEngagementState(
     const institution = await prisma.institution.findUnique({
         where: { institution_id: institutionId },
         select: {
-            engagement_stage: true,
-            engagement_score: true,
-            last_activity: true // Assuming this field exists or we add it
+            institution_id: true,
+            // engagement_stage: true, // Missing in schema
+            // engagement_score: true, // Missing in schema
+            // last_activity: true     // Missing in schema
         }
     });
 
     if (!institution) throw new Error(`Institution ${institutionId} not found`);
 
-    const currentStage = institution.engagement_stage || EngagementState.UNCONTACTED;
-    // @ts-ignore - Assuming engagement_score exists on Institution model
-    const currentRawScore = institution.engagement_score || 0;
-    // @ts-ignore - Assuming last_activity
-    const lastActivity = institution.last_activity || null;
+    // Mock values until schema is updated
+    const currentStage = EngagementState.UNCONTACTED;
+    const currentRawScore = 0;
+    const lastActivity = null;
 
     // 2. Calculate new score (Pure Logic)
     // We map OutreachEventType to EngagementEventType for scoring if needed

@@ -15,15 +15,14 @@ export async function updateEngagementScore(
 
     const institution = await prisma.institution.findUnique({
         where: { institution_id: institutionId },
-        select: { engagement_score: true, last_activity: true } // Mock fields
+        select: { institution_id: true } // Just verifying existence
     });
 
     if (!institution) throw new Error("Institution not found");
 
-    // @ts-ignore
-    const currentScore = institution.engagement_score || 0;
-    // @ts-ignore
-    const lastActivity = institution.last_activity || null;
+    // Mock values until schema is updated
+    const currentScore = 0;
+    const lastActivity = null;
 
     const effective = calculateCurrentScore(currentScore, lastActivity);
     const newScore = calculateNewScore(effective, event as any);
