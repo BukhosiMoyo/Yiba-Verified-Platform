@@ -8,13 +8,15 @@ interface PipelineBoardProps {
 }
 
 export function PipelineBoard({ institutions }: PipelineBoardProps) {
-    EngagementStage.UNCONTACTED,
+    const stages = [
+        EngagementStage.UNCONTACTED,
         EngagementStage.CONTACTED,
         EngagementStage.ENGAGED,
         EngagementStage.EVALUATING,
         EngagementStage.READY,
         EngagementStage.ACTIVE,
         EngagementStage.DECLINED,
+    ];
 
     const getInstitutionsByStage = (stage: EngagementStage) => {
         return institutions.filter((inst) => inst.engagement_stage === stage);
