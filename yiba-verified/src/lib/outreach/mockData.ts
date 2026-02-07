@@ -27,6 +27,7 @@ import type {
     OversightMetrics,
     GeneratedContentLog,
     FlaggedContent,
+    RecoveryCandidate,
 } from './types';
 
 // Mock data for Awareness Engine UI development
@@ -310,6 +311,35 @@ export function getMockDeclines(filters?: DeclineFilters): DeclineRecord[] {
             province: 'Gauteng',
             stage: 'PROBLEM_AWARE' as EngagementStage,
             declined_at: new Date(Date.now() - 3600000 * 120),
+        },
+    ];
+}
+
+export function getMockDeclineReasons(): { reason: DeclineReason; count: number }[] {
+    return [
+        { reason: DeclineReason.NOT_INTERESTED, count: 12 },
+        { reason: DeclineReason.BUDGET, count: 8 },
+        { reason: DeclineReason.TIMING, count: 5 },
+        { reason: DeclineReason.ALREADY_USING, count: 3 },
+        { reason: DeclineReason.OTHER, count: 2 },
+    ];
+}
+
+export function getMockRecoveryCandidates(): RecoveryCandidate[] {
+    return [
+        {
+            institution_id: 'inst_6',
+            institution_name: 'Budget Academy',
+            reason: 'Budget constraints mentioned',
+            declined_at: new Date(Date.now() - 3600000 * 120),
+            suggested_strategy: 'Offer discount on annual plan',
+        },
+        {
+            institution_id: 'inst_5',
+            institution_name: 'Old School Training',
+            reason: 'Satisfied with current system',
+            declined_at: new Date(Date.now() - 3600000 * 48),
+            suggested_strategy: 'Highlight AI automation features',
         },
     ];
 }

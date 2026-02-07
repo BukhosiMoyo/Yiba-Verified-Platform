@@ -19,6 +19,8 @@ import type {
     OversightMetrics,
     GeneratedContentLog,
     FlaggedContent,
+    RecoveryCandidate,
+    DeclineReason,
 } from './types';
 
 /**
@@ -286,6 +288,26 @@ export const awarenessApi = {
         }
         const res = await fetch(`/api/platform-admin/outreach/declines?${params}`);
         if (!res.ok) throw new Error('Failed to fetch declines');
+        return res.json();
+    },
+
+    async getDeclineReasons(): Promise<{ reason: DeclineReason; count: number }[]> {
+        if (USE_MOCKS) {
+            const { getMockDeclineReasons } = await import('./mockData');
+            return getMockDeclineReasons();
+        }
+        const res = await fetch('/api/platform-admin/outreach/declines/reasons');
+        if (!res.ok) throw new Error('Failed to fetch decline reasons');
+        return res.json();
+    },
+
+    async getRecoveryCandidates(): Promise<RecoveryCandidate[]> {
+        if (USE_MOCKS) {
+            const { getMockRecoveryCandidates } = await import('./mockData');
+            return getMockRecoveryCandidates();
+        }
+        const res = await fetch('/api/platform-admin/outreach/declines/recovery');
+        if (!res.ok) throw new Error('Failed to fetch recovery candidates');
         return res.json();
     },
 
