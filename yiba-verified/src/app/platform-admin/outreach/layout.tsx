@@ -101,7 +101,7 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
             {/* Modern pill-style navigation */}
             <div className="relative">
                 <div className="bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-sm rounded-xl border-0 shadow-md p-2">
-                    <nav className="flex gap-2 overflow-x-auto scrollbar-hide">
+                    <nav className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                         {navItems.map((item, index) => {
                             const Icon = item.icon;
                             return (
@@ -113,13 +113,14 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
                                         animationDelay: `${index * 50}ms`,
                                     }}
                                 >
-                                    {/* Gradient background on hover */}
+                                    {/* Gradient background on hover for the whole link */}
                                     <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
 
-                                    {/* Icon with gradient background */}
-                                    <div className={`relative p-1.5 rounded-md bg-gradient-to-br ${item.gradient} opacity-20 group-hover:opacity-100 transition-all duration-300 group-hover:shadow-lg`}>
-                                        <Icon className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <Icon className="h-4 w-4 absolute inset-1.5 text-foreground opacity-100 group-hover:opacity-0 transition-opacity" />
+                                    {/* Icon container with separated background opacity */}
+                                    <div className="relative flex items-center justify-center w-7 h-7 rounded-md group-hover:shadow-lg transition-all duration-300">
+                                        <div className={`absolute inset-0 rounded-md bg-gradient-to-br ${item.gradient} opacity-20 group-hover:opacity-100 transition-all duration-300`} />
+                                        <Icon className="relative z-10 h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                        <Icon className="absolute z-10 h-4 w-4 text-foreground opacity-100 group-hover:opacity-0 transition-opacity duration-300" />
                                     </div>
 
                                     {/* Label */}
@@ -127,7 +128,7 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
                                         {item.label}
                                     </span>
 
-                                    {/* Active indicator dot (you can make this dynamic based on current path) */}
+                                    {/* Active indicator dot */}
                                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </Link>
                             );

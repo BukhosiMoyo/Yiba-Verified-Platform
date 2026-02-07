@@ -10,7 +10,8 @@ import {
     BatchConfig,
     SuppressionEntry,
 } from "@/lib/outreach/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function DeliverabilityPage() {
@@ -67,6 +68,25 @@ export default function DeliverabilityPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Deliverability Controls</h2>
+                <Button onClick={async () => {
+                    try {
+                        toast.loading("Starting batch...");
+                        const res = await fetch('/api/platform-admin/outreach/deliverability/batch/start', { method: 'POST' });
+                        const data = await res.json();
+                        toast.dismiss();
+                        if (data.success) {
+                            toast.success(`Queued ${data.count} emails for delivery.`);
+                            loadData(); // Reload metrics
+                        } else {
+                            toast.info(data.message || "Failed to start batch");
+                        }
+                    } catch (e) {
+                        toast.dismiss();
+                        toast.error("Error starting batch");
+                    }
+                }}>
+                    <Play className="mr-2 h-4 w-4" /> Start Batch Now
+                </Button>
             </div>
 
             <HealthMetrics metrics={metrics} />

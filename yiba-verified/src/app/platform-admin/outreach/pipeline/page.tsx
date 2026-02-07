@@ -107,8 +107,12 @@ export default function PipelinePage() {
 
             {/* Upload Modal controlled by URL param */}
             <Dialog open={showUpload} onOpenChange={(open) => !open && closeUpload()}>
-                <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none shadow-none">
-                    <PipelineUploadWizard onSuccess={closeUpload} />
+                <DialogContent
+                    className="max-w-4xl p-0 bg-transparent border-none shadow-none"
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                >
+                    <PipelineUploadWizard onSuccess={closeUpload} onCancel={closeUpload} />
                 </DialogContent>
             </Dialog>
         </div>

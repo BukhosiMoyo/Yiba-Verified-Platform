@@ -4,20 +4,21 @@ import { useState } from "react";
 import Papa from "papaparse";
 import { validateParsedCsv } from "@/lib/client-csv-validator";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EngagementState } from "@/lib/outreach/types";
 
-export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) {
+export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () => void, onCancel?: () => void }) {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [validationResult, setValidationResult] = useState<any>(null);
+    const [importStats, setImportStats] = useState<{ success: number; failed: number } | null>(null);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -109,14 +110,8 @@ export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) 
             }
 
             toast.dismiss();
-
-            if (failCount > 0) {
-                toast.warning(`Imported ${successCount} leads. ${failCount} failed.`);
-            } else {
-                toast.success(`Successfully imported ${successCount} leads to pipeline!`);
-            }
-
-            if (onSuccess) onSuccess();
+            setImportStats({ success: successCount, failed: failCount });
+            setStep(3); // Go to success step
             router.refresh(); // Refresh server components if any
 
         } catch (error: any) {
@@ -128,15 +123,26 @@ export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) 
         }
     };
 
+    const handleClose = () => {
+        if (onSuccess) onSuccess();
+    }
+
     if (step === 1) {
         return (
-            <Card className="border-0 shadow-lg bg-background/60 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle>Upload Pipeline CSV</CardTitle>
-                    <CardDescription>
-                        Upload a CSV file containing institution and contact details.
-                        <br />Required columns: Email, Organization/Company (or domain inferred)
-                    </CardDescription>
+            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Upload Pipeline CSV</CardTitle>
+                        <CardDescription>
+                            Upload a CSV file containing institution and contact details.
+                            <br />Required columns: Email, Organization/Company (or domain inferred)
+                        </CardDescription>
+                    </div>
+                    {onCancel && (
+                        <Button variant="ghost" size="icon" onClick={onCancel}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div
@@ -164,27 +170,35 @@ export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) 
                             </div>
                         )}
                     </div>
-                    <div className="flex justify-end pt-4">
-                        <Button onClick={processFile} disabled={!file || loading} className="min-w-[120px]">
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? "Processing..." : "Next: Verify"}
-                        </Button>
-                    </div>
                 </CardContent>
+                <CardFooter className="flex justify-between border-t pt-6">
+                    <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+                    <Button onClick={processFile} disabled={!file || loading} className="min-w-[120px]">
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {loading ? "Processing..." : "Next: Verify"}
+                    </Button>
+                </CardFooter>
             </Card>
         );
     }
 
     if (step === 2 && validationResult) {
         return (
-            <Card className="border-0 shadow-lg bg-background/60 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle>Review Data</CardTitle>
-                    <CardDescription>
-                        Verify the parsed data before importing.
-                    </CardDescription>
+            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Review Data</CardTitle>
+                        <CardDescription>
+                            Verify the parsed data before importing.
+                        </CardDescription>
+                    </div>
+                    {onCancel && (
+                        <Button variant="ghost" size="icon" onClick={onCancel}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 overflow-y-auto">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-background/50 border rounded-xl text-center shadow-sm">
                             <div className="text-3xl font-bold text-foreground">{validationResult.stats.total_rows}</div>
@@ -204,50 +218,95 @@ export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) 
                         </div>
                     </div>
 
-                    <div className="max-h-[400px] overflow-auto border rounded-xl bg-background/50">
-                        <Table>
-                            <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur-sm">
-                                <TableRow>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Organization</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {validationResult.valid.slice(0, 100).map((row: any, i: number) => (
-                                    <TableRow key={`valid-${i}`}>
-                                        <TableCell className="font-medium">{row.email}</TableCell>
-                                        <TableCell>{row.organization}</TableCell>
-                                        <TableCell>{row.role || <span className="text-muted-foreground italic">Unknown</span>}</TableCell>
-                                        <TableCell>
-                                            <div className="inline-flex items-center text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">
-                                                <CheckCircle className="w-3 h-3 mr-1" /> Valid
-                                            </div>
-                                        </TableCell>
+                    <div className="border rounded-xl bg-background/50 overflow-hidden">
+                        <div className="max-h-[300px] overflow-auto">
+                            <Table>
+                                <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur-sm z-10">
+                                    <TableRow>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Organization</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
-                                ))}
-                                {validationResult.invalid.slice(0, 50).map((item: any, i: number) => (
-                                    <TableRow key={`invalid-${i}`} className="bg-red-50/50 dark:bg-red-900/10">
-                                        <TableCell className="text-muted-foreground">{item.row.email || 'Missing Email'}</TableCell>
-                                        <TableCell className="text-muted-foreground">{item.row.organization}</TableCell>
-                                        <TableCell colSpan={2} className="text-red-600 dark:text-red-400 text-sm">
-                                            <div className="flex items-center">
-                                                <AlertCircle className="w-4 h-4 mr-1" />
-                                                {item.reason}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {validationResult.valid.slice(0, 100).map((row: any, i: number) => (
+                                        <TableRow key={`valid-${i}`}>
+                                            <TableCell className="font-medium">{row.email}</TableCell>
+                                            <TableCell>{row.organization}</TableCell>
+                                            <TableCell>{row.role || <span className="text-muted-foreground italic">Unknown</span>}</TableCell>
+                                            <TableCell>
+                                                <div className="inline-flex items-center text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">
+                                                    <CheckCircle className="w-3 h-3 mr-1" /> Valid
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {validationResult.invalid.slice(0, 50).map((item: any, i: number) => (
+                                        <TableRow key={`invalid-${i}`} className="bg-red-50/50 dark:bg-red-900/10">
+                                            <TableCell className="text-muted-foreground">{item.row.email || 'Missing Email'}</TableCell>
+                                            <TableCell className="text-muted-foreground">{item.row.organization}</TableCell>
+                                            <TableCell colSpan={2} className="text-red-600 dark:text-red-400 text-sm">
+                                                <div className="flex items-center">
+                                                    <AlertCircle className="w-4 h-4 mr-1" />
+                                                    {item.reason}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex justify-between border-t pt-6">
+                    <Button variant="outline" onClick={() => setStep(1)} disabled={loading}>Back</Button>
+                    <Button onClick={importLeads} disabled={loading || validationResult.stats.valid_count === 0} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Import {validationResult.stats.valid_count} Leads
+                    </Button>
+                </CardFooter>
+            </Card>
+        );
+    }
+
+    if (step === 3 && importStats) {
+        return (
+            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-w-md mx-auto text-center p-6">
+                <CardContent className="pt-6 space-y-6">
+                    <div className="mx-auto bg-green-100 dark:bg-green-900/30 w-20 h-20 rounded-full flex items-center justify-center mb-4">
+                        <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
                     </div>
 
-                    <div className="flex justify-between pt-4">
-                        <Button variant="outline" onClick={() => setStep(1)} disabled={loading}>Back</Button>
-                        <Button onClick={importLeads} disabled={loading || validationResult.stats.valid_count === 0} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Import {validationResult.stats.valid_count} Leads
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold text-foreground">Import Complete!</h2>
+                        <p className="text-muted-foreground">
+                            Your data has been successfully processed and added to the pipeline.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl">
+                        <div>
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{importStats.success}</div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Successful</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{importStats.failed}</div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Failed</div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-2">
+                        <Button onClick={handleClose} className="w-full bg-primary text-primary-foreground shadow-md">
+                            Done
+                        </Button>
+                        <Button variant="ghost" onClick={() => {
+                            setStep(1);
+                            setFile(null);
+                            setValidationResult(null);
+                            setImportStats(null);
+                        }} className="w-full">
+                            Upload Another File
                         </Button>
                     </div>
                 </CardContent>

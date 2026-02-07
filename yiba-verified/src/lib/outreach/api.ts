@@ -33,30 +33,18 @@ const USE_MOCKS = process.env.NEXT_PUBLIC_FEATURE_AWARENESS_ENGINE_UI === 'true'
 export const awarenessApi = {
     // Metrics & Dashboard
     async getMetrics(period: '7d' | '30d' | '90d' = '30d'): Promise<OutreachMetrics> {
-        if (USE_MOCKS) {
-            const { getMockMetrics } = await import('./mockData');
-            return getMockMetrics();
-        }
         const res = await fetch(`/api/platform-admin/outreach/metrics?period=${period}`);
         if (!res.ok) throw new Error('Failed to fetch metrics');
         return res.json();
     },
 
     async getTrends(period: '7d' | '30d' | '90d' = '30d'): Promise<TrendDataPoint[]> {
-        if (USE_MOCKS) {
-            const { getMockTrends } = await import('./mockData');
-            return getMockTrends();
-        }
         const res = await fetch(`/api/platform-admin/outreach/trends?period=${period}`);
         if (!res.ok) throw new Error('Failed to fetch trends');
         return res.json();
     },
 
     async getAlerts(): Promise<Alert[]> {
-        if (USE_MOCKS) {
-            const { getMockAlerts } = await import('./mockData');
-            return getMockAlerts();
-        }
         const res = await fetch('/api/platform-admin/outreach/alerts');
         if (!res.ok) throw new Error('Failed to fetch alerts');
         return res.json();
@@ -64,10 +52,7 @@ export const awarenessApi = {
 
     // Institutions / Pipeline
     async getInstitutions(filters?: InstitutionFilters): Promise<InstitutionOutreachProfile[]> {
-        if (USE_MOCKS) {
-            const { getMockInstitutions } = await import('./mockData');
-            return getMockInstitutions(filters);
-        }
+        // Pipeline API is implemented
         const params = new URLSearchParams();
         if (filters) {
             Object.entries(filters).forEach(([key, value]) => {
@@ -80,6 +65,12 @@ export const awarenessApi = {
     },
 
     async getInstitution(id: string): Promise<InstitutionOutreachProfile> {
+        // This might fail if getInstitution not implemented? 
+        // I implemented getInstitutions (plural) in previous turn. 
+        // Did I implement singular? No.
+        // Wait, `institutions/route.ts` is plural. I need `/institutions/[institutionId]/route.ts`.
+        // I should LEAVE mock for singular unless I implement it.
+        // Let's check if I implemented singular.
         if (USE_MOCKS) {
             const { getMockInstitution } = await import('./mockData');
             return getMockInstitution(id);
@@ -90,17 +81,8 @@ export const awarenessApi = {
     },
 
     async getTimeline(institutionId: string): Promise<OutreachEvent[]> {
+        // Timeline not implemented yet
         if (USE_MOCKS) {
-            // Even in mock mode, if we have the Engine running, we might want to try it?
-            // The prompt says "UI reads from OutreachEvent store".
-            // So we should try the action. If the action returns empty (because no DB), we might fallback.
-            // But strict adherence request: "Timeline reads from OutreachEvent store".
-
-            // However, since we haven't migrated DB, the store returns [].
-            // To keep the UI lookin good for the user, we might want to merge mocks?
-            // "Mocks may remain ONLY as data seeds".
-
-            // Let's call the action.
             const { getInstitutionTimeline } = await import('@/app/platform-admin/outreach/actions');
             return getInstitutionTimeline(institutionId);
         }
@@ -110,11 +92,9 @@ export const awarenessApi = {
     },
 
     async updateStage(institutionId: string, stage: string): Promise<void> {
+        // updateStage not implemented API side yet
         if (USE_MOCKS) {
             const { transitionStage } = await import('@/app/platform-admin/outreach/actions');
-            // We need to map string stage to Event Type or State?
-            // The UI usually sends the TARGET stage.
-            // But our engine expects an EVENT (e.g. STAGE_CHANGED).
             await transitionStage(institutionId, 'STAGE_CHANGED' as any, { targetStage: stage });
             return;
         }
@@ -232,30 +212,18 @@ export const awarenessApi = {
 
     // Deliverability
     async getDeliverabilityMetrics(): Promise<DeliverabilityMetrics> {
-        if (USE_MOCKS) {
-            const { getMockDeliverabilityMetrics } = await import('./mockData');
-            return getMockDeliverabilityMetrics();
-        }
         const res = await fetch('/api/platform-admin/outreach/deliverability/metrics');
         if (!res.ok) throw new Error('Failed to fetch deliverability metrics');
         return res.json();
     },
 
     async getBatchConfig(): Promise<BatchConfig> {
-        if (USE_MOCKS) {
-            const { getMockBatchConfig } = await import('./mockData');
-            return getMockBatchConfig();
-        }
         const res = await fetch('/api/platform-admin/outreach/deliverability/config');
         if (!res.ok) throw new Error('Failed to fetch batch config');
         return res.json();
     },
 
     async updateBatchConfig(config: BatchConfig): Promise<void> {
-        if (USE_MOCKS) {
-            console.log('[MOCK] Update batch config:', config);
-            return;
-        }
         const res = await fetch('/api/platform-admin/outreach/deliverability/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -265,10 +233,6 @@ export const awarenessApi = {
     },
 
     async getSuppressionList(): Promise<SuppressionEntry[]> {
-        if (USE_MOCKS) {
-            const { getMockSuppressionList } = await import('./mockData');
-            return getMockSuppressionList();
-        }
         const res = await fetch('/api/platform-admin/outreach/deliverability/suppression-list');
         if (!res.ok) throw new Error('Failed to fetch suppression list');
         return res.json();
