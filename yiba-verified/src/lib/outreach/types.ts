@@ -303,3 +303,12 @@ export interface FlaggedContent {
     content_snippet: string;
     confidence_score: number;
 }
+
+export interface GeneratedContentLog {
+    log_id: string;
+    target_institution: string;
+    generated_at: Date;
+    content_snippet: string;
+    prompt_template: string;
+    sentiment_score: number;
+}
