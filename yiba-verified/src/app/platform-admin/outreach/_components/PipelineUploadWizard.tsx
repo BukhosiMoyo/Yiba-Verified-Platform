@@ -72,7 +72,7 @@ export function PipelineUploadWizard({ onSuccess }: { onSuccess?: () => void }) 
                 programmes: v.programmes,
                 accreditation_start_date: v.accreditation_start_date,
                 accreditation_end_date: v.accreditation_end_date,
-                initial_stage: EngagementState.AWARENESS // Default starting stage
+                initial_stage: EngagementState.UNCONTACTED // Default starting stage
             }));
 
             const BATCH_SIZE = 100; // Smaller batch size for safety
