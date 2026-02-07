@@ -64,7 +64,7 @@ export function QuestionEditor({ question, onChange, onDelete }: QuestionEditorP
                             <Label>Type</Label>
                             <Select
                                 value={question.type}
-                                onValueChange={(val: QuestionType) => onChange({ ...question, type: val })}
+                                onValueChange={(val) => onChange({ ...question, type: val as QuestionType })}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
