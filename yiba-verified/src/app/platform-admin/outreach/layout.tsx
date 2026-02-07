@@ -11,7 +11,8 @@ import {
     Mail,
     TrendingDown,
     Bot,
-    Sparkles
+    Sparkles,
+    TestTube
 } from 'lucide-react';
 
 interface OutreachLayoutProps {
@@ -73,6 +74,12 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
             label: 'AI Oversight',
             icon: Bot,
             gradient: 'from-indigo-500 to-purple-500'
+        },
+        {
+            href: '/platform-admin/outreach/sandbox',
+            label: 'Sandbox',
+            icon: TestTube,
+            gradient: 'from-pink-500 to-rose-500'
         },
     ];
 

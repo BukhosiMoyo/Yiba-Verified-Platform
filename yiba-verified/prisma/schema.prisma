@@ -56,6 +56,8 @@ model Institution {
   users                           User[]
   userInstitutions                UserInstitution[]
 
+  questionnaireResponses QuestionnaireResponse[]
+
   @@index([registration_number])
   @@index([province])
   @@index([parent_institution_id])
@@ -2556,3 +2558,39 @@ model OutreachSandboxMessage {
   
   session           OutreachSandboxSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
 }
+
+/// Outreach Questionnaire Template
+model Questionnaire {
+  questionnaire_id String    @id @default(uuid())
+  slug             String    @unique
+  title            String
+  description      String
+  steps            Json      // Array of QuestionnaireStep
+  status           String    @default("DRAFT") // TemplateStatus: DRAFT, PUBLISHED
+  created_at       DateTime  @default(now())
+  published_at     DateTime?
+  responses        QuestionnaireResponse[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+/// Questionnaire Response from an Institution
+model QuestionnaireResponse {
+  response_id      String        @id @default(uuid())
+  questionnaire_id String
+  institution_id   String
+  tracking_token   String        @unique
+  answers          Json          // Record<string, any>
+  completed        Boolean       @default(false)
+  submitted_at     DateTime?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  questionnaire    Questionnaire @relation(fields: [questionnaire_id], references: [questionnaire_id])
+  institution      Institution   @relation(fields: [institution_id], references: [institution_id])
+
+  @@index([questionnaire_id])
+  @@index([institution_id])
+}
+
