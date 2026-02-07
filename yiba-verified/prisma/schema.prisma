@@ -2491,3 +2491,68 @@ enum JobRequestStatus {
   VIEWED
   ARCHIVED
 }
+
+/// ==========================================
+/// OUTREACH SANDBOX MODELS
+/// Isolated environment for testing awareness engine flow.
+/// ==========================================
+
+model OutreachSandboxSession {
+  session_id        String   @id @default(uuid())
+  name              String
+  created_by_user_id String
+  
+  // Simulated Institution State
+  institution_name  String
+  industry          String?
+  province          String?
+  current_stage     String   @default("UNCONTACTED") // store enum as string for flexibility or map to Enums
+  engagement_score  Int      @default(0)
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  last_activity_at  DateTime @default(now())
+  
+  // Configuration
+  ai_enabled        Boolean  @default(true)
+  require_approval  Boolean  @default(false)
+
+  events            OutreachSandboxEvent[]
+  messages          OutreachSandboxMessage[]
+}
+
+model OutreachSandboxEvent {
+  event_id          String   @id @default(uuid())
+  session_id        String
+  event_type        String   // Mapped to OutreachEventType
+  timestamp         DateTime @default(now())
+  metadata          Json?    // Stores score delta, specialized info
+  description       String?
+  
+  session           OutreachSandboxSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+}
+
+model OutreachSandboxMessage {
+  message_id        String   @id @default(uuid())
+  session_id        String
+  
+  // Message Content
+  subject           String
+  preview_text      String?
+  body_html         String
+  from_name         String?
+  
+  // Simulation State
+  status            String   // DRAFT, SENT, OPENED, CLICKED
+  sent_at           DateTime?
+  opened_at         DateTime?
+  clicked_at        DateTime?
+  
+  // Link to Template/AI
+  template_id       String?
+  ai_draft_id       String?
+  
+  created_at        DateTime @default(now())
+  
+  session           OutreachSandboxSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+}
