@@ -62,7 +62,7 @@ export function TrendChart({ data }: TrendChartProps) {
                                                         Date
                                                     </span>
                                                     <span className="font-bold text-muted-foreground">
-                                                        {label}
+                                                        {label ? label : 'Unknown'}
                                                     </span>
                                                 </div>
                                                 {payload.map((item) => (
