@@ -23,7 +23,7 @@ export default function ContentStudioPage() {
     const [templates, setTemplates] = useState<EmailTemplateStage[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedStage, setSelectedStage] = useState<EngagementStage>(
-        EngagementStage.UNAWARE
+        EngagementStage.UNCONTACTED
     );
     const [currentTemplate, setCurrentTemplate] = useState<EmailTemplateStage | null>(
         null
