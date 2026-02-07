@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PipelineBoard } from "../_components/PipelineBoard";
 import { PipelineFilters as Filters } from "../_components/PipelineFilters";
+import { PipelineUploadWizard } from "../_components/PipelineUploadWizard";
 import { awarenessApi } from "@/lib/outreach/api";
 import { InstitutionFilters, InstitutionOutreachProfile } from "@/lib/outreach/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, LayoutGrid, List, Upload, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, List } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 export default function PipelinePage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     const [institutions, setInstitutions] = useState<InstitutionOutreachProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<"board" | "list">("board");
+
+    // Check for upload action in URL
+    const showUpload = searchParams.get("action") === "upload";
 
     const loadInstitutions = async (filters: InstitutionFilters = {}) => {
         setLoading(true);
@@ -32,6 +41,19 @@ export default function PipelinePage() {
 
     const handleFilterChange = (filters: InstitutionFilters) => {
         loadInstitutions(filters);
+    };
+
+    const closeUpload = () => {
+        const params = new URLSearchParams(searchParams);
+        params.delete("action");
+        router.replace(`${pathname}?${params.toString()}`);
+        loadInstitutions(); // Reload data after potential upload
+    };
+
+    const openUpload = () => {
+        const params = new URLSearchParams(searchParams);
+        params.set("action", "upload");
+        router.push(`${pathname}?${params.toString()}`);
     };
 
     return (
@@ -60,7 +82,13 @@ export default function PipelinePage() {
                         </Button>
                     </div>
                 </div>
-                <Filters onFilterChange={handleFilterChange} />
+                <div className="flex items-center space-x-2">
+                    <Filters onFilterChange={handleFilterChange} />
+                    <Button onClick={openUpload} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:shadow-lg transition-all">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import CSV
+                    </Button>
+                </div>
             </div>
 
             {loading ? (
@@ -76,6 +104,13 @@ export default function PipelinePage() {
                     List view coming soon
                 </div>
             )}
+
+            {/* Upload Modal controlled by URL param */}
+            <Dialog open={showUpload} onOpenChange={(open) => !open && closeUpload()}>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none shadow-none">
+                    <PipelineUploadWizard onSuccess={closeUpload} />
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
