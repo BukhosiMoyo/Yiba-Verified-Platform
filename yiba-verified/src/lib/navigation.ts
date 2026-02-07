@@ -24,12 +24,14 @@ export function getNavigationItemsForRole(
 export function getAdvisorNavItems(): NavItem[] {
   return [
     { label: "Service requests", href: "/advisor", iconKey: "inbox", capability: "SERVICE_REQUESTS_VIEW" },
-    { label: "Account", href: "/account/profile", iconKey: "user", children: [
-      { label: "Profile", href: "/account/profile" },
-      { label: "Security", href: "/account/security" },
-      { label: "Logs", href: "/account/logs" },
-      { label: "Notifications", href: "/account/notifications" },
-    ]},
+    {
+      label: "Account", href: "/account/profile", iconKey: "user", children: [
+        { label: "Profile", href: "/account/profile" },
+        { label: "Security", href: "/account/security" },
+        { label: "Logs", href: "/account/logs" },
+        { label: "Notifications", href: "/account/notifications" },
+      ]
+    },
   ];
 }
 
@@ -37,6 +39,20 @@ export function getAdvisorNavItems(): NavItem[] {
 export function getPlatformAdminNavItems(): NavItem[] {
   return [
     { label: "Dashboard", href: "/platform-admin", iconKey: "layout-dashboard" },
+    {
+      label: "Outreach",
+      href: "/platform-admin/outreach",
+      iconKey: "megaphone",
+      childParam: "status",
+      children: [
+        { label: "Overview", href: "/platform-admin/outreach" },
+        { label: "Pipeline", href: "/platform-admin/outreach/pipeline" },
+        { label: "Content Studio", href: "/platform-admin/outreach/content" },
+        { label: "AI Oversight", href: "/platform-admin/outreach/ai-oversight" },
+        { label: "Declines", href: "/platform-admin/outreach/declines" },
+        { label: "Sandbox", href: "/platform-admin/outreach/sandbox" },
+      ],
+    },
     { label: "Service requests", href: "/platform-admin/service-requests", iconKey: "inbox", capability: "SERVICE_REQUESTS_VIEW" },
     { label: "Institutions", href: "/platform-admin/institutions", iconKey: "building-2" },
     { label: "Learners", href: "/platform-admin/learners", iconKey: "users" },
@@ -229,7 +245,7 @@ export function getQctoNavItems(
   // QCTO_SUPER_ADMIN and PLATFORM_ADMIN see all provinces
   // Other QCTO roles see only their assigned provinces
   let provincesToShow: readonly string[] = PROVINCES;
-  
+
   if (role && role !== "QCTO_SUPER_ADMIN" && role !== "PLATFORM_ADMIN") {
     // For province-filtered QCTO roles, only show assigned provinces
     if (assignedProvinces && assignedProvinces.length > 0) {
