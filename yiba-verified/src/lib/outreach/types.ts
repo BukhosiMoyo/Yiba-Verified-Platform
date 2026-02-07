@@ -312,3 +312,18 @@ export interface GeneratedContentLog {
     prompt_template: string;
     sentiment_score: number;
 }
+
+export interface OversightMetrics {
+    total_generated_today: number;
+    success_rate: number;
+    intervention_rate: number;
+    avg_generation_time_ms: number;
+}
+
+export interface RecoveryCandidate {
+    institution_id: string;
+    institution_name: string;
+    reason: string;
+    declined_at: Date;
+    suggested_strategy: string;
+}
