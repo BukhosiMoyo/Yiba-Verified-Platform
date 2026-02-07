@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Phone, Monitor } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,11 +10,13 @@ interface EmailPreviewProps {
 }
 
 export function EmailPreview({ subject, previewText, bodyHtml }: EmailPreviewProps) {
+    const [view, setView] = useState("desktop");
+
     return (
         <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border">
             <div className="bg-background border-b p-2 flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground ml-2">Preview</span>
-                <Tabs defaultValue="desktop" className="w-[200px]">
+                <Tabs value={view} onValueChange={setView} className="w-[200px]">
                     <TabsList className="grid w-full grid-cols-2 h-8">
                         <TabsTrigger value="desktop" className="text-xs">
                             <Monitor className="h-3 w-3 mr-1" /> Desktop
