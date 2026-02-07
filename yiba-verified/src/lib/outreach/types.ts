@@ -296,3 +296,10 @@ export interface DeclineFilters {
     date_from?: Date;
     date_to?: Date;
 }
+
+export interface FlaggedContent {
+    flag_id: string;
+    violation_type: string;
+    content_snippet: string;
+    confidence_score: number;
+}
