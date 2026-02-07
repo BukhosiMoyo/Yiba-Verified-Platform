@@ -16,6 +16,9 @@ import type {
     AIDraft,
     AIPolicy,
     AIAuditLog,
+    OversightMetrics,
+    GeneratedContentLog,
+    FlaggedContent,
 } from './types';
 
 /**
@@ -352,6 +355,36 @@ export const awarenessApi = {
         }
         const res = await fetch(`/api/platform-admin/outreach/ai/audit-log?limit=${limit}`);
         if (!res.ok) throw new Error('Failed to fetch audit log');
+        return res.json();
+    },
+
+    async getOversightMetrics(): Promise<OversightMetrics> {
+        if (USE_MOCKS) {
+            const { getMockOversightMetrics } = await import('./mockData');
+            return getMockOversightMetrics();
+        }
+        const res = await fetch('/api/platform-admin/outreach/ai/metrics');
+        if (!res.ok) throw new Error('Failed to fetch oversight metrics');
+        return res.json();
+    },
+
+    async getGenerationLogs(): Promise<GeneratedContentLog[]> {
+        if (USE_MOCKS) {
+            const { getMockGenerationLogs } = await import('./mockData');
+            return getMockGenerationLogs();
+        }
+        const res = await fetch('/api/platform-admin/outreach/ai/logs');
+        if (!res.ok) throw new Error('Failed to fetch generation logs');
+        return res.json();
+    },
+
+    async getFlaggedContent(): Promise<FlaggedContent[]> {
+        if (USE_MOCKS) {
+            const { getMockFlaggedContent } = await import('./mockData');
+            return getMockFlaggedContent();
+        }
+        const res = await fetch('/api/platform-admin/outreach/ai/flagged');
+        if (!res.ok) throw new Error('Failed to fetch flagged content');
         return res.json();
     },
 };

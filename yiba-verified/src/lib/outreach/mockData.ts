@@ -418,3 +418,44 @@ export function getMockAIAuditLog(limit: number): AIAuditLog[] {
     }
     return logs;
 }
+
+export function getMockOversightMetrics(): OversightMetrics {
+    return {
+        total_generated_today: 45,
+        success_rate: 82.5,
+        intervention_rate: 17.5,
+        avg_generation_time_ms: 1250,
+    };
+}
+
+export function getMockGenerationLogs(): GeneratedContentLog[] {
+    return [
+        {
+            log_id: 'log_1',
+            target_institution: 'Tech Skills Academy',
+            generated_at: new Date(Date.now() - 3600000 * 2),
+            content_snippet: 'Subject: Your TVET Compliance...\nDear Sarah,\n\nWe noticed that...',
+            prompt_template: 'initial_outreach_v1',
+            sentiment_score: 0.85,
+        },
+        {
+            log_id: 'log_2',
+            target_institution: 'Future Leaders',
+            generated_at: new Date(Date.now() - 3600000 * 5),
+            content_snippet: 'Subject: Simplify QCTO Reporting\nHi John,\n\nAre you tired of...',
+            prompt_template: 'follow_up_v2',
+            sentiment_score: 0.62,
+        },
+    ];
+}
+
+export function getMockFlaggedContent(): FlaggedContent[] {
+    return [
+        {
+            flag_id: 'flag_1',
+            violation_type: 'Tone Policy',
+            content_snippet: '...we guarantee immediate results or your money back...',
+            confidence_score: 0.92,
+        },
+    ];
+}
