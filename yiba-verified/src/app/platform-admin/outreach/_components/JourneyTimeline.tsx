@@ -9,7 +9,7 @@ import {
     Bot,
     ArrowRight,
     XCircle,
-    checkCheck,
+    CheckCheck,
     Ban,
     AlertCircle,
 } from "lucide-react";
@@ -37,7 +37,7 @@ export function JourneyTimeline({ events }: JourneyTimelineProps) {
             case OutreachEventType.DECLINED:
                 return XCircle;
             case OutreachEventType.CONVERTED:
-                return checkCheck;
+                return CheckCheck;
             case OutreachEventType.UNSUBSCRIBED:
                 return Ban;
             case OutreachEventType.BOUNCED:

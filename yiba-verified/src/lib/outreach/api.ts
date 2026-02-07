@@ -259,13 +259,13 @@ export const awarenessApi = {
         if (!res.ok) throw new Error('Failed to update config');
     },
 
-    async getSuppressionList(): Promise<Suppression Entry[]> {
-        if(USE_MOCKS) {
+    async getSuppressionList(): Promise<SuppressionEntry[]> {
+        if (USE_MOCKS) {
             const { getMockSuppressionList } = await import('./mockData');
             return getMockSuppressionList();
         }
-    const res = await fetch('/api/platform-admin/outreach/deliverability/suppression-list');
-        if(!res.ok) throw new Error('Failed to fetch suppression list');
+        const res = await fetch('/api/platform-admin/outreach/deliverability/suppression-list');
+        if (!res.ok) throw new Error('Failed to fetch suppression list');
         return res.json();
     },
 

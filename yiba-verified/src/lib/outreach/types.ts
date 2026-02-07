@@ -5,6 +5,7 @@ import { EngagementState } from "@prisma/client";
  * Or we can just use the Prisma one directly.
  */
 export { EngagementState };
+export { EngagementState as EngagementStage };
 
 /**
  * Events that influence the engagement score.

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     TrendingUp,
     Mail,
-    Check Delivered,
+    CheckCircle,
     Eye,
     MousePointer,
     MessageSquare,
