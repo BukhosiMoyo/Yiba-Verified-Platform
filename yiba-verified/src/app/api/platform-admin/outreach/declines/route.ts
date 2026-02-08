@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { DeclineRecord, EngagementState, Role } from "@/lib/outreach/types";
+import { DeclineRecord, EngagementState } from "@/lib/outreach/types";
 
 // GET /api/platform-admin/outreach/declines
 export async function GET(req: Request) {
