@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { EngagementStage, InstitutionOutreachProfile } from "@/lib/outreach/types";
 import { StageColumn } from "./StageColumn";
 
@@ -8,6 +9,8 @@ interface PipelineBoardProps {
 }
 
 export function PipelineBoard({ institutions }: PipelineBoardProps) {
+    const [hoveredStage, setHoveredStage] = useState<EngagementStage | null>(null);
+
     const stages = [
         EngagementStage.UNCONTACTED,
         EngagementStage.CONTACTED,
@@ -23,13 +26,16 @@ export function PipelineBoard({ institutions }: PipelineBoardProps) {
     };
 
     return (
-        <div className="flex h-full gap-4 overflow-x-auto pb-4">
+        <div className="flex h-full gap-4 overflow-x-auto pb-4 px-1 snap-x">
             {stages.map((stage) => (
-                <StageColumn
-                    key={stage}
-                    stage={stage}
-                    institutions={getInstitutionsByStage(stage)}
-                />
+                <div key={stage} className="snap-start flex-shrink-0 h-full">
+                    <StageColumn
+                        stage={stage}
+                        institutions={getInstitutionsByStage(stage)}
+                        isHovered={hoveredStage === stage}
+                        onHover={setHoveredStage}
+                    />
+                </div>
             ))}
         </div>
     );
