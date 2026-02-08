@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getStorageService } from "@/lib/storage";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 // Helper to validate email (loose regex)
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -340,7 +341,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                             role: "INSTITUTION_ADMIN",
                             status: "QUEUED",
                             created_by_user_id: session.user.userId,
-                            token: uuidv4(),
+                            token_hash: crypto.createHash('sha256').update(uuidv4()).digest('hex'),
                             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                         }
                     });
