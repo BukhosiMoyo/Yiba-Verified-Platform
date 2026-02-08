@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Questionnaire, QuestionType } from "@/lib/outreach/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup, RadioItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -117,7 +117,7 @@ export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererPr
                                 >
                                     {q.options.map((opt) => (
                                         <div key={opt} className="flex items-center space-x-3 p-3 rounded-md border hover:bg-muted/50 transition-colors cursor-pointer">
-                                            <RadioGroupItem value={opt} id={`${q.question_id}-${opt}`} />
+                                            <RadioItem value={opt} id={`${q.question_id}-${opt}`} />
                                             <Label htmlFor={`${q.question_id}-${opt}`} className="flex-1 cursor-pointer font-normal">
                                                 {opt}
                                             </Label>
@@ -160,7 +160,7 @@ export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererPr
                                 >
                                     {q.options.map((opt) => (
                                         <div key={opt} className="flex items-center space-x-3 p-3 rounded-md border hover:bg-muted/50 transition-colors cursor-pointer">
-                                            <RadioGroupItem value={opt} id={`${q.question_id}-${opt}`} />
+                                            <RadioItem value={opt} id={`${q.question_id}-${opt}`} />
                                             <Label htmlFor={`${q.question_id}-${opt}`} className="flex-1 cursor-pointer font-normal">
                                                 {opt}
                                             </Label>

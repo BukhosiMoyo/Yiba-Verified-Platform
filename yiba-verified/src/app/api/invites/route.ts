@@ -271,6 +271,21 @@ export async function POST(request: NextRequest) {
       let aiContent: any = null;
       if (role === "INSTITUTION_ADMIN") {
         try {
+          // Fetch Strategy Directives for UNCONTACTED stage
+          let strategyDirectives = "";
+          try {
+            const stageTemplate = await prisma.engagementStageTemplate.findUnique({
+              where: { stage: EngagementState.UNCONTACTED }
+            });
+            if (stageTemplate?.ai_instructions) {
+              // handle if ai_instructions is JSON or string
+              const instructions = stageTemplate.ai_instructions as any;
+              strategyDirectives = typeof instructions === 'string' ? instructions : JSON.stringify(instructions);
+            }
+          } catch (e) {
+            console.warn("Could not fetch strategy directives:", e);
+          }
+
           // We await here, adding ~1-3s latency. Acceptable for admin action.
           // In production, move to background worker.
           aiContent = await generateEmailCopy({
@@ -278,7 +293,12 @@ export async function POST(request: NextRequest) {
             recipientName: email.split("@")[0], // Fallback if no name provided
             role: "Institution Administrator",
             senderName: "Yiba Verified Platform",
-            engagementState: "UNCONTACTED"
+            engagementState: "UNCONTACTED",
+            // Deep Context Injection
+            institutionProvince: institution?.province || undefined,
+            institutionType: institution?.institution_type || undefined,
+            strategyDirectives: strategyDirectives,
+            interactionHistory: "First official invitation from Yiba Verified Platform."
           });
         } catch (aiErr) {
           console.warn("AI Email Generation Failed, falling back to template:", aiErr);

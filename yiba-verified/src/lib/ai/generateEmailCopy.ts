@@ -16,6 +16,11 @@ export async function generateEmailCopy(context: {
     role: string;
     senderName: string; // usually "Yiba Verified Platform"
     engagementState: string; // e.g. "UNCONTACTED"
+    // Deep Context Fields
+    institutionProvince?: string; // e.g. "Gauteng"
+    institutionType?: string; // e.g. "Private College"
+    interactionHistory?: string; // Summary of past interactions
+    strategyDirectives?: string; // Dynamic instructions from Content Studio
     specialContext?: string; // e.g. "They operate in Limpopo"
 }): Promise<InstitutionAdminInvite | null> {
     if (!OPENAI_API_KEY) {
@@ -27,8 +32,11 @@ export async function generateEmailCopy(context: {
 ${AI_POLICY.CORE_DIRECTIVES.join("\n")}
 
 You are generating an invitation email for an Institution Admin to join Yiba Verified.
-Current Engagement State: ${context.engagementState}
-Tone Guideline: ${AI_POLICY.TONE_GUIDELINES[context.engagementState as keyof typeof AI_POLICY.TONE_GUIDELINES] || "Professional and helpful."}
+
+CONTEXT:
+- Engagement State: ${context.engagementState}
+- Tone Guideline: ${AI_POLICY.TONE_GUIDELINES[context.engagementState as keyof typeof AI_POLICY.TONE_GUIDELINES] || "Professional and helpful."}
+- Strategy Directives: ${context.strategyDirectives || "None provided."}
 
 Constraints:
 - Max Tokens: ${AI_POLICY.SAFETY_BOUNDARIES.MAX_TOKENS}
@@ -38,13 +46,17 @@ Constraints:
 
     const userPrompt = `
 Recipient: ${context.recipientName}
-Institution: ${context.institutionName}
 Role: ${context.role}
+Institution: ${context.institutionName}
+Location: ${context.institutionProvince || "South Africa"}
+Type: ${context.institutionType || "Training Provider"}
 Sender: ${context.senderName}
+
+Interaction History: ${context.interactionHistory || "First contact."}
 Special Context: ${context.specialContext || "None"}
 
 Write a short, trust-building email inviting them to claim their institution's profile.
-Focus on the benefits of verification and student trust.
+Focus on value relevant to a ${context.institutionType || "training provider"} in ${context.institutionProvince || "South Africa"}.
 Do not sell. Just invite.
 `;
 
