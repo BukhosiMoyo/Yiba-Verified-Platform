@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+
 import { useState } from "react";
 import { Questionnaire, QuestionType } from "@/lib/outreach/types";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,8 @@ interface QuestionnaireRendererProps {
 }
 
 export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererProps) {
+    const searchParams = useSearchParams();
+    const token = searchParams.get("token");
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -52,7 +56,10 @@ export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererPr
             const res = await fetch(`/api/questionnaires/${questionnaire.slug}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ answers })
+                body: JSON.stringify({
+                    answers,
+                    token
+                })
             });
 
             if (!res.ok) throw new Error("Failed to submit");

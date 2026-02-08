@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
         token_hash: tokenHash,
         deleted_at: null,
       },
+      include: {
+        institution: true,
+      },
     });
 
     if (!invite) {
@@ -66,17 +69,80 @@ export async function POST(request: NextRequest) {
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, "This invite has expired", 400);
     }
 
+    // Trigger AI Response
+    let aiHistoryEntry = null;
+    let aiResponse = null;
+
+    // Only trigger if we have context
+    if (invite.institution) {
+      try {
+        const { generateResponse, ResponseContext } = await import("@/lib/ai/responseEngine");
+        const { AIResponseTrigger } = await import("@/lib/outreach/types");
+
+        const trigger = (reason || reasonOther)
+          ? AIResponseTrigger.DECLINE_WITH_REASON
+          : AIResponseTrigger.DECLINE_NO_REASON;
+
+        // Use simplified type since we don't import the full Profile type here easily
+        const context = {
+          institutionName: invite.institution.trading_name || invite.institution.legal_name || "Valued Institution",
+          recipientName: "Colleague",
+          role: invite.role,
+          currentStage: invite.engagement_state,
+          trigger: trigger,
+          payload: { reason, reasonOther },
+          interactionHistory: JSON.stringify(invite.engagement_history || [])
+        };
+
+        aiResponse = await generateResponse(context);
+
+        if (aiResponse) {
+          aiHistoryEntry = {
+            timestamp: new Date().toISOString(),
+            event: "AI_RESPONSE_GENERATED",
+            scoreDelta: 0,
+            metadata: {
+              trigger_type: trigger,
+              stage_at_time: invite.engagement_state,
+              strategy_used: aiResponse.strategy_used,
+              generated_content: {
+                subject: aiResponse.subject,
+                preview: aiResponse.preview_text
+              }
+            }
+          };
+        }
+      } catch (e) {
+        console.error("AI Generation Error:", e);
+      }
+    }
+
+    const currentHistory = (invite.engagement_history as any[]) || [];
+    if (aiHistoryEntry) {
+      currentHistory.push(aiHistoryEntry);
+    }
+
+    // Add Decline Event to history too
+    currentHistory.push({
+      timestamp: new Date().toISOString(),
+      event: "INVITE_DECLINED",
+      scoreDelta: -50,
+      metadata: { reason, reasonOther }
+    });
+
     await prisma.invite.update({
       where: { invite_id: invite.invite_id },
       data: {
-        status: "DECLINED",
+        status: "DECLINED", // Assuming InviteStatus has DECLINED or string
+        engagement_state: "DECLINED", // Update engagement state
+        engagement_history: currentHistory,
         declined_at: new Date(),
         decline_reason: reason ?? null,
         decline_reason_other: reasonOther ?? null,
       },
     });
 
-    return ok({ success: true, message: "Invite declined" });
+    return ok({ success: true, message: "Invite declined", ai_response: !!aiResponse });
   } catch (error) {
     return fail(error);
   }

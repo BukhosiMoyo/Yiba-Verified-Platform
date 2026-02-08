@@ -304,6 +304,37 @@ export interface FlaggedContent {
     confidence_score: number;
 }
 
+// ==========================================
+// AI RESPONSE ENGINE TYPES
+// ==========================================
+
+export enum AIResponseTrigger {
+    LINK_CLICK = 'LINK_CLICK',
+    QUESTIONNAIRE_SUBMIT = 'QUESTIONNAIRE_SUBMIT',
+    DECLINE_WITH_REASON = 'DECLINE_WITH_REASON',
+    DECLINE_NO_REASON = 'DECLINE_NO_REASON',
+    NO_RESPONSE = 'NO_RESPONSE',
+    DIRECT_REPLY_EMAIL = 'DIRECT_REPLY_EMAIL',
+}
+
+export interface AIResponseStrategy {
+    trigger: AIResponseTrigger;
+    stage: EngagementState;
+    goal: string; // High-level directive for system prompt
+    rules: string[]; // Specific constraints
+    allowed_ctas: string[];
+}
+
+export interface AIInteractionMetadata {
+    trigger_type: AIResponseTrigger;
+    stage_at_time: EngagementState;
+    strategy_used: string; // Description or ID
+    tone_variant: string;
+    confidence_score: number;
+    prompt_used?: string;
+    generated_content?: string;
+}
+
 export interface GeneratedContentLog {
     log_id: string;
     target_institution: string;
