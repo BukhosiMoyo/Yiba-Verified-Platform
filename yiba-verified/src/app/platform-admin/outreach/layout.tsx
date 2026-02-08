@@ -23,7 +23,7 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
     }
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-140px)]">
+        <div className="flex flex-col min-h-[calc(100vh-140px)] pb-12">
             <div className="space-y-6 max-w-[1600px] mx-auto w-full flex-1">
                 {/* Header: Refined, subtle, context-focused */}
                 <div className="flex flex-col gap-6">
@@ -53,9 +53,9 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
                 </main>
             </div>
 
-            {/* Footer Status Bar: Full width, slimmer */}
-            <footer className="border-t border-border/20 py-2.5 px-6 mt-auto bg-background/30 backdrop-blur-sm flex items-center justify-between text-[10px] text-muted-foreground/60">
-                <div className="flex items-center gap-4">
+            {/* Footer Status Bar: Fixed, Full width, White Background, Behind Sidebar */}
+            <footer className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/20 py-2.5 px-6 bg-background flex items-center justify-between text-[10px] text-muted-foreground/60 transition-[padding] duration-300">
+                <div className="flex items-center gap-4 pl-[72px] lg:pl-[280px] transition-[padding] duration-300">
                     <div className="flex items-center gap-1.5">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
                         <span>System Online</span>

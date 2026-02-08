@@ -22,42 +22,50 @@ export function OutreachNav() {
             href: '/platform-admin/outreach',
             label: 'Command Center',
             icon: LayoutDashboard,
+            color: 'text-blue-500',
             exact: true
         },
         {
             href: '/platform-admin/outreach/pipeline',
             label: 'Pipeline',
-            icon: Workflow
+            icon: Workflow,
+            color: 'text-purple-500'
         },
         {
             href: '/platform-admin/outreach/content',
             label: 'Content',
-            icon: FileEdit
+            icon: FileEdit,
+            color: 'text-pink-500'
         },
         {
             href: '/platform-admin/outreach/questionnaires',
             label: 'Questionnaires',
-            icon: ClipboardList
+            icon: ClipboardList,
+            color: 'text-orange-500'
         },
         {
             href: '/platform-admin/outreach/deliverability',
             label: 'Deliverability',
-            icon: Mail
+            icon: Mail,
+            color: 'text-green-500'
         },
         {
             href: '/platform-admin/outreach/declines',
             label: 'Declines',
-            icon: TrendingDown
+            icon: TrendingDown,
+            color: 'text-red-500'
         },
         {
             href: '/platform-admin/outreach/ai-oversight',
             label: 'AI Oversight',
-            icon: Bot
+            icon: Bot,
+            color: 'text-cyan-500'
         },
         {
             href: '/platform-admin/outreach/sandbox',
             label: 'Sandbox',
-            icon: TestTube
+            icon: TestTube,
+            color: 'text-yellow-500'
         },
     ];
 
@@ -83,7 +91,7 @@ export function OutreachNav() {
                         >
                             <Icon className={cn(
                                 "h-4 w-4 transition-colors",
-                                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                                isActive ? item.color : "text-muted-foreground group-hover:text-foreground"
                             )} />
                             <span>{item.label}</span>
 

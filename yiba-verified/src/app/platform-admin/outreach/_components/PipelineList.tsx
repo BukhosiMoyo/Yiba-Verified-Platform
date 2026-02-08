@@ -31,12 +31,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { PROVINCES } from "@/lib/provinces";
 
 interface PipelineListProps {
     institutions: InstitutionOutreachProfile[];
 }
+
+type SortField = 'institution_name' | 'province' | 'engagement_stage' | 'last_activity' | 'engagement_score';
+type SortDirection = 'asc' | 'desc';
 
 export function PipelineList({ institutions }: PipelineListProps) {
     const router = useRouter();
@@ -53,9 +56,22 @@ export function PipelineList({ institutions }: PipelineListProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
-    // Filtered and Paginated data
+    // Sorting state
+    const [sortField, setSortField] = useState<SortField>('last_activity');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    // Filtered, Sorted, and Paginated data
     const filteredInstitutions = useMemo(() => {
-        return institutions.filter((inst) => {
+        let result = institutions.filter((inst) => {
             const matchesSearch = inst.institution_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 inst.domain.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesProvince = provinceFilter === "all" || inst.province === provinceFilter;
@@ -80,7 +96,25 @@ export function PipelineList({ institutions }: PipelineListProps) {
 
             return matchesSearch && matchesProvince && matchesStage && matchesEngagement && matchesActivity;
         });
-    }, [institutions, searchQuery, provinceFilter, stageFilter, engagementFilter, activityFilter]);
+
+        // Apply Sorting
+        result.sort((a, b) => {
+            let valA: any = a[sortField];
+            let valB: any = b[sortField];
+
+            // Handle special cases if any (e.g. date strings)
+            if (sortField === 'last_activity') {
+                valA = new Date(valA).getTime();
+                valB = new Date(valB).getTime();
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [institutions, searchQuery, provinceFilter, stageFilter, engagementFilter, activityFilter, sortField, sortDirection]);
 
     const totalPages = Math.ceil(filteredInstitutions.length / pageSize);
     const paginatedInstitutions = filteredInstitutions.slice(
@@ -222,15 +256,45 @@ export function PipelineList({ institutions }: PipelineListProps) {
                 </Select>
             </div>
 
-            <div className="rounded-md border border-border bg-card shadow-sm overflow-hidden">
+            <div className="rounded-md border border-border bg-card shadow-sm">
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[300px]">Institution</TableHead>
-                            <TableHead>Province</TableHead>
-                            <TableHead>Stage</TableHead>
-                            <TableHead>Last Activity</TableHead>
-                            <TableHead>Engagement</TableHead>
+                            <TableHead className="w-[300px] cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('institution_name')}>
+                                <div className="flex items-center gap-1">
+                                    Institution
+                                    {sortField === 'institution_name' && (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                                    {sortField !== 'institution_name' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('province')}>
+                                <div className="flex items-center gap-1">
+                                    Province
+                                    {sortField === 'province' && (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                                    {sortField !== 'province' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('engagement_stage')}>
+                                <div className="flex items-center gap-1">
+                                    Stage
+                                    {sortField === 'engagement_stage' && (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                                    {sortField !== 'engagement_stage' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('last_activity')}>
+                                <div className="flex items-center gap-1">
+                                    Last Activity
+                                    {sortField === 'last_activity' && (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                                    {sortField !== 'last_activity' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('engagement_score')}>
+                                <div className="flex items-center gap-1">
+                                    Engagement
+                                    {sortField === 'engagement_score' && (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                                    {sortField !== 'engagement_score' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                                </div>
+                            </TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
