@@ -62,7 +62,7 @@ export default function PipelinePage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <h2 className="text-2xl font-bold tracking-tight">Pipeline</h2>
-                    <div className="flex items-center space-x-1 border rounded-md p-1 bg-muted/20">
+                    <div className="flex items-center space-x-1 border border-border rounded-md p-1 bg-muted">
                         <Button
                             variant={view === "board" ? "secondary" : "ghost"}
                             size="sm"
