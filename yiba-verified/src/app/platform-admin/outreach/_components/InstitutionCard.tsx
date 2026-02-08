@@ -65,7 +65,7 @@ export function InstitutionCard({ institution }: InstitutionCardProps) {
     };
 
     return (
-        <Card className="group cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 border-border/50 hover:border-primary/20 bg-background/50 hover:bg-background">
+        <Card className="group cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 border-border/40 hover:border-primary/40 bg-card hover:bg-card/80">
             <CardHeader className="p-3 pb-0 flex flex-row items-start justify-between space-y-0">
                 <div className="flex-1 overflow-hidden">
                     <Link

@@ -27,8 +27,8 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
     return (
         <div
             className={cn(
-                "flex flex-col rounded-xl border bg-muted/30 h-full max-h-[calc(100vh-220px)] transition-all duration-300 ease-in-out",
-                isHovered ? "border-primary/20 w-96 shadow-sm" : "border-border/40 w-80"
+                "flex flex-col rounded-xl border bg-muted/10 h-full max-h-[calc(100vh-220px)] transition-all duration-300 ease-in-out",
+                isHovered ? "border-primary/20 w-96 shadow-sm bg-muted/20" : "border-border/20 w-80"
             )}
             onMouseEnter={() => onHover?.(stage)}
             onMouseLeave={() => onHover?.(null)}
@@ -42,7 +42,8 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
 
             <div
                 ref={parentRef}
-                className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent"
+                className="flex-1 overflow-y-auto p-2 scrollbar-hide"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
                 <div
                     style={{
@@ -52,7 +53,7 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
                     }}
                 >
                     {institutions.length === 0 && (
-                        <div className="absolute inset-0 flex h-24 items-center justify-center rounded-lg border border-dashed border-border/50 text-xs text-muted-foreground">
+                        <div className="absolute inset-0 flex h-24 items-center justify-center rounded-lg border border-dashed border-border/50 text-xs text-muted-foreground bg-muted/10">
                             No institutions
                         </div>
                     )}
@@ -62,14 +63,15 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
                         return (
                             <div
                                 key={inst.institution_id}
+                                data-index={virtualRow.index}
+                                ref={rowVirtualizer.measureElement}
                                 style={{
                                     position: 'absolute',
                                     top: 0,
                                     left: 0,
                                     width: '100%',
-                                    height: `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
-                                    paddingBottom: '0.5rem' // Spacer between cards
+                                    paddingBottom: '0.75rem' // Increased spacer between cards
                                 }}
                             >
                                 <div className="px-0.5">
@@ -83,3 +85,7 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
         </div>
     );
 }
+
+// Add global style for scrollbar hiding if needed, or rely on inline styles + tailwind class
+// We used inline styles for robust cross-browser support
+

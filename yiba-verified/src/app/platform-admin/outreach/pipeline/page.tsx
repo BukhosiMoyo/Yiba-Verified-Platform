@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PipelineBoard } from "../_components/PipelineBoard";
+import { PipelineList } from "../_components/PipelineList";
 import { PipelineFilters as Filters } from "../_components/PipelineFilters";
 import { PipelineUploadWizard } from "../_components/PipelineUploadWizard";
 import { awarenessApi } from "@/lib/outreach/api";
@@ -65,7 +66,7 @@ export default function PipelinePage() {
                         <Button
                             variant={view === "board" ? "secondary" : "ghost"}
                             size="sm"
-                            className="h-8 px-2"
+                            className={`h-8 px-2 transition-all ${view === "board" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                             onClick={() => setView("board")}
                         >
                             <LayoutGrid className="h-4 w-4 mr-2" />
@@ -74,7 +75,7 @@ export default function PipelinePage() {
                         <Button
                             variant={view === "list" ? "secondary" : "ghost"}
                             size="sm"
-                            className="h-8 px-2"
+                            className={`h-8 px-2 transition-all ${view === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                             onClick={() => setView("list")}
                         >
                             <List className="h-4 w-4 mr-2" />
@@ -100,8 +101,8 @@ export default function PipelinePage() {
                     <PipelineBoard institutions={institutions} />
                 </div>
             ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg border-dashed">
-                    List view coming soon
+                <div className="flex-1 overflow-auto p-1">
+                    <PipelineList institutions={institutions} />
                 </div>
             )}
 

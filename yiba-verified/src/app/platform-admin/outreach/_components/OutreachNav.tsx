@@ -62,8 +62,8 @@ export function OutreachNav() {
     ];
 
     return (
-        <div className="w-full flex justify-center">
-            <nav className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-xl border border-border/40 bg-background/50 backdrop-blur-sm shadow-sm">
+        <div className="w-full flex justify-center border-b border-border/40 pb-4">
+            <nav className="flex flex-wrap items-center justify-center gap-1.5 p-1 rounded-xl border border-border/40 bg-background/50 backdrop-blur-sm shadow-sm">
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = item.exact

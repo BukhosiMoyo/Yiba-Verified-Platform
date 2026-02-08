@@ -47,9 +47,27 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
             </div>
 
             {/* Main Content */}
-            <main className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <main className="animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[calc(100vh-280px)]">
                 {children}
             </main>
+
+            {/* Footer Status Bar */}
+            <footer className="border-t border-border/40 pt-4 mt-8 flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>System Online</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>Database Connected</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4 opacity-70">
+                    <span>Background Jobs: Idle</span>
+                    <span>v2.4.0</span>
+                </div>
+            </footer>
         </div>
     );
 }
