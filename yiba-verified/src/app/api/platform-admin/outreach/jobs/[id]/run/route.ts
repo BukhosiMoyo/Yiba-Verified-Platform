@@ -339,7 +339,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                             institution_id: institutionId!,
                             role: "INSTITUTION_ADMIN",
                             status: "QUEUED",
-                            invited_by: session.user.userId,
+                            created_by_user_id: session.user.userId,
                             token: uuidv4(),
                             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                         }
