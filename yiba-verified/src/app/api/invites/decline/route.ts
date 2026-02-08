@@ -76,8 +76,14 @@ export async function POST(request: NextRequest) {
     // Only trigger if we have context
     if (invite.institution) {
       try {
-        const { generateResponse, ResponseContext } = await import("@/lib/ai/responseEngine");
+        const { generateResponse } = await import("@/lib/ai/responseEngine");
         const { AIResponseTrigger } = await import("@/lib/outreach/types");
+        // ResponseContext is a type, so we don't need to import it for runtime usage here, 
+        // or we should import it statically if possible.
+        // But since we are inside a try block, let's just use "any" or define the object directly
+        // to avoid top-level import if we want to keep this dynamic partial import pattern (likely for cold start or circular dep reasons)
+        // actually, we can just skip importing the Interface at runtime.
+
 
         const trigger = (reason || reasonOther)
           ? AIResponseTrigger.DECLINE_WITH_REASON
