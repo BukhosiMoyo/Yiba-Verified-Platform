@@ -239,6 +239,7 @@ model User {
   userInstitutions                UserInstitution[]            @relation("UserInstitutions")
   userServiceLeads                UserServiceLead[]
   emailChangeRequests             EmailChangeRequest[]
+  outreachImportJobs              OutreachImportJob[]
 
   @@index([institution_id])
   @@index([qcto_id])
@@ -2617,4 +2618,86 @@ model EngagementStageTemplate {
   updated_at        DateTime        @updatedAt
   published_at      DateTime?
   created_by        String?
+}
+
+// Enums
+enum OutreachImportJobStatus {
+  UPLOADED
+  VALIDATING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum OutreachImportItemStatus {
+  VALID
+  INVALID_EMAIL
+  MISSING_INSTITUTION
+  DUPLICATE_IN_FILE
+  ALREADY_EXISTS_DB
+  CREATED
+  FAILED_CREATE
+}
+
+enum OutreachImportSourceType {
+  CSV_UPLOAD
+}
+
+// Models
+model OutreachImportJob {
+  id                  String                  @id @default(uuid())
+  created_by_user_id  String
+  source_type         OutreachImportSourceType @default(CSV_UPLOAD)
+  original_filename   String
+  s3_key              String
+  status              OutreachImportJobStatus @default(UPLOADED)
+
+  // Counters
+  total_rows          Int                     @default(0)
+  total_emails_extracted Int                  @default(0)
+  processed_rows      Int                     @default(0)
+  processed_emails    Int                     @default(0)
+  valid_emails        Int                     @default(0)
+  invalid_emails      Int                     @default(0)
+  duplicate_in_file   Int                     @default(0)
+  already_exists_in_db Int                    @default(0)
+  created_invites     Int                     @default(0)
+  failed_creates      Int                     @default(0)
+
+  error_message       String?
+
+  created_at          DateTime                @default(now())
+  updated_at          DateTime                @updatedAt
+  completed_at        DateTime?
+
+  items               OutreachImportJobItem[]
+  user                User                    @relation(fields: [created_by_user_id], references: [user_id])
+
+  @@index([created_by_user_id])
+  @@index([status])
+}
+
+model OutreachImportJobItem {
+  id                  String                  @id @default(uuid())
+  job_id              String
+  row_number          Int
+  institution_name_raw String?
+  email_raw           String?
+  email_normalized    String?
+  emails_extracted    Json?                   // Array of strings
+  status              OutreachImportItemStatus
+  reason              String?
+
+  institution_id      String?
+  invite_id           String?
+
+  created_at          DateTime                @default(now())
+  updated_at          DateTime                @updatedAt
+
+  job                 OutreachImportJob       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@index([job_id])
+  @@index([status])
+  @@index([email_normalized])
 }

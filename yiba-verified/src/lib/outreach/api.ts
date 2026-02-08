@@ -52,9 +52,12 @@ export const awarenessApi = {
     },
 
     // Institutions / Pipeline
-    async getInstitutions(filters?: InstitutionFilters): Promise<InstitutionOutreachProfile[]> {
+    async getInstitutions(filters?: InstitutionFilters, page = 1, limit = 50): Promise<{ data: InstitutionOutreachProfile[], meta: { total: number, page: number, limit: number, totalPages: number } }> {
         // Pipeline API is implemented
         const params = new URLSearchParams();
+        params.append('page', String(page));
+        params.append('limit', String(limit));
+
         if (filters) {
             Object.entries(filters).forEach(([key, value]) => {
                 if (value !== undefined) params.append(key, String(value));

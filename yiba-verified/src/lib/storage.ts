@@ -109,6 +109,23 @@ export class StorageService {
     return await getSignedUrl(this.s3Client, command, { expiresIn });
   }
 
+  /**
+   * Generate a presigned URL for uploading a file (S3 only)
+   */
+  async getPresignedUploadUrl(storageKey: string, contentType: string, expiresIn: number = 3600): Promise<string | null> {
+    if (this.config.provider !== "s3" || !this.s3Client || !this.config.bucket) {
+      return null;
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: this.config.bucket,
+      Key: storageKey,
+      ContentType: contentType,
+    });
+
+    return await getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
   // S3 implementation
   private async uploadToS3(buffer: Buffer, storageKey: string, contentType?: string, isPublic: boolean = false): Promise<UploadResult> {
     if (!this.s3Client || !this.config.bucket) {

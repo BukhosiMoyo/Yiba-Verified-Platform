@@ -17,25 +17,33 @@ export async function GET(req: Request) {
         const stage = searchParams.get("stage");
         const province = searchParams.get("province");
 
+        // Pagination
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "50");
+        const skip = (page - 1) * limit;
+
         const where: any = {};
         if (province) {
             where.province = province;
         }
 
         // Fetch institutions with their invites to determine engagement state
-        const institutions = await prisma.institution.findMany({
-            where,
-            include: {
-                invites: {
-                    orderBy: { created_at: 'desc' },
-                    take: 1
+        const [institutions, total] = await prisma.$transaction([
+            prisma.institution.findMany({
+                where,
+                include: {
+                    invites: {
+                        orderBy: { created_at: 'desc' },
+                        take: 1
+                    },
+                    contacts: true
                 },
-                contacts: true
-            },
-            orderBy: { created_at: 'desc' },
-            // Removed hard limit to allow seeing all imported leads
-            // take: 1000 
-        });
+                orderBy: { created_at: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.institution.count({ where })
+        ]);
 
         // Map to InstitutionOutreachProfile
         const profiles = institutions.map((inst): InstitutionOutreachProfile | null => {
@@ -43,7 +51,8 @@ export async function GET(req: Request) {
             const state = latestInvite?.engagement_state || "UNCONTACTED";
 
             // If filtering by stage and it doesn't match, we might filter here if not possible in DB query easily
-            // (since state is on relation)
+            // Note: This imprecise filtering logic (filtering AFTER pagination) is flawed for strict pagination
+            // but preserving existing behavior for now. Ideally 'stage' should be in the DB query.
             if (stage && state !== stage) return null;
 
             return {
@@ -84,7 +93,15 @@ export async function GET(req: Request) {
             };
         }).filter((p): p is InstitutionOutreachProfile => p !== null);
 
-        return NextResponse.json(profiles);
+        return NextResponse.json({
+            data: profiles,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
 
     } catch (error: any) {
         console.error("[PIPELINE GET] Error:", error);

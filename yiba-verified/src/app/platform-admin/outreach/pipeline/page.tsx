@@ -21,6 +21,7 @@ export default function PipelinePage() {
     const [view, setView] = useState<"board" | "list">("board");
     const [loading, setLoading] = useState(false);
     const [institutions, setInstitutions] = useState<InstitutionOutreachProfile[]>([]);
+    const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
     const [showUpload, setShowUpload] = useState(false);
 
     // Add ref for board scrolling
@@ -32,18 +33,31 @@ export default function PipelinePage() {
         if (uploadParam === "true") {
             setShowUpload(true);
         }
-        loadInstitutions();
+        loadInstitutions(1);
     }, [searchParams]);
 
-    const loadInstitutions = async () => {
+    const loadInstitutions = async (pageVal = 1) => {
         setLoading(true);
         try {
-            const data = await awarenessApi.getInstitutions();
-            setInstitutions(data);
+            // @ts-ignore - API type updated but might not be reflected in editor context immediately
+            const response = await awarenessApi.getInstitutions(undefined, pageVal, pagination.limit);
+            if (response.meta) {
+                setInstitutions(response.data);
+                setPagination(response.meta);
+            } else {
+                // Fallback if API hasn't updated or returns array (mock mode)
+                setInstitutions(response as any);
+            }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage > 0 && newPage <= pagination.totalPages) {
+            loadInstitutions(newPage);
         }
     };
 
@@ -55,7 +69,7 @@ export default function PipelinePage() {
     const closeUpload = () => {
         setShowUpload(false);
         router.push(pathname);
-        loadInstitutions(); // Refresh after upload
+        loadInstitutions(1); // Refresh after upload, reset to page 1
     };
 
     const scrollBoard = (direction: 'left' | 'right') => {
@@ -69,8 +83,8 @@ export default function PipelinePage() {
     };
 
     return (
-        <div className="flex flex-col space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="flex flex-col space-y-4 h-[calc(100vh-100px)]">
+            <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-4">
                     <h2 className="text-2xl font-bold tracking-tight">Pipeline</h2>
                     <div className="flex items-center space-x-1 border border-border rounded-md p-1 bg-muted">
@@ -107,7 +121,7 @@ export default function PipelinePage() {
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <AddContactDialog onContactAdded={() => loadInstitutions()} />
+                    <AddContactDialog onContactAdded={() => loadInstitutions(pagination.page)} />
 
                     <Button
                         onClick={openUpload}
@@ -132,7 +146,7 @@ export default function PipelinePage() {
                                 setLoading(true);
                                 try {
                                     await awarenessApi.clearData();
-                                    loadInstitutions();
+                                    loadInstitutions(1);
                                 } catch (e) {
                                     console.error("Clear data failed", e);
                                 } finally {
@@ -154,16 +168,48 @@ export default function PipelinePage() {
             </div>
 
             {loading ? (
-                <div className="flex h-64 items-center justify-center">
+                <div className="flex-1 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-            ) : view === "board" ? (
-                <div className="flex-1 overflow-hidden h-[calc(100vh-200px)]">
-                    <PipelineBoard institutions={institutions} scrollRef={boardScrollRef} />
-                </div>
             ) : (
-                <div className="w-full">
-                    <PipelineList institutions={institutions} />
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 overflow-hidden">
+                        {view === "board" ? (
+                            <PipelineBoard institutions={institutions} scrollRef={boardScrollRef} />
+                        ) : (
+                            <div className="h-full overflow-y-auto">
+                                <PipelineList institutions={institutions} />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="shrink-0 py-2 border-t border-border flex items-center justify-between px-2">
+                        <div className="text-sm text-muted-foreground">
+                            Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} records
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                disabled={pagination.page <= 1 || loading}
+                            >
+                                Previous
+                            </Button>
+                            <span className="text-sm font-medium">
+                                Page {pagination.page} of {pagination.totalPages}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                disabled={pagination.page >= pagination.totalPages || loading}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
 
