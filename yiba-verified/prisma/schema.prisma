@@ -2594,3 +2594,27 @@ model QuestionnaireResponse {
   @@index([institution_id])
 }
 
+
+/// Template for Awareness Engine Stages (Content Studio)
+model EngagementStageTemplate {
+  stage_id          String          @id @default(uuid())
+  stage             EngagementState @unique
+  version           Int             @default(1)
+  status            String          @default("DRAFT") // Mapped to TemplateStatus
+  
+  // Content
+  subject_line      String
+  preview_text      String?
+  body_html         String          @db.Text
+  cta_url           String?
+  
+  // Logic
+  eligibility_rules Json?           
+  ai_instructions   Json?           // Store AIInstructions interface
+  
+  // Meta
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+  published_at      DateTime?
+  created_by        String?
+}
