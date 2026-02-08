@@ -112,10 +112,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
                 // Determine Institution
                 let institutionName: string | null = null;
-                const orgKeys = Object.keys(row).filter(k => /org|company|institution|provider|name/i.test(k));
+                const orgKeys = Object.keys(row as any).filter(k => /org|company|institution|provider|name/i.test(k));
                 for (const k of orgKeys) {
-                    if (row[k]) {
-                        institutionName = row[k];
+                    if ((row as any)[k]) {
+                        institutionName = (row as any)[k];
                         break;
                     }
                 }
