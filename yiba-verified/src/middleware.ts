@@ -41,7 +41,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://vercel.com",
     "img-src 'self' data: https: blob: https://vercel.live https://vercel.com",
     "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://vercel.com",
-    "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://vercel.live https://vercel.com",
+    "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://vercel.live https://vercel.com https://*.amazonaws.com",
     "frame-src 'self' https://maps.googleapis.com https://*.googleapis.com https://vercel.live https://vercel.com",
     "frame-ancestors 'none'",
   ].join("; ");
