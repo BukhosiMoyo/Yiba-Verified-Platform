@@ -129,7 +129,7 @@ export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () =
 
     if (step === 1) {
         return (
-            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
+            <Card className="border shadow-2xl bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Upload Pipeline CSV</CardTitle>
@@ -184,7 +184,7 @@ export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () =
 
     if (step === 2 && validationResult) {
         return (
-            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
+            <Card className="border shadow-2xl bg-background/95 backdrop-blur-md max-h-[90vh] flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Review Data</CardTitle>
@@ -272,7 +272,7 @@ export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () =
 
     if (step === 3 && importStats) {
         return (
-            <Card className="border-0 shadow-lg bg-background/95 backdrop-blur-md max-w-md mx-auto text-center p-6">
+            <Card className="border shadow-2xl bg-background/95 backdrop-blur-md max-w-md mx-auto text-center p-6">
                 <CardContent className="pt-6 space-y-6">
                     <div className="mx-auto bg-green-100 dark:bg-green-900/30 w-20 h-20 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
