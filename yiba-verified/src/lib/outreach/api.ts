@@ -28,7 +28,8 @@ import type {
  * Falls back to mock data when FEATURE_AWARENESS_ENGINE_UI is enabled but backend not ready
  */
 
-const USE_MOCKS = process.env.NEXT_PUBLIC_FEATURE_AWARENESS_ENGINE_UI === 'true';
+// Disable Mocks to use Real API
+const USE_MOCKS = false; // process.env.NEXT_PUBLIC_FEATURE_AWARENESS_ENGINE_UI === 'true';
 
 export const awarenessApi = {
     // Metrics & Dashboard
