@@ -9,7 +9,8 @@ import { v4 as uuidv4 } from "uuid";
 // Helper to validate email (loose regex)
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "PLATFORM_ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
