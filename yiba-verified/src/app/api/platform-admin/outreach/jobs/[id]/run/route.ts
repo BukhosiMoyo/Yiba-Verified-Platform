@@ -98,7 +98,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
                 // Extract emails
                 const emails: string[] = [];
-                Object.values(row).forEach((val: any) => {
+                Object.values(row as any).forEach((val: any) => {
                     if (typeof val === 'string' && val.includes('@')) {
                         val.split(/[;, ]+/).forEach((part: string) => {
                             const e = part.trim().toLowerCase().replace(/[;,.]+$/, '');
