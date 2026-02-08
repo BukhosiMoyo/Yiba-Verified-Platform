@@ -28,7 +28,7 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
         <div
             className={cn(
                 "flex flex-col rounded-xl border bg-card h-full max-h-[calc(100vh-220px)] transition-all duration-300 ease-in-out",
-                isHovered ? "border-primary/20 w-96 shadow-md" : "border-border/20 w-80"
+                isHovered ? "border-primary/20 w-96 shadow-md" : "border-border w-80"
             )}
             onMouseEnter={() => onHover?.(stage)}
             onMouseLeave={() => onHover?.(null)}
