@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PipelineBoard } from "../_components/PipelineBoard";
 import { PipelineList } from "../_components/PipelineList";
-import { PipelineFilters as Filters } from "../_components/PipelineFilters";
+
 import { PipelineUploadWizard } from "../_components/PipelineUploadWizard";
 import { awarenessApi } from "@/lib/outreach/api";
 import { InstitutionFilters, InstitutionOutreachProfile } from "@/lib/outreach/types";
@@ -58,7 +58,7 @@ export default function PipelinePage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] space-y-4">
+        <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <h2 className="text-2xl font-bold tracking-tight">Pipeline</h2>
@@ -84,7 +84,6 @@ export default function PipelinePage() {
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Filters onFilterChange={handleFilterChange} />
                     <Button onClick={openUpload} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:shadow-lg transition-all">
                         <Upload className="h-4 w-4 mr-2" />
                         Import CSV
@@ -93,15 +92,15 @@ export default function PipelinePage() {
             </div>
 
             {loading ? (
-                <div className="flex h-full items-center justify-center">
+                <div className="flex h-64 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             ) : view === "board" ? (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden h-[calc(100vh-200px)]">
                     <PipelineBoard institutions={institutions} />
                 </div>
             ) : (
-                <div className="flex-1 overflow-auto p-1">
+                <div className="w-full">
                     <PipelineList institutions={institutions} />
                 </div>
             )}

@@ -91,7 +91,7 @@ export function OutreachNav() {
                         >
                             <Icon className={cn(
                                 "h-4 w-4 transition-colors",
-                                isActive ? item.color : "text-muted-foreground group-hover:text-foreground"
+                                isActive ? item.color : cn(item.color, "opacity-70 group-hover:opacity-100")
                             )} />
                             <span>{item.label}</span>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -170,6 +170,13 @@ export function Sidebar({ items, role, viewingAsRole, isOpen, onClose, userName 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  useEffect(() => {
+    if (pathname?.startsWith("/platform-admin/outreach")) {
+      setInternalCollapsed(true);
+      if (onCollapsedChange) onCollapsedChange(true);
+    }
+  }, [pathname, onCollapsedChange]);
 
   const prefetchOnHover = (href: string) => () => {
     const path = href.split("?")[0];

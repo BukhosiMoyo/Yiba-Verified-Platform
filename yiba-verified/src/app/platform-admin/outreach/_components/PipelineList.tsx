@@ -172,8 +172,8 @@ export function PipelineList({ institutions }: PipelineListProps) {
 
     return (
         <div className="space-y-4">
-            {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border">
+            {/* Filters Row - Enhanced Visibility */}
+            <div className="flex flex-wrap items-center gap-4 bg-background p-3 rounded-lg border border-border shadow-sm">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -256,9 +256,10 @@ export function PipelineList({ institutions }: PipelineListProps) {
                 </Select>
             </div>
 
+            {/* Table Container - Natural Scale (No inner scroll) */}
             <div className="rounded-md border border-border bg-card shadow-sm">
                 <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                         <TableRow className="hover:bg-transparent">
                             <TableHead className="w-[300px] cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('institution_name')}>
                                 <div className="flex items-center gap-1">
