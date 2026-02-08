@@ -77,7 +77,7 @@ export function PipelineList({ institutions }: PipelineListProps) {
     }
 
     return (
-        <div className="rounded-md border bg-background">
+        <div className="rounded-md border bg-card">
             <Table>
                 <TableHeader>
                     <TableRow>
