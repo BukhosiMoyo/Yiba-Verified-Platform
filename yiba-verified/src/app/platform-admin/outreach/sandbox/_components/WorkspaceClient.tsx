@@ -9,10 +9,11 @@ import { Bot, Mail, MousePointer, RotateCcw, Settings, SkipForward, User } from 
 import { Separator } from "@/components/ui/separator";
 import { useState, useTransition } from "react";
 import { generateNextMessage, resetSession, advanceTime, simulateEvent, simulateConversion } from "../actions";
-import { OutreachEventType } from "@/lib/outreach/types";
+import { OutreachEventType, Questionnaire } from "@/lib/outreach/types";
+import { QuestionnaireRenderer } from "@/app/questionnaire/[slug]/_components/QuestionnaireRenderer";
 
 // Client Component to handle interactions
-export function WorkspaceClient({ session, messages, events }: { session: SandboxSession; messages: SandboxMessage[]; events: any[] }) {
+export function WorkspaceClient({ session, messages, events, questionnaire }: { session: SandboxSession; messages: SandboxMessage[]; events: any[]; questionnaire?: Questionnaire }) {
     const [activeTab, setActiveTab] = useState("inbox");
     const [isPending, startTransition] = useTransition();
 
@@ -178,18 +179,29 @@ export function WorkspaceClient({ session, messages, events }: { session: Sandbo
                         )}
                     </TabsContent>
 
-                    <TabsContent value="landing" className="flex-1 p-4">
-                        <div className="border border-dashed h-full rounded flex items-center justify-center bg-slate-50">
-                            <div className="text-center max-w-sm">
-                                <h3 className="font-semibold mb-2">Simulated Landing Page</h3>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Simulating the questionnaire flow here triggers logic.
-                                </p>
-                                <Button onClick={() => handleEvent("QUESTIONNAIRE_COMPLETED")}>
-                                    Complete Questionnaire
-                                </Button>
+                    <TabsContent value="landing" className="flex-1 p-4 overflow-y-auto">
+                        {questionnaire ? (
+                            <div className="max-w-xl mx-auto">
+                                <QuestionnaireRenderer
+                                    questionnaire={questionnaire}
+                                    onComplete={async (answers) => {
+                                        await handleEvent("QUESTIONNAIRE_COMPLETED", answers);
+                                    }}
+                                />
                             </div>
-                        </div>
+                        ) : (
+                            <div className="border border-dashed h-full rounded flex items-center justify-center bg-slate-50">
+                                <div className="text-center max-w-sm">
+                                    <h3 className="font-semibold mb-2">Simulated Landing Page</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        No active questionnaire for stage: {session.current_stage}
+                                    </p>
+                                    <Button onClick={() => handleEvent("QUESTIONNAIRE_COMPLETED")} variant="outline">
+                                        Simulate Completion anyway
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>

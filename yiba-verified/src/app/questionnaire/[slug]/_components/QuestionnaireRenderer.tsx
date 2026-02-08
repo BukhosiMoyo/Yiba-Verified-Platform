@@ -15,9 +15,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 interface QuestionnaireRendererProps {
     questionnaire: Questionnaire;
+    onComplete?: (answers: Record<string, any>) => Promise<void>;
 }
 
-export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererProps) {
+export function QuestionnaireRenderer({ questionnaire, onComplete }: QuestionnaireRendererProps) {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -53,6 +54,13 @@ export function QuestionnaireRenderer({ questionnaire }: QuestionnaireRendererPr
     const submitQuestionnaire = async () => {
         setSubmitting(true);
         try {
+            if (onComplete) {
+                await onComplete(answers);
+                setCompleted(true);
+                toast.success("Simulation: Submitted successfully!");
+                return;
+            }
+
             const res = await fetch(`/api/questionnaires/${questionnaire.slug}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
