@@ -40,3 +40,66 @@ export async function getRealMetrics() {
     // ...
     return null; // Return null to signal "Use Mock Seeds" if we can't query
 }
+
+// ==========================================
+// DB PRE-CHECK FOR DUPLICATES
+// ==========================================
+
+import { prisma } from '@/lib/prisma';
+
+export async function checkDuplicates(leads: any[]): Promise<{ existingCount: number, newCount: number }> {
+    if (!leads || leads.length === 0) return { existingCount: 0, newCount: 0 };
+
+    const emails = leads.map(l => l.email?.toLowerCase()).filter(Boolean);
+    const names = leads.map(l => l.organization || l.institution_name).filter(Boolean);
+
+    // 1. Resolve Institutions (Only check names present in CSV)
+    // The import route logic matches on `legal_name`.
+    const existingInsts = await prisma.institution.findMany({
+        where: { legal_name: { in: names } },
+        select: { institution_id: true, legal_name: true }
+    });
+
+    const instMap = new Map();
+    existingInsts.forEach(i => {
+        if (i.legal_name) instMap.set(i.legal_name.toLowerCase(), i.institution_id);
+    });
+
+    // 2. Fetch Existing Invites for these emails
+    // We fetch ALL invites for these emails, then locally filter by institution
+    const existingInvites = await prisma.invite.findMany({
+        where: { email: { in: emails } },
+        select: { email: true, institution_id: true }
+    });
+
+    const existingKeys = new Set(
+        existingInvites.map(inv => `${inv.email.toLowerCase()}|${inv.institution_id}`)
+    );
+
+    let existingCount = 0;
+    let newCount = 0;
+
+    for (const lead of leads) {
+        const email = lead.email?.toLowerCase();
+        const orgName = (lead.organization || lead.institution_name)?.toLowerCase();
+
+        if (!email) continue;
+
+        // Try to resolve Institution ID from Name
+        const instId = instMap.get(orgName);
+
+        if (instId) {
+            // Check if this specific Email + Institution combo exists in Invites
+            if (existingKeys.has(`${email}|${instId}`)) {
+                existingCount++;
+            } else {
+                newCount++;
+            }
+        } else {
+            // If Institution doesn't exist, this is definitely a new Lead (creates new Inst + new Invite)
+            newCount++;
+        }
+    }
+
+    return { existingCount, newCount };
+}

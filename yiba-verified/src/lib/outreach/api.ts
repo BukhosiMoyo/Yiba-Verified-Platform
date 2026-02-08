@@ -65,6 +65,23 @@ export const awarenessApi = {
         return res.json();
     },
 
+    async createInstitution(data: Partial<InstitutionOutreachProfile>): Promise<InstitutionOutreachProfile> {
+        const res = await fetch('/api/platform-admin/outreach/institutions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to create institution');
+        return res.json();
+    },
+
+    async clearData(): Promise<void> {
+        const res = await fetch('/api/platform-admin/outreach/institutions', {
+            method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to clear data');
+    },
+
     async getInstitution(id: string): Promise<InstitutionOutreachProfile> {
         // This might fail if getInstitution not implemented? 
         // I implemented getInstitutions (plural) in previous turn. 

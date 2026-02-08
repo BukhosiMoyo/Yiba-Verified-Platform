@@ -53,9 +53,11 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
                 </main>
             </div>
 
-            {/* Footer Status Bar: Fixed, Full width, White Background, Behind Sidebar */}
-            <footer className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/20 py-2.5 px-6 bg-background flex items-center justify-between text-[10px] text-muted-foreground/60 transition-[padding] duration-300">
-                <div className="flex items-center gap-4 pl-[72px] lg:pl-[280px] transition-[padding] duration-300">
+            {/* Footer Status Bar: Sticky at bottom, respects sidebar margin */}
+            {/* Footer Status Bar: Sticky at bottom */}
+            {/* Footer Status Bar: Static at bottom of layout (mt-auto) */}
+            <footer className="border-t border-border/20 py-2.5 px-6 bg-white dark:bg-background flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 mt-auto">
+                <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
                         <span>System Online</span>

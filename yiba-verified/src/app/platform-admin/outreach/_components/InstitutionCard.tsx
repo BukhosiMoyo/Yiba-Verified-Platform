@@ -66,23 +66,29 @@ export function InstitutionCard({ institution }: InstitutionCardProps) {
 
     return (
         <Card className="group cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 border border-border hover:border-primary/40 bg-card hover:bg-muted/30">
-            <CardHeader className="p-3 pb-0 flex flex-row items-start justify-between space-y-0">
-                <div className="flex-1 overflow-hidden">
-                    <Link
-                        href={`/platform-admin/outreach/institutions/${institution.institution_id}`}
-                        className="font-medium hover:underline hover:text-primary truncate block text-sm"
-                    >
-                        {institution.institution_name}
-                    </Link>
-                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                        {institution.province}
-                    </p>
+            <CardHeader className="p-1 pb-0 flex flex-row items-center justify-between space-y-0">
+                <div className="flex-1 min-w-0 pr-1">
+                    <div className="flex items-center gap-1 mb-0.5">
+                        <StatusIcon status={institution.status_flags} className="h-2.5 w-2.5 flex-shrink-0" />
+                        <Link
+                            href={`/platform-admin/outreach/institutions/${institution.institution_id}`}
+                            className="font-medium hover:underline hover:text-primary truncate block text-xs leading-tight"
+                            title={institution.institution_name}
+                        >
+                            {institution.institution_name}
+                        </Link>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <span className="truncate max-w-[120px]" title={institution.contacts?.[0]?.email}>{institution.contacts?.[0]?.email || 'No Email'}</span>
+                        <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
+                        <span className="truncate">{institution.province}</span>
+                    </div>
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-2.5 w-2.5" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -102,27 +108,18 @@ export function InstitutionCard({ institution }: InstitutionCardProps) {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </CardHeader>
-            <CardContent className="p-3 py-2">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 min-w-0">
-                        <StatusIcon status={institution.status_flags} />
-                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                            {institution.domain}
-                        </span>
-                    </div>
-                    <EngagementScoreGauge score={institution.engagement_score} size="sm" showLabel={false} />
-                </div>
-            </CardContent>
-            <CardFooter className="p-3 pt-0 flex items-center justify-between text-[10px] text-muted-foreground border-t border-border/30 mt-2 pt-2">
-                <div className="flex items-center">
-                    <Calendar className="mr-1 h-3 w-3 opacity-70" />
+            <CardContent className="p-1 pt-0 flex items-center justify-between pb-1">
+                <div className="flex items-center text-[10px] text-muted-foreground">
+                    <Calendar className="mr-1 h-2.5 w-2.5 opacity-70" />
                     {new Date(institution.last_activity).toLocaleDateString()}
                 </div>
-                <div className="flex items-center gap-1">
-                    {loading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    <span>{institution.contacts.length} contact{institution.contacts.length !== 1 ? "s" : ""}</span>
+                <div className="flex items-center gap-1.5">
+                    {loading && <Loader2 className="h-2 w-2 animate-spin text-primary mr-1" />}
+                    <div className="scale-75 origin-right">
+                        <EngagementScoreGauge score={institution.engagement_score} size="sm" showLabel={false} />
+                    </div>
                 </div>
-            </CardFooter>
+            </CardContent>
         </Card>
     );
 }

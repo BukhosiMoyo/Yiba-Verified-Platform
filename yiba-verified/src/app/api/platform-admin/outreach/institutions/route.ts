@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { EngagementState, InstitutionOutreachProfile } from "@/lib/outreach/types";
+import crypto from 'crypto';
 
 // GET /api/platform-admin/outreach/institutions
 export async function GET(req: Request) {
@@ -17,70 +18,76 @@ export async function GET(req: Request) {
         const province = searchParams.get("province");
 
         const where: any = {};
-        if (province) where.province = province;
+        if (province) {
+            where.province = province;
+        }
 
         // Fetch institutions with their invites to determine engagement state
-        // Since engagement state is on Invite, we need to filter/sort effectively.
-        // We'll fetch institutions and their "primary" or "any" invite.
         const institutions = await prisma.institution.findMany({
-            where: where,
+            where,
             include: {
                 invites: {
-                    orderBy: { created_at: 'desc' }, // Get latest invite
+                    orderBy: { created_at: 'desc' },
                     take: 1
                 },
-                contacts: {
-                    take: 1
-                }
+                contacts: true
             },
-            orderBy: { created_at: 'desc' }
+            orderBy: { created_at: 'desc' },
+            // Removed hard limit to allow seeing all imported leads
+            // take: 1000 
         });
 
-        // Map to OutreachProfile
-        const profiles: InstitutionOutreachProfile[] = institutions.map(inst => {
-            const primaryInvite = inst.invites[0];
-            const primaryContact = inst.contacts[0];
+        // Map to InstitutionOutreachProfile
+        const profiles = institutions.map((inst): InstitutionOutreachProfile | null => {
+            const latestInvite = inst.invites[0];
+            const state = latestInvite?.engagement_state || "UNCONTACTED";
 
-            // Default to UNCONTACTED if no invite exists, or use invite state
-            const state = primaryInvite?.engagement_state || EngagementState.UNCONTACTED;
+            // If filtering by stage and it doesn't match, we might filter here if not possible in DB query easily
+            // (since state is on relation)
+            if (stage && state !== stage) return null;
 
-            // Client-side filtering for stage if needed (or we could do it in DB query if we reverse relations)
-            // For now, simple client/mapper filter
             return {
                 institution_id: inst.institution_id,
-                institution_name: inst.trading_name || inst.legal_name,
-                domain: inst.contact_email ? inst.contact_email.split('@')[1] : 'unknown',
+                institution_name: inst.legal_name,
+                domain: inst.contact_email ? inst.contact_email.split('@')[1] : "", // Simple domain extraction
                 province: inst.province,
                 engagement_stage: state,
-                engagement_score: primaryInvite?.engagement_score_raw || 0,
-                last_activity: primaryInvite?.last_interaction_at || inst.updated_at,
+                engagement_score: latestInvite?.engagement_score_raw || 0,
+                last_activity: latestInvite?.last_interaction_at || inst.updated_at,
                 next_scheduled_step: null,
                 status_flags: {
-                    bounced: false,
-                    opt_out: primaryInvite?.status === "DECLINED", // Simplify
-                    declined: primaryInvite?.status === "DECLINED",
+                    bounced: false, // Placeholder
+                    opt_out: false,
+                    declined: state === "DECLINED",
                     ai_suppressed: false
                 },
-                contacts: primaryInvite ? [{
-                    contact_id: primaryInvite.invite_id, // Use invite as proxy for contact if no real contact
-                    email: primaryInvite.email,
-                    first_name: "Admin", // Placeholder
-                    last_name: "",
-                    role: primaryInvite.role,
-                    primary: true
-                }] : []
+                contacts: [
+                    // Add primary contact from institution
+                    ...(inst.contact_email ? [{
+                        contact_id: "primary",
+                        email: inst.contact_email,
+                        first_name: inst.contact_person_name?.split(" ")[0] || "",
+                        last_name: inst.contact_person_name?.split(" ").slice(1).join(" ") || "",
+                        role: "Primary",
+                        primary: true
+                    }] : []),
+                    // Add other contacts
+                    ...inst.contacts.map(c => ({
+                        contact_id: c.id,
+                        email: c.email,
+                        first_name: c.first_name,
+                        last_name: c.last_name,
+                        role: c.type,
+                        primary: false
+                    }))
+                ]
             };
-        });
+        }).filter((p): p is InstitutionOutreachProfile => p !== null);
 
-        // Apply stage filter in memory if strictly needed (though UI might query all)
-        const finalDetails = stage
-            ? profiles.filter(p => p.engagement_stage === stage)
-            : profiles;
+        return NextResponse.json(profiles);
 
-        return NextResponse.json(finalDetails);
-
-    } catch (error) {
-        console.error("Failed to fetch institutions:", error);
+    } catch (error: any) {
+        console.error("[PIPELINE GET] Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -96,88 +103,165 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { leads, source } = body;
 
+        // console.log(`[PIPELINE IMPORT] Received batch. Source: ${source}, Leads: ${leads?.length}`);
+
         if (!leads || !Array.isArray(leads)) {
             return NextResponse.json({ error: "Invalid leads data" }, { status: 400 });
         }
 
-        console.log(`[PIPELINE] Import started: ${leads.length} leads from ${source}`);
+        if (leads.length === 0) {
+            return NextResponse.json({ success: true, count: 0 });
+        }
 
-        let count = 0;
+        // --- BULK PROCESSING START ---
 
-        // Transactional upsert is hard with loop, we'll loop sequentially for safety
-        for (const lead of leads) {
-            // lead structure from Wizard: 
-            // { institution_name, domain, contacts: [{ email, ... }], province, ... }
+        // 1. Prepare Data Maps
+        // We need to deduplicate input based on email first (in case CSV has duplicates within itself)
+        const uniqueLeads = new Map();
+        leads.forEach((l: any) => {
+            const email = l.contacts?.[0]?.email || l.email;
+            if (email) uniqueLeads.set(email.toLowerCase(), l);
+        });
 
-            const name = lead.institution_name || lead.name;
-            // Get primary email from contacts array or top level
-            const email = lead.contacts?.[0]?.email || lead.email;
+        const cleanLeads = Array.from(uniqueLeads.values());
+        const emails = cleanLeads.map((l: any) => (l.contacts?.[0]?.email || l.email).toLowerCase());
+        const names = cleanLeads.map((l: any) => l.institution_name || l.name).filter(Boolean);
 
-            if (!name || !email) continue; // Skip invalid
+        // 2. Resolve Institutions
+        // Fetch existing institutions by name to avoid duplicates
+        const existingInsts = await prisma.institution.findMany({
+            where: { legal_name: { in: names } },
+            select: { institution_id: true, legal_name: true }
+        });
 
-            // 1. Create/Find Institution
-            const type = "OTHER";
+        const instMap = new Map(existingInsts.map(i => [i.legal_name, i.institution_id]));
+        const newInsts: any[] = [];
 
-            let inst = await prisma.institution.findFirst({
-                where: { legal_name: name }
-            });
+        // Identify new institutions to create
+        // We iterate cleanLeads to see if their institution exists
+        const uniqueNewNames = new Set<string>();
 
-            if (!inst) {
-                inst = await prisma.institution.create({
-                    data: {
-                        legal_name: name,
-                        trading_name: name,
-                        institution_type: type as any,
-                        registration_number: `IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                        physical_address: lead.physical_address || "Address Pending",
-                        province: lead.province || "Gauteng",
-                        contact_email: email,
-                        status: "APPROVED"
-                    }
+        cleanLeads.forEach((l: any) => {
+            const name = l.institution_name || l.name;
+            if (name && !instMap.has(name) && !uniqueNewNames.has(name)) {
+                uniqueNewNames.add(name);
+                newInsts.push({
+                    institution_id: crypto.randomUUID(), // Generate ID upfront for bulk insert mapping if needed, or query after. 
+                    // Prisma createMany doesn't return IDs easily in Postgres. 
+                    // Strategy: Generate UUIDs here so we know them.
+                    legal_name: name,
+                    trading_name: name,
+                    institution_type: "OTHER",
+                    registration_number: `IMP-${Date.now()}-${Math.floor(Math.random() * 10000)}`, // Potential collision if too fast? Use UUID or better uniqueness.
+                    // Better reg number:
+                    // registration_number: crypto.randomUUID(), // Temp reg number
+                    physical_address: l.physical_address || "Address Pending",
+                    province: l.province || "Gauteng",
+                    contact_email: (l.contacts?.[0]?.email || l.email),
+                    status: "APPROVED"
                 });
             }
+        });
 
-            // 2. Create Invite (The Lead)
-            // Check if invite already exists for this institution/email
-            const existingInvite = await prisma.invite.findFirst({
-                where: {
-                    institution_id: inst.institution_id,
-                    email: email
-                }
+        // Bulk Create Institutions
+        if (newInsts.length > 0) {
+            // Fix registration number to be unique per row
+            newInsts.forEach((inst, idx) => {
+                inst.registration_number = `IMP-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`;
             });
 
-            if (!existingInvite) {
-                const crypto = require('crypto');
-                const token = crypto.randomUUID();
-                const hash = crypto.createHash('sha256').update(token).digest('hex');
+            await prisma.institution.createMany({
+                data: newInsts,
+                skipDuplicates: true // Safety
+            });
 
-                await prisma.invite.create({
-                    data: {
+            // Add new ones to map
+            newInsts.forEach(i => instMap.set(i.legal_name, i.institution_id));
+        }
+
+        // 3. Resolve Invites (The Leads)
+        // Check which emails already have an invite FOR THIS SPECIFIC INSTITUTION
+        const existingInvites = await prisma.invite.findMany({
+            where: { email: { in: emails } },
+            select: { email: true, institution_id: true }
+        });
+
+        // Create a set of existing (email, institution_id) pairs
+        const existingInviteKeys = new Set(
+            existingInvites.map(i => `${i.email.toLowerCase()}|${i.institution_id}`)
+        );
+
+        const newInvites: any[] = [];
+
+        cleanLeads.forEach((l: any) => {
+            const email = (l.contacts?.[0]?.email || l.email)?.toLowerCase();
+            const name = l.institution_name || l.name;
+            const instId = instMap.get(name);
+
+            if (email && instId) {
+                const key = `${email}|${instId}`;
+
+                // Only create if NO invite exists for this specific Email+Institution pair
+                if (!existingInviteKeys.has(key)) {
+                    // Start 90 day expiration now
+                    const token = crypto.randomUUID();
+                    const hash = crypto.createHash('sha256').update(token).digest('hex');
+
+                    newInvites.push({
                         email: email,
-                        role: lead.contacts?.[0]?.role || "INSTITUTION_ADMIN",
-                        institution_id: inst.institution_id,
+                        role: l.contacts?.[0]?.role || "INSTITUTION_ADMIN",
+                        institution_id: instId,
                         token_hash: hash,
-                        expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90),
+                        expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90), // 90 days
                         created_by_user_id: session.user.userId,
                         engagement_state: "UNCONTACTED",
                         engagement_score_raw: 0,
-                        first_name: lead.contacts?.[0]?.first_name,
-                        last_name: lead.contacts?.[0]?.last_name
-                    }
-                });
-                count++;
-            } else {
-                // If it exists, we count it as processed (or maybe skip count? let's count it for now to avoid confusing user)
-                // Actually, if we return count of *new* leads, that is better.
-                // But the UI says "Import X Leads". If X succeeds, it expects valid rows.
-                count++;
+                        first_name: l.contacts?.[0]?.first_name,
+                        last_name: l.contacts?.[0]?.last_name
+                    });
+
+                    // Mark as added so we don't double add in this same batch if CSV has dupes
+                    existingInviteKeys.add(key);
+                }
             }
+        });
+
+        // Bulk Create Invites
+        if (newInvites.length > 0) {
+            await prisma.invite.createMany({
+                data: newInvites,
+                skipDuplicates: true
+            });
         }
 
-        return NextResponse.json({ success: true, count });
+        // console.log(`[PIPELINE IMPORT] Success. Batch processed. New leads: ${newInvites.length}`);
+        return NextResponse.json({ success: true, count: newInvites.length });
 
+    } catch (error: any) {
+        console.error("Pipeline import error FULL:", error);
+        return NextResponse.json({ error: error.message || "Internal Server Error", details: error.toString(), stack: error.stack }, { status: 500 });
+    }
+}
+
+// DELETE /api/platform-admin/outreach/institutions (Clear all)
+export async function DELETE(req: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || session.user.role !== "PLATFORM_ADMIN") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        // Delete all invites first (foreign key constraint)
+        await prisma.invite.deleteMany({});
+
+        // Delete all institutions
+        const { count } = await prisma.institution.deleteMany({});
+
+        console.log(`[PIPELINE] Cleared ${count} institutions`);
+
+        return NextResponse.json({ success: true, count });
     } catch (error) {
-        console.error("Pipeline import error:", error);
+        console.error("Pipeline clear error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

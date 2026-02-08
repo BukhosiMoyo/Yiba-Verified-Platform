@@ -27,17 +27,15 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
     return (
         <div
             className={cn(
-                "flex flex-col rounded-xl border bg-card h-full max-h-[calc(100vh-220px)] transition-all duration-300 ease-in-out",
-                isHovered ? "border-primary/20 w-96 shadow-md" : "border-border w-80"
+                "flex flex-col rounded-xl border bg-card/50 backdrop-blur-sm h-full min-h-[calc(100vh-200px)] transition-all duration-300 ease-in-out",
+                isHovered ? "border-primary/20 w-80 shadow-md bg-card" : "border-border/60 w-72"
             )}
+            style={{ height: 'calc(100vh - 200px)' }} // Explicit height
             onMouseEnter={() => onHover?.(stage)}
             onMouseLeave={() => onHover?.(null)}
         >
             <div className="p-3 border-b border-border/40 flex items-center justify-between bg-muted rounded-t-xl sticky top-0 z-10">
-                <StageBadge stage={stage} />
-                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {institutions.length}
-                </span>
+                <StageBadge stage={stage} count={institutions.length} />
             </div>
 
             <div

@@ -3,10 +3,11 @@ import { cn } from "@/lib/utils";
 
 interface StageBadgeProps {
     stage: EngagementStage;
+    count?: number;
     className?: string;
 }
 
-export function StageBadge({ stage, className }: StageBadgeProps) {
+export function StageBadge({ stage, count, className }: StageBadgeProps) {
     const getStageColor = (stage: EngagementStage) => {
         switch (stage) {
             case EngagementStage.UNCONTACTED:
@@ -46,6 +47,11 @@ export function StageBadge({ stage, className }: StageBadgeProps) {
             )}
         >
             {getLabel(stage)}
+            {count !== undefined && (
+                <span className="ml-2 opacity-70 border-l border-current pl-2">
+                    {count}
+                </span>
+            )}
         </span>
     );
 }

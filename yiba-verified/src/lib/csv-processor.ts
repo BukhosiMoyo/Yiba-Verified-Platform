@@ -10,6 +10,7 @@ export interface CsvRow {
     accreditation_start_date?: string;
     accreditation_end_date?: string;
     programmes?: string;
+    emails?: string[];
     [key: string]: any;
 }
 
@@ -85,8 +86,13 @@ export function processInviteCsv(csvContent: string): CsvValidationResult {
                 // Handle multiple emails separated by ; or ,
                 const rawEmail = row[key];
                 if (rawEmail) {
-                    const firstEmail = rawEmail.split(/[;,]/)[0].trim();
-                    if (!normalizedRow.email) normalizedRow.email = firstEmail;
+                    const extractedEmails = rawEmail.split(/[;,]/).map((e: string) => e.trim()).filter((e: string) => isValidEmail(e));
+
+                    if (extractedEmails.length > 0) {
+                        if (!normalizedRow.emails) normalizedRow.emails = [];
+                        normalizedRow.emails.push(...extractedEmails);
+                        if (!normalizedRow.email) normalizedRow.email = extractedEmails[0];
+                    }
                 }
             }
             // Name mapping
@@ -114,45 +120,52 @@ export function processInviteCsv(csvContent: string): CsvValidationResult {
             else if (lowerKey.includes('accreditation') && lowerKey.includes('end')) normalizedRow.accreditation_end_date = row[key];
         });
 
-        // Validate Email
-        if (!normalizedRow.email || !isValidEmail(normalizedRow.email)) {
+        // Validate Emails
+        const emailsToProcess = normalizedRow.emails && normalizedRow.emails.length > 0 ? normalizedRow.emails : (normalizedRow.email ? [normalizedRow.email] : []);
+
+        if (emailsToProcess.length === 0) {
             invalidInvites.push({
                 row: normalizedRow,
-                reason: normalizedRow.email ? 'Invalid email format' : 'Missing email',
+                reason: 'Missing or invalid email',
                 row_index: index
             });
             return;
         }
 
-        const email = normalizedRow.email.toLowerCase().trim();
+        // Iterate all found emails
+        emailsToProcess.forEach(emailStr => {
+            const email = emailStr.toLowerCase().trim();
+            if (!isValidEmail(email)) return;
 
-        // Deduplicate
-        if (seenEmails.has(email)) {
-            duplicateCount++;
-            // We skip duplicate rows (or we could return them as invalid)
-            // Requirement says "Deduplicate by email... within the uploaded list"
-            return;
-        }
-        seenEmails.add(email);
+            // Deduplicate by Email + Organization
+            const orgKey = normalizedRow.organization ? normalizedRow.organization.toLowerCase().trim() : 'unknown';
+            const uniqueKey = `${email}|${orgKey}`;
 
-        // Extract Domain
-        const domain = email.split('@')[1];
-        if (domain) domains.add(domain);
+            if (seenEmails.has(uniqueKey)) {
+                duplicateCount++;
+                return;
+            }
+            seenEmails.add(uniqueKey);
 
-        validInvites.push({
-            email,
-            first_name: normalizedRow.first_name || '',
-            last_name: normalizedRow.last_name || '',
-            organization: normalizedRow.organization || extractOrgFromDomain(domain) || '',
-            domain,
-            phone_number: normalizedRow.phone_number || '',
-            role: normalizedRow.role || '',
-            original_row_index: index,
-            // Extended fields
-            physical_address: normalizedRow.physical_address,
-            accreditation_start_date: normalizedRow.accreditation_start_date,
-            accreditation_end_date: normalizedRow.accreditation_end_date,
-            programmes: normalizedRow.programmes,
+            // Extract Domain
+            const domain = email.split('@')[1];
+            if (domain) domains.add(domain);
+
+            validInvites.push({
+                email,
+                first_name: normalizedRow.first_name || '',
+                last_name: normalizedRow.last_name || '',
+                organization: normalizedRow.organization || extractOrgFromDomain(domain) || '',
+                domain,
+                phone_number: normalizedRow.phone_number || '',
+                role: normalizedRow.role || '',
+                original_row_index: index,
+                // Extended fields
+                physical_address: normalizedRow.physical_address,
+                accreditation_start_date: normalizedRow.accreditation_start_date,
+                accreditation_end_date: normalizedRow.accreditation_end_date,
+                programmes: normalizedRow.programmes,
+            });
         });
     });
 
