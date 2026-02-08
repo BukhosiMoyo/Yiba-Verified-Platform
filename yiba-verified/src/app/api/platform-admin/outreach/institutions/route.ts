@@ -132,7 +132,7 @@ export async function POST(req: Request) {
                         physical_address: lead.physical_address || "Address Pending",
                         province: lead.province || "Gauteng",
                         contact_email: email,
-                        status: "ACTIVE"
+                        status: "APPROVED"
                     }
                 });
             }
