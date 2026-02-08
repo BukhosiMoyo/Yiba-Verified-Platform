@@ -158,7 +158,7 @@ export async function POST(req: Request) {
                         institution_id: inst.institution_id,
                         token_hash: hash,
                         expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90),
-                        created_by_user_id: session.user.id,
+                        created_by_user_id: session.user.userId,
                         engagement_state: "UNCONTACTED",
                         engagement_score_raw: 0,
                         first_name: lead.contacts?.[0]?.first_name,
