@@ -8,17 +8,22 @@ export default async function SandboxWorkspace({ params }: { params: { sessionId
 
     if (!sessionData) return <div>Session not found</div>;
 
-    // 2. Serialize Data (Date -> String) for Client Component
-    // We cast to 'any' to bypass strict Date type checks since we are passing strings to the client
-    // The client component handles string dates via new Date() or similar if needed.
+    if (!sessionData) return <div>Session not found</div>;
+
+    // 2. Separate Relations & Serialize
+    // Destructure to separate the relational arrays (which have Dates) from the main session fields
+    const { messages: rawMessages, events: rawEvents, ...sessionFields } = sessionData;
+
+    // Serialize Session Fields
     const session = {
-        ...sessionData,
-        created_at: sessionData.created_at.toISOString(),
-        updated_at: sessionData.updated_at.toISOString(),
-        last_activity_at: sessionData.last_activity_at.toISOString(),
+        ...sessionFields,
+        created_at: sessionFields.created_at.toISOString(),
+        updated_at: sessionFields.updated_at.toISOString(),
+        last_activity_at: sessionFields.last_activity_at.toISOString(),
     } as any;
 
-    const messages = sessionData.messages.map(msg => ({
+    // Serialize Messages
+    const messages = rawMessages.map(msg => ({
         ...msg,
         sent_at: msg.sent_at?.toISOString() ?? null,
         opened_at: msg.opened_at?.toISOString() ?? null,
@@ -26,7 +31,8 @@ export default async function SandboxWorkspace({ params }: { params: { sessionId
         created_at: msg.created_at.toISOString(),
     })) as any;
 
-    const events = sessionData.events.map(evt => ({
+    // Serialize Events
+    const events = rawEvents.map(evt => ({
         ...evt,
         timestamp: evt.timestamp.toISOString(),
     })) as any;
