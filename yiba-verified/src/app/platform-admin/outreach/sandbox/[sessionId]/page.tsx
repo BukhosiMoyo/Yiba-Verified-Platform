@@ -1,6 +1,8 @@
 import { SandboxSession, SandboxMessage } from "@/lib/outreach/sandbox/types";
 import { getSandboxSession } from "../actions";
 import { WorkspaceClient } from "../_components/WorkspaceClient";
+import { Terminal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 import { prisma } from "@/lib/prisma";
 import { EngagementState } from "@prisma/client";
@@ -43,11 +45,40 @@ export default async function SandboxWorkspace({ params }: { params: Promise<{ s
 
     // 4. Render Client Wrapper
     return (
-        <WorkspaceClient
-            session={serializedData}
-            messages={serializedData.messages}
-            events={serializedData.events}
-            questionnaire={serializedQuestionnaire}
-        />
+        <div className="flex flex-col h-screen bg-slate-50 dark:bg-black overflow-hidden">
+            {/* Context Header */}
+            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-b px-8 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+                        <Terminal className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Outreach Intelligence</div>
+                        <h1 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Sandbox Explorer</h1>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="flex flex-col items-end">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Active Instance</div>
+                        <div className="text-sm font-bold text-slate-600 dark:text-slate-300">{sessionData.institution_name}</div>
+                    </div>
+                    <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800" />
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 font-black text-[10px] tracking-widest py-1 px-3">
+                        <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse mr-2" />
+                        LIVE SYNC
+                    </Badge>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden">
+                <WorkspaceClient
+                    session={serializedData}
+                    messages={serializedData.messages}
+                    events={serializedData.events}
+                    questionnaire={serializedQuestionnaire}
+                />
+            </div>
+        </div>
     );
 }

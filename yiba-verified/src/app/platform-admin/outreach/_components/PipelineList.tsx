@@ -301,64 +301,70 @@ export function PipelineList({ institutions }: PipelineListProps) {
                     </TableHeader>
                     <TableBody>
                         {paginatedInstitutions.length > 0 ? (
-                            paginatedInstitutions.map((inst) => (
-                                <TableRow key={inst.id}>
-                                    <TableCell className="font-medium">
-                                        <Link
-                                            href={`/platform-admin/outreach/institutions/${inst.institution_id}`}
-                                            className="hover:underline hover:text-primary transition-colors"
-                                        >
-                                            {inst.institution_name}
-                                        </Link>
-                                        <div className="text-xs text-muted-foreground mt-0.5">{inst.domain}</div>
-                                    </TableCell>
-                                    <TableCell>{inst.province}</TableCell>
-                                    <TableCell>
-                                        <StageBadge stage={inst.engagement_stage} />
-                                    </TableCell>
-                                    <TableCell>
-                                        {new Date(inst.last_activity).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <EngagementScoreGauge score={inst.engagement_score} size="sm" showLabel={false} />
-                                            <span className="text-xs text-muted-foreground">{inst.engagement_score}%</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/platform-admin/outreach/institutions/${inst.institution_id}`}>
-                                                        View Details
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleMoveToNext(inst)}
-                                                    disabled={loadingId === inst.institution_id}
-                                                >
-                                                    <ArrowRight className="h-3 w-3 mr-2" />
-                                                    Move to Next Stage
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDecline(inst)}
-                                                    disabled={loadingId === inst.institution_id}
-                                                    className="text-red-600 focus:text-red-600"
-                                                >
-                                                    <XCircle className="h-3 w-3 mr-2" />
-                                                    Mark as Declined
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            paginatedInstitutions.map((inst, index) => {
+                                const itemKey = inst.id || `fallback-list-${currentPage}-${index}`;
+                                if (!inst.id) {
+                                    console.error(`[PipelineList] Missing ID for institution at index ${index} on page ${currentPage}`, inst);
+                                }
+                                return (
+                                    <TableRow key={itemKey}>
+                                        <TableCell className="font-medium">
+                                            <Link
+                                                href={`/platform-admin/outreach/institutions/${inst.institution_id}`}
+                                                className="hover:underline hover:text-primary transition-colors"
+                                            >
+                                                {inst.institution_name}
+                                            </Link>
+                                            <div className="text-xs text-muted-foreground mt-0.5">{inst.domain}</div>
+                                        </TableCell>
+                                        <TableCell>{inst.province}</TableCell>
+                                        <TableCell>
+                                            <StageBadge stage={inst.engagement_stage} />
+                                        </TableCell>
+                                        <TableCell>
+                                            {new Date(inst.last_activity).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <EngagementScoreGauge score={inst.engagement_score} size="sm" showLabel={false} />
+                                                <span className="text-xs text-muted-foreground">{inst.engagement_score}%</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Open menu</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/platform-admin/outreach/institutions/${inst.institution_id}`}>
+                                                            View Details
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleMoveToNext(inst)}
+                                                        disabled={loadingId === inst.institution_id}
+                                                    >
+                                                        <ArrowRight className="h-3 w-3 mr-2" />
+                                                        Move to Next Stage
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDecline(inst)}
+                                                        disabled={loadingId === inst.institution_id}
+                                                        className="text-red-600 focus:text-red-600"
+                                                    >
+                                                        <XCircle className="h-3 w-3 mr-2" />
+                                                        Mark as Declined
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">

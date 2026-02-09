@@ -3,35 +3,37 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface RadioGroupProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
+interface RadioGroupContextValue {
   value?: string;
   onValueChange?: (value: string) => void;
   error?: boolean;
 }
 
+const RadioGroupContext = React.createContext<RadioGroupContextValue | undefined>(
+  undefined
+);
+
+export interface RadioGroupProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  error?: boolean;
+  children?: React.ReactNode;
+}
+
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
   ({ className, value, onValueChange, error, children, ...props }, ref) => {
     return (
-      <div
-        ref={ref}
-        className={cn("space-y-2.5", className)}
-        role="radiogroup"
-        {...props}
-      >
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child)) {
-            const p = (child.props as { name?: string; value?: string });
-            return React.cloneElement(child, {
-              name: p.name || "radio-group",
-              checked: p.value === value,
-              onCheckedChange: onValueChange,
-              error,
-            } as React.ComponentProps<typeof RadioItem>);
-          }
-          return child;
-        })}
-      </div>
+      <RadioGroupContext.Provider value={{ value, onValueChange, error }}>
+        <div
+          ref={ref}
+          className={cn("space-y-2.5", className)}
+          role="radiogroup"
+          {...props}
+        >
+          {children}
+        </div>
+      </RadioGroupContext.Provider>
     );
   }
 );
@@ -41,31 +43,20 @@ export interface RadioItemProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string;
   value: string;
-  checked?: boolean;
-  onCheckedChange?: (value: string) => void;
   error?: boolean;
 }
 
 const RadioItem = React.forwardRef<HTMLInputElement, RadioItemProps>(
-  (
-    {
-      className,
-      label,
-      value,
-      checked,
-      onCheckedChange,
-      error,
-      id,
-      name,
-      ...props
-    },
-    ref
-  ) => {
+  ({ className, label, value, error: itemError, id, name, ...props }, ref) => {
+    const context = React.useContext(RadioGroupContext);
     const radioId = id || React.useId();
 
+    const checked = context?.value === value;
+    const error = itemError || context?.error;
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (onCheckedChange) {
-        onCheckedChange(e.target.value);
+      if (context?.onValueChange) {
+        context.onValueChange(e.target.value);
       }
       if (props.onChange) {
         props.onChange(e);
@@ -79,7 +70,7 @@ const RadioItem = React.forwardRef<HTMLInputElement, RadioItemProps>(
             type="radio"
             id={radioId}
             ref={ref}
-            name={name}
+            name={name || "radio-group"}
             value={value}
             checked={checked}
             onChange={handleChange}

@@ -71,9 +71,16 @@ export function StageColumn({ stage, institutions, totalCount, isHovered, isFocu
 
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                         const inst = institutions[virtualRow.index];
+                        if (!inst) return null; // Safety check
+
+                        const itemKey = inst.id || `fallback-stage-${stage}-${virtualRow.index}`;
+                        if (!inst.id) {
+                            console.error(`[StageColumn] Missing ID for institution at index ${virtualRow.index} in stage ${stage}`, inst);
+                        }
+
                         return (
                             <div
-                                key={inst.id}
+                                key={itemKey}
                                 data-index={virtualRow.index}
                                 ref={rowVirtualizer.measureElement}
                                 style={{
