@@ -47,7 +47,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="w-full md:w-1/2 lg:w-[40%] flex flex-col space-y-6 overflow-y-auto pr-2 custom-scrollbar"
+                className="w-full md:w-1/2 lg:w-[40%] flex flex-col space-y-6 overflow-y-auto pr-2 pb-20 custom-scrollbar"
             >
                 <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg shadow-purple-500/30 border border-white/10 ring-1 ring-black/5">
@@ -59,7 +59,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
                     </div>
                 </div>
 
-                <Card className="border-none shadow-2xl bg-white dark:bg-slate-900 relative overflow-hidden group ring-1 ring-slate-900/5 dark:ring-white/10">
+                <Card className="border-none shadow-2xl bg-white dark:bg-slate-900 relative group ring-1 ring-slate-900/5 dark:ring-white/10">
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-purple-500 to-indigo-600"></div>
                     <div className="absolute -top-24 -right-24 h-48 w-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
                     <CardHeader className="pb-4 relative z-10">
@@ -85,7 +85,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="space-y-6 relative z-10">
+                    <CardContent className="space-y-6 relative z-10 max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                         <div className="grid grid-cols-2 gap-4">
                             {/* Visual Gauge for Engagement Score */}
                             <div className="p-5 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner relative overflow-hidden flex flex-col justify-between h-[120px]">
@@ -247,7 +247,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
             <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex-1 flex flex-col border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-950 ring-1 ring-slate-900/5"
+                className="flex-1 min-h-0 flex flex-col border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-950 ring-1 ring-slate-900/5"
             >
                 {/* Simulated Browser Header */}
                 <div className="bg-slate-100 dark:bg-slate-900/50 p-3 border-b flex items-center justify-between px-6">
@@ -271,7 +271,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
                     </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
                     <div className="px-6 py-2 border-b bg-slate-50/30 dark:bg-slate-900/30 flex items-center justify-between">
                         <TabsList className="bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl h-10 w-fit">
                             <TabsTrigger
@@ -292,116 +292,119 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
-                        <AnimatePresence mode="wait">
-                            <TabsContent value="inbox" className="m-0 focus-visible:outline-none">
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="space-y-6"
-                                >
-                                    {messages.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-                                            <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-full mb-4">
-                                                <Mail className="h-12 w-12 opacity-10" />
+                    <div className="flex-1 min-h-0 p-6 relative flex flex-col">
+                        <div className="flex-1 min-h-0 flex flex-col">
+                            <AnimatePresence mode="wait">
+                                <TabsContent value="inbox" className="m-0 focus-visible:outline-none flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-20">
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-6"
+                                    >
+                                        {messages.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-32 text-slate-400">
+                                                <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-full mb-4">
+                                                    <Mail className="h-12 w-12 opacity-10" />
+                                                </div>
+                                                <h3 className="text-lg font-bold text-slate-300 dark:text-slate-800 uppercase tracking-widest">Inbox Protocol Empty</h3>
+                                                <p className="text-sm opacity-50">Waiting for Admin Brain to transmit message.</p>
                                             </div>
-                                            <h3 className="text-lg font-bold text-slate-300 dark:text-slate-800 uppercase tracking-widest">Inbox Protocol Empty</h3>
-                                            <p className="text-sm opacity-50">Waiting for Admin Brain to transmit message.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid gap-4 max-w-2xl mx-auto">
-                                            {messages.map((msg, idx) => {
-                                                const msgKey = msg.message_id || `fallback-msg-${idx}`;
-                                                if (!msg.message_id) {
-                                                    console.error(`[WorkspaceClient] Missing message_id at index ${idx}`, msg);
-                                                }
-                                                return (
-                                                    <motion.div
-                                                        key={msgKey}
-                                                        initial={{ opacity: 0, x: 20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: idx * 0.1 }}
-                                                    >
-                                                        <Card className="border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all hover:border-purple-400/50 group overflow-hidden">
-                                                            <CardHeader className="p-5 pb-3">
-                                                                <div className="flex justify-between items-center mb-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">YT</div>
-                                                                        <div>
-                                                                            <div className="text-sm font-black text-slate-800 dark:text-slate-100">{msg.from_name}</div>
-                                                                            <div className="text-[10px] text-muted-foreground font-medium">To: Recipient (Simulated)</div>
+                                        ) : (
+                                            <div className="grid gap-4 max-w-2xl mx-auto">
+                                                {messages.map((msg, idx) => {
+                                                    const msgKey = msg.message_id || `fallback-msg-${idx}`;
+                                                    if (!msg.message_id) {
+                                                        console.error(`[WorkspaceClient] Missing message_id at index ${idx}`, msg);
+                                                    }
+                                                    return (
+                                                        <motion.div
+                                                            key={msgKey}
+                                                            initial={{ opacity: 0, x: 20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: idx * 0.1 }}
+                                                        >
+                                                            <Card className="border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all hover:border-purple-400/50 group overflow-hidden">
+                                                                <CardHeader className="p-5 pb-3">
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">YT</div>
+                                                                            <div>
+                                                                                <div className="text-sm font-black text-slate-800 dark:text-slate-100">{msg.from_name}</div>
+                                                                                <div className="text-[10px] text-muted-foreground font-medium">To: Recipient (Simulated)</div>
+                                                                            </div>
                                                                         </div>
+                                                                        <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-bold opacity-70">RECENT</div>
                                                                     </div>
-                                                                    <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-bold opacity-70">RECENT</div>
-                                                                </div>
-                                                                <div className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">{msg.subject}</div>
-                                                            </CardHeader>
-                                                            <CardContent className="p-5 pt-0">
-                                                                <div className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800/50 font-medium italic">
-                                                                    {msg.body_html.replace(/<[^>]*>?/gm, '').substring(0, 180)}...
-                                                                </div>
-                                                                <div className="mt-5 flex items-center justify-between">
-                                                                    <div className="flex gap-2">
-                                                                        <Button size="sm" variant="outline" className="h-9 px-5 rounded-xl text-xs font-bold border-slate-200 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95" onClick={() => handleEvent("EMAIL_OPENED")}>
-                                                                            Preview Data
-                                                                        </Button>
-                                                                        <Button size="sm" className="h-9 px-5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/10 transition-all hover:scale-105 active:scale-95" onClick={() => handleEvent("LINK_CLICKED")}>
-                                                                            <MousePointer className="mr-2 h-3.5 w-3.5" /> Navigate to Portal
+                                                                    <div className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">{msg.subject}</div>
+                                                                </CardHeader>
+                                                                <CardContent className="p-5 pt-0">
+                                                                    <div className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800/50 font-medium italic">
+                                                                        {msg.body_html.replace(/<[^>]*>?/gm, '').substring(0, 180)}...
+                                                                    </div>
+                                                                    <div className="mt-5 flex items-center justify-between">
+                                                                        <div className="flex gap-2">
+                                                                            <Button size="sm" variant="outline" className="h-9 px-5 rounded-xl text-xs font-bold border-slate-200 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95" onClick={() => handleEvent("EMAIL_OPENED")}>
+                                                                                Preview Data
+                                                                            </Button>
+                                                                            <Button size="sm" className="h-9 px-5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/10 transition-all hover:scale-105 active:scale-95" onClick={() => handleEvent("LINK_CLICKED")}>
+                                                                                <MousePointer className="mr-2 h-3.5 w-3.5" /> Navigate to Portal
+                                                                            </Button>
+                                                                        </div>
+                                                                        <Button size="sm" variant="ghost" className="h-9 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleEvent("DECLINED")}>
+                                                                            Opt-Out
                                                                         </Button>
                                                                     </div>
-                                                                    <Button size="sm" variant="ghost" className="h-9 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleEvent("DECLINED")}>
-                                                                        Opt-Out
-                                                                    </Button>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            </TabsContent>
+                                                                </CardContent>
+                                                            </Card>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                </TabsContent>
 
-                            <TabsContent value="landing" className="m-0 focus-visible:outline-none">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 1.05 }}
-                                    className="h-full min-h-[500px]"
-                                >
-                                    {questionnaire ? (
-                                        <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg custom-scrollbar">
-                                            <QuestionnaireRenderer
-                                                questionnaire={questionnaire}
-                                                onComplete={async (answers) => {
-                                                    await handleEvent("QUESTIONNAIRE_COMPLETED", answers);
-                                                }}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 h-[400px] rounded-3xl flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/20 px-8 text-center">
-                                            <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200 dark:shadow-black/50 mb-6">
-                                                <Globe className="h-10 w-10 text-slate-300" />
+                                <TabsContent value="landing" className="m-0 focus-visible:outline-none flex-1 min-h-0 flex flex-col">
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 1.05 }}
+                                        className="flex-1 min-h-0 flex flex-col"
+                                    >
+                                        {questionnaire ? (
+                                            <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-20">
+                                                <QuestionnaireRenderer
+                                                    questionnaire={questionnaire}
+                                                    onComplete={async (answers) => {
+                                                        await handleEvent("QUESTIONNAIRE_COMPLETED", answers);
+                                                        setActiveTab("inbox");
+                                                    }}
+                                                />
                                             </div>
-                                            <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-2">Simulated Discovery Page</h3>
-                                            <p className="text-sm text-slate-500 max-w-xs mb-8">
-                                                No intelligence questionnaire mapped for current state: <b className="text-purple-600">{session.current_stage}</b>
-                                            </p>
-                                            <div className="flex gap-3">
-                                                <Button onClick={() => handleEvent("QUESTIONNAIRE_COMPLETED")} variant="secondary" className="font-bold px-6">
-                                                    Simulate Bulk Submission
-                                                </Button>
-                                                <Button onClick={() => setActiveTab("inbox")} variant="outline" className="font-bold">
-                                                    Return to Inbox
-                                                </Button>
+                                        ) : (
+                                            <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 h-[400px] rounded-3xl flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/20 px-8 text-center">
+                                                <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200 dark:shadow-black/50 mb-6">
+                                                    <Globe className="h-10 w-10 text-slate-300" />
+                                                </div>
+                                                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-2">Simulated Discovery Page</h3>
+                                                <p className="text-sm text-slate-500 max-w-xs mb-8">
+                                                    No intelligence questionnaire mapped for current state: <b className="text-purple-600">{session.current_stage}</b>
+                                                </p>
+                                                <div className="flex gap-3">
+                                                    <Button onClick={() => handleEvent("QUESTIONNAIRE_COMPLETED")} variant="secondary" className="font-bold px-6">
+                                                        Simulate Bulk Submission
+                                                    </Button>
+                                                    <Button onClick={() => setActiveTab("inbox")} variant="outline" className="font-bold">
+                                                        Return to Inbox
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            </TabsContent>
-                        </AnimatePresence>
+                                        )}
+                                    </motion.div>
+                                </TabsContent>
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </Tabs>
             </motion.div>

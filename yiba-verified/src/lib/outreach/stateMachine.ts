@@ -37,6 +37,9 @@ export function determineNextState(
             return EngagementState.CONTACTED;
 
         case EngagementState.CONTACTED:
+            // Explicit progression via Questionnaire
+            if (event === 'QUESTIONNAIRE_COMPLETED' as EngagementEventType) return EngagementState.ENGAGED;
+
             // If score crosses threshold, upgrade to ENGAGED
             if (currentScore >= ENGAGEMENT_THRESHOLD) {
                 return EngagementState.ENGAGED;
@@ -44,13 +47,18 @@ export function determineNextState(
             return EngagementState.CONTACTED;
 
         case EngagementState.ENGAGED:
-            // Can move to EVALUATING on high-intent actions (Manual trigger?)
-            // For now, stay ENGAGED or drop back if score decays (though this function is called on EVENT, so score usually goes up)
-            // If score drops below threshold (e.g. via decay fn elsewhere), it might revert to CONTACTED.
-            // But this function handles "Next State after Event".
+            // Explicit progression via Questionnaire (Move to Evaluating/Trust Building)
+            if (event === 'QUESTIONNAIRE_COMPLETED' as EngagementEventType) return EngagementState.EVALUATING;
+
             return EngagementState.ENGAGED;
 
         case EngagementState.EVALUATING:
+            // Explicit progression via Questionnaire (Move to Ready/Action)
+            if (event === 'QUESTIONNAIRE_COMPLETED' as EngagementEventType) return EngagementState.READY;
+
+            return EngagementState.EVALUATING;
+
+
         case EngagementState.READY:
         case EngagementState.ACTIVE:
         case EngagementState.PAUSED:

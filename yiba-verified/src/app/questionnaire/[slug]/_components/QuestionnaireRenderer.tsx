@@ -23,13 +23,26 @@ interface QuestionnaireRendererProps {
 export function QuestionnaireRenderer({ questionnaire, onComplete }: QuestionnaireRendererProps) {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+    // Flatten all questions from all steps
+    // Flatten all questions from all steps
+    const allQuestions = questionnaire.steps.flatMap((step, stepIdx) =>
+        step.questions.map((q, qIdx) => ({
+            ...q,
+            stepTitle: step.title,
+            stepCopy: step.copy,
+            // Fallback ID to prevent duplicate key errors if DB has empty strings
+            question_id: q.question_id || `q-fallback-${stepIdx}-${qIdx}`
+        }))
+    );
+
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
     const [submitting, setSubmitting] = useState(false);
     const [completed, setCompleted] = useState(false);
 
-    const currentStep = questionnaire.steps[currentStepIndex];
-    const isLastStep = currentStepIndex === questionnaire.steps.length - 1;
+    const currentQuestion = allQuestions[currentQuestionIndex];
+    const isLastQuestion = currentQuestionIndex === allQuestions.length - 1;
 
     const handleAnswerChange = (questionId: string, value: any) => {
         setAnswers(prev => ({
@@ -40,16 +53,21 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
 
     const handleNext = () => {
         // Validation check
-        const missingRequired = currentStep.questions.filter(q => q.required && !answers[q.question_id]);
-        if (missingRequired.length > 0) {
-            toast.error("Please answer all required questions.");
+        if (currentQuestion.required && !answers[currentQuestion.question_id]) {
+            toast.error("Please answer this required question.");
             return;
         }
 
-        if (isLastStep) {
+        if (isLastQuestion) {
             submitQuestionnaire();
         } else {
-            setCurrentStepIndex(prev => prev + 1);
+            setCurrentQuestionIndex(prev => prev + 1);
+        }
+    };
+
+    const handleBack = () => {
+        if (currentQuestionIndex > 0) {
+            setCurrentQuestionIndex(prev => prev - 1);
         }
     };
 
@@ -100,11 +118,15 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
                 <div className="space-y-4">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Success</h2>
                     <p className="text-slate-500 dark:text-slate-400 max-w-sm text-lg font-medium leading-relaxed">
-                        Data integrated. Your institution profile has been updated based on your input.
+                        Data integrated. Proceeding to next phase of simulation.
                     </p>
                 </div>
-                <Button onClick={() => window.close()} variant="outline" className="rounded-2xl px-12 h-12 font-bold border-slate-200 dark:border-slate-800">
-                    Exit Workspace
+                <Button
+                    onClick={() => onComplete ? onComplete({}) : window.location.reload()}
+                    size="lg"
+                    className="rounded-2xl px-12 h-14 font-bold bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/20 text-white"
+                >
+                    Return to Inbox
                 </Button>
             </motion.div>
         );
@@ -137,7 +159,7 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
                     <div className="w-32 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden ring-1 ring-slate-900/5 dark:ring-white/10">
                         <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${((currentStepIndex + 1) / questionnaire.steps.length) * 100}%` }}
+                            animate={{ width: `${((currentQuestionIndex + 1) / allQuestions.length) * 100}%` }}
                             className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite] skew-x-12"></div>
@@ -149,184 +171,188 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
             <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar relative z-10">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={currentStepIndex}
+                        key={currentQuestionIndex}
                         initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                         exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
                         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                        className="max-w-2xl mx-auto space-y-12"
+                        className="max-w-3xl mx-auto space-y-12"
                     >
                         <div className="space-y-4">
                             <Badge variant="outline" className="rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-[10px] font-black tracking-widest uppercase py-1 shadow-sm">
-                                Section {currentStepIndex + 1}
+                                Question {currentQuestionIndex + 1} of {allQuestions.length}
                             </Badge>
-                            <h3 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white leading-[1.1] tracking-tight drop-shadow-sm">
-                                {currentStep.title}
+                            <h3 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white leading-[1.1] tracking-tight drop-shadow-sm">
+                                {currentQuestion.stepTitle}
                             </h3>
                             <p className="text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                                {currentStep.copy}
+                                {currentQuestion.stepCopy}
                             </p>
                         </div>
 
                         <div className="space-y-10">
-                            {currentStep.questions.map((q, idx) => (
-                                <motion.div
-                                    key={q.question_id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    className="space-y-6"
-                                >
-                                    <div className="flex gap-4">
-                                        <div className="h-6 w-6 mt-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shadow-inner">
-                                            {idx + 1}
+                            {(() => {
+                                const q = currentQuestion;
+                                const idx = 0;
+                                return (
+                                    <motion.div
+                                        key={q.question_id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.1 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className="flex gap-4">
+                                            <div className="h-6 w-6 mt-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shadow-inner">
+                                                {idx + 1}
+                                            </div>
+                                            <Label className="text-xl font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                                                {q.text} {q.required && <span className="text-purple-500 font-black ml-1">*</span>}
+                                            </Label>
                                         </div>
-                                        <Label className="text-xl font-bold text-slate-800 dark:text-slate-200 leading-tight">
-                                            {q.text} {q.required && <span className="text-purple-500 font-black ml-1">*</span>}
-                                        </Label>
-                                    </div>
 
-                                    <div className="pl-10">
-                                        {q.type === QuestionType.RADIO && q.options && (
-                                            <RadioGroup
-                                                value={answers[q.question_id] || ""}
-                                                onValueChange={(val) => handleAnswerChange(q.question_id, val)}
-                                                className="grid gap-3"
-                                            >
-                                                {q.options.map((opt, i) => (
-                                                    <div key={`${opt}-${i}`} className="relative group">
-                                                        <RadioItem
-                                                            value={opt}
-                                                            id={`${q.question_id}-${opt}`}
-                                                            className="sr-only"
-                                                        />
-                                                        <Label
-                                                            htmlFor={`${q.question_id}-${opt}`}
-                                                            className={cn(
-                                                                "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer font-bold text-lg relative overflow-hidden",
-                                                                answers[q.question_id] === opt
-                                                                    ? "border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 shadow-[0_0_20px_rgba(147,51,234,0.15)] ring-1 ring-purple-500/50"
-                                                                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50 hover:shadow-lg hover:-translate-y-0.5"
-                                                            )}
-                                                        >
-                                                            <div className={cn(
-                                                                "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                                                                answers[q.question_id] === opt
-                                                                    ? "border-purple-600 bg-purple-600 scale-110"
-                                                                    : "border-slate-300 dark:border-slate-700 group-hover:border-slate-400"
-                                                            )}>
-                                                                {answers[q.question_id] === opt && <div className="h-2 w-2 rounded-full bg-white shadow-sm" />}
-                                                            </div>
-                                                            {opt}
-                                                            {answers[q.question_id] === opt && (
-                                                                <motion.div
-                                                                    layoutId={`glow-${q.question_id}`}
-                                                                    className="absolute inset-0 bg-purple-500/5 pointer-events-none"
-                                                                    initial={{ opacity: 0 }}
-                                                                    animate={{ opacity: 1 }}
-                                                                    exit={{ opacity: 0 }}
-                                                                />
-                                                            )}
-                                                        </Label>
-                                                    </div>
-                                                ))}
-                                            </RadioGroup>
-                                        )}
-
-                                        {q.type === QuestionType.CHECKBOX && q.options && (
-                                            <div className="grid gap-3">
-                                                {q.options.map((opt, i) => {
-                                                    const currentAnswers = (answers[q.question_id] as string[]) || [];
-                                                    const isChecked = currentAnswers.includes(opt);
-                                                    return (
+                                        <div className="pl-10">
+                                            {q.type === QuestionType.RADIO && q.options && (
+                                                <RadioGroup
+                                                    value={answers[q.question_id] || ""}
+                                                    onValueChange={(val) => handleAnswerChange(q.question_id, val)}
+                                                    className="grid gap-3"
+                                                >
+                                                    {q.options.map((opt, i) => (
                                                         <div key={`${opt}-${i}`} className="relative group">
-                                                            <Checkbox
+                                                            <RadioItem
+                                                                value={opt}
                                                                 id={`${q.question_id}-${opt}`}
-                                                                checked={isChecked}
                                                                 className="sr-only"
-                                                                onCheckedChange={(checked) => {
-                                                                    const newAnswers = checked
-                                                                        ? [...currentAnswers, opt]
-                                                                        : currentAnswers.filter(a => a !== opt);
-                                                                    handleAnswerChange(q.question_id, newAnswers);
-                                                                }}
                                                             />
                                                             <Label
                                                                 htmlFor={`${q.question_id}-${opt}`}
                                                                 className={cn(
-                                                                    "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer font-bold text-lg",
-                                                                    isChecked
-                                                                        ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 shadow-[0_0_20px_rgba(79,70,229,0.15)] ring-1 ring-indigo-500/50"
+                                                                    "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer font-bold text-lg relative overflow-hidden",
+                                                                    answers[q.question_id] === opt
+                                                                        ? "border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 shadow-[0_0_20px_rgba(147,51,234,0.15)] ring-1 ring-purple-500/50"
                                                                         : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50 hover:shadow-lg hover:-translate-y-0.5"
                                                                 )}
                                                             >
                                                                 <div className={cn(
-                                                                    "h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300",
-                                                                    isChecked
-                                                                        ? "border-indigo-600 bg-indigo-600 scale-110"
+                                                                    "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-300",
+                                                                    answers[q.question_id] === opt
+                                                                        ? "border-purple-600 bg-purple-600 scale-110"
                                                                         : "border-slate-300 dark:border-slate-700 group-hover:border-slate-400"
                                                                 )}>
-                                                                    {isChecked && <ChevronRight className="h-4 w-4 text-white drop-shadow-sm" />}
+                                                                    {answers[q.question_id] === opt && <div className="h-2 w-2 rounded-full bg-white shadow-sm" />}
                                                                 </div>
                                                                 {opt}
+                                                                {answers[q.question_id] === opt && (
+                                                                    <motion.div
+                                                                        layoutId={`glow-${q.question_id}`}
+                                                                        className="absolute inset-0 bg-purple-500/5 pointer-events-none"
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        exit={{ opacity: 0 }}
+                                                                    />
+                                                                )}
                                                             </Label>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                                    ))}
+                                                </RadioGroup>
+                                            )}
 
-                                        {(q.type === QuestionType.OTHER_REVEAL || q.type === QuestionType.TEXT) && (
-                                            <div className="space-y-4">
-                                                {q.type === QuestionType.OTHER_REVEAL && q.options && (
-                                                    <RadioGroup
-                                                        value={answers[q.question_id] || ""}
-                                                        onValueChange={(val) => handleAnswerChange(q.question_id, val)}
-                                                        className="grid gap-3"
-                                                    >
-                                                        {q.options.map((opt, i) => (
+                                            {q.type === QuestionType.CHECKBOX && q.options && (
+                                                <div className="grid gap-3">
+                                                    {q.options.map((opt, i) => {
+                                                        const currentAnswers = (answers[q.question_id] as string[]) || [];
+                                                        const isChecked = currentAnswers.includes(opt);
+                                                        return (
                                                             <div key={`${opt}-${i}`} className="relative group">
-                                                                <RadioItem value={opt} id={`${q.question_id}-${opt}`} className="sr-only" />
-                                                                <Label htmlFor={`${q.question_id}-${opt}`} className={cn(
-                                                                    "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer font-bold text-lg",
-                                                                    answers[q.question_id] === opt
-                                                                        ? "border-purple-600 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-400"
-                                                                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50"
-                                                                )}>
+                                                                <Checkbox
+                                                                    id={`${q.question_id}-${opt}`}
+                                                                    checked={isChecked}
+                                                                    className="sr-only"
+                                                                    onCheckedChange={(checked) => {
+                                                                        const newAnswers = checked
+                                                                            ? [...currentAnswers, opt]
+                                                                            : currentAnswers.filter(a => a !== opt);
+                                                                        handleAnswerChange(q.question_id, newAnswers);
+                                                                    }}
+                                                                />
+                                                                <Label
+                                                                    htmlFor={`${q.question_id}-${opt}`}
+                                                                    className={cn(
+                                                                        "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer font-bold text-lg",
+                                                                        isChecked
+                                                                            ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 shadow-[0_0_20px_rgba(79,70,229,0.15)] ring-1 ring-indigo-500/50"
+                                                                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50 hover:shadow-lg hover:-translate-y-0.5"
+                                                                    )}
+                                                                >
                                                                     <div className={cn(
-                                                                        "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all",
-                                                                        answers[q.question_id] === opt
-                                                                            ? "border-purple-600 bg-purple-600"
-                                                                            : "border-slate-300 dark:border-slate-700"
+                                                                        "h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300",
+                                                                        isChecked
+                                                                            ? "border-indigo-600 bg-indigo-600 scale-110"
+                                                                            : "border-slate-300 dark:border-slate-700 group-hover:border-slate-400"
                                                                     )}>
-                                                                        {answers[q.question_id] === opt && <div className="h-2 w-2 rounded-full bg-white" />}
+                                                                        {isChecked && <ChevronRight className="h-4 w-4 text-white drop-shadow-sm" />}
                                                                     </div>
                                                                     {opt}
                                                                 </Label>
                                                             </div>
-                                                        ))}
-                                                    </RadioGroup>
-                                                )}
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
 
-                                                {(q.type === QuestionType.TEXT || (q.type === QuestionType.OTHER_REVEAL && answers[q.question_id] === "Other")) && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        className="pt-2"
-                                                    >
-                                                        <Input
-                                                            placeholder={q.type === QuestionType.TEXT ? "Your response..." : "Please specify..."}
-                                                            className="h-14 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 font-medium focus-visible:ring-purple-500 focus-visible:border-purple-500"
-                                                            value={answers[q.type === QuestionType.TEXT ? q.question_id : `${q.question_id}_detail`] || ""}
-                                                            onChange={(e) => handleAnswerChange(q.type === QuestionType.TEXT ? q.question_id : `${q.question_id}_detail`, e.target.value)}
-                                                        />
-                                                    </motion.div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
+                                            {(q.type === QuestionType.OTHER_REVEAL || q.type === QuestionType.TEXT) && (
+                                                <div className="space-y-4">
+                                                    {q.type === QuestionType.OTHER_REVEAL && q.options && (
+                                                        <RadioGroup
+                                                            value={answers[q.question_id] || ""}
+                                                            onValueChange={(val) => handleAnswerChange(q.question_id, val)}
+                                                            className="grid gap-3"
+                                                        >
+                                                            {q.options.map((opt, i) => (
+                                                                <div key={`${opt}-${i}`} className="relative group">
+                                                                    <RadioItem value={opt} id={`${q.question_id}-${opt}`} className="sr-only" />
+                                                                    <Label htmlFor={`${q.question_id}-${opt}`} className={cn(
+                                                                        "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer font-bold text-lg",
+                                                                        answers[q.question_id] === opt
+                                                                            ? "border-purple-600 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-400"
+                                                                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50"
+                                                                    )}>
+                                                                        <div className={cn(
+                                                                            "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                                                            answers[q.question_id] === opt
+                                                                                ? "border-purple-600 bg-purple-600"
+                                                                                : "border-slate-300 dark:border-slate-700"
+                                                                        )}>
+                                                                            {answers[q.question_id] === opt && <div className="h-2 w-2 rounded-full bg-white" />}
+                                                                        </div>
+                                                                        {opt}
+                                                                    </Label>
+                                                                </div>
+                                                            ))}
+                                                        </RadioGroup>
+                                                    )}
+
+                                                    {(q.type === QuestionType.TEXT || (q.type === QuestionType.OTHER_REVEAL && answers[q.question_id] === "Other")) && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="pt-2"
+                                                        >
+                                                            <Input
+                                                                placeholder={q.type === QuestionType.TEXT ? "Your response..." : "Please specify..."}
+                                                                className="h-14 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 font-medium focus-visible:ring-purple-500 focus-visible:border-purple-500"
+                                                                value={answers[q.type === QuestionType.TEXT ? q.question_id : `${q.question_id}_detail`] || ""}
+                                                                onChange={(e) => handleAnswerChange(q.type === QuestionType.TEXT ? q.question_id : `${q.question_id}_detail`, e.target.value)}
+                                                            />
+                                                        </motion.div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                );
+                            })()}
                         </div>
                     </motion.div>
                 </AnimatePresence>
@@ -335,14 +361,14 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
             <div className="p-8 border-t bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center z-20">
                 <div className="flex flex-col">
                     <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Interactive Protocol</span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-white">Step {currentStepIndex + 1} of {questionnaire.steps.length}</span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-white">Question {currentQuestionIndex + 1} of {allQuestions.length}</span>
                 </div>
                 <div className="flex gap-4">
-                    {currentStepIndex > 0 && (
+                    {currentQuestionIndex > 0 && (
                         <Button
                             variant="outline"
                             size="lg"
-                            onClick={() => setCurrentStepIndex(prev => prev - 1)}
+                            onClick={handleBack}
                             className="rounded-2xl h-14 px-8 font-bold border-2 border-slate-200 dark:border-slate-800 hover:bg-slate-50"
                         >
                             Back
@@ -361,9 +387,9 @@ export function QuestionnaireRenderer({ questionnaire, onComplete }: Questionnai
                             </>
                         ) : (
                             <>
-                                {isLastStep ? "Finalize Submission" : "Next Phase"}
-                                {!isLastStep && <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />}
-                                {isLastStep && <CheckCircle2 className="ml-2 h-5 w-5" />}
+                                {isLastQuestion ? "Submit Response" : "Next Question"}
+                                {!isLastQuestion && <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />}
+                                {isLastQuestion && <CheckCircle2 className="ml-2 h-5 w-5" />}
                             </>
                         )}
                     </Button>

@@ -45,6 +45,12 @@ export async function getSandboxSession(sessionId: string) {
  */
 export async function simulateEvent(sessionId: string, eventType: OutreachEventType, metadata: any = {}) {
     await SandboxEngine.triggerSandboxEvent(sessionId, eventType, metadata);
+
+    // Auto-generate next draft if questionnaire is completed to keep the loop going
+    if (eventType === 'QUESTIONNAIRE_COMPLETED' || eventType === 'FORM_SUBMITTED') {
+        await SandboxEngine.generateSandboxDraft(sessionId);
+    }
+
     revalidatePath(`/platform-admin/outreach/sandbox/${sessionId}`);
 }
 

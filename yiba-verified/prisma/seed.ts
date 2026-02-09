@@ -1016,6 +1016,10 @@ async function main() {
   const { seedEmailTemplates } = await import("./seed.templates");
   await seedEmailTemplates(prisma);
 
+  // Questionnaire templates
+  const { seedQuestionnaires } = await import("./seed.questionnaires");
+  await seedQuestionnaires(prisma);
+
   console.log("\n✅ Seeding completed!");
   console.log("\n📋 Seeded Login Credentials:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

@@ -18,6 +18,7 @@ export enum EngagementEventType {
     INVITE_ACCEPTED = "INVITE_ACCEPTED",
     INVITE_DECLINED = "INVITE_DECLINED",
     MANUAL_INTERVENTION = "MANUAL_INTERVENTION",
+    QUESTIONNAIRE_COMPLETED = "QUESTIONNAIRE_COMPLETED",
 }
 
 /**
@@ -42,6 +43,7 @@ export const SCORING_POINTS: Record<EngagementEventType, number> = {
     [EngagementEventType.INVITE_ACCEPTED]: 50, // Should probably transition state immediately
     [EngagementEventType.INVITE_DECLINED]: -50, // Should transition to DECLINED
     [EngagementEventType.MANUAL_INTERVENTION]: 0,
+    [EngagementEventType.QUESTIONNAIRE_COMPLETED]: 20,
 };
 
 export const MAX_SCORE = 100;
@@ -65,6 +67,7 @@ export enum OutreachEventType {
     EMAIL_OPENED = 'EMAIL_OPENED',
     LINK_CLICKED = 'LINK_CLICKED',
     FORM_SUBMITTED = 'FORM_SUBMITTED',
+    QUESTIONNAIRE_COMPLETED = 'QUESTIONNAIRE_COMPLETED',
     AI_EMAIL_GENERATED = 'AI_EMAIL_GENERATED',
     STAGE_CHANGED = 'STAGE_CHANGED',
     DECLINED = 'DECLINED',
