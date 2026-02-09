@@ -609,3 +609,15 @@ input[type="date"]:focus::-webkit-datetime-edit-year-field {
     font-size: 1.25rem;
   }
 }
+
+/* Completely hide scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

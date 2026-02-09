@@ -23,7 +23,7 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
     }
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-140px)] pb-12">
+        <div className="flex flex-col min-h-[calc(100vh-140px)]">
             <div className="space-y-6 max-w-[1600px] mx-auto w-full flex-1">
                 {/* Header: Refined, subtle, context-focused */}
                 <div className="flex flex-col gap-6">
@@ -53,25 +53,7 @@ export default async function OutreachLayout({ children }: OutreachLayoutProps) 
                 </main>
             </div>
 
-            {/* Footer Status Bar: Sticky at bottom, respects sidebar margin */}
-            {/* Footer Status Bar: Sticky at bottom */}
-            {/* Footer Status Bar: Static at bottom of layout (mt-auto) */}
-            <footer className="border-t border-border/20 py-2.5 px-6 bg-white dark:bg-background flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 mt-auto">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-                        <span>System Online</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-                        <span>Database Connected</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4 opacity-70">
-                    <span>Background Jobs: Idle</span>
-                    <span className="font-mono">v2.4.0</span>
-                </div>
-            </footer>
+
         </div>
     );
 }

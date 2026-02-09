@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 interface StageColumnProps {
     stage: EngagementStage;
     institutions: InstitutionOutreachProfile[];
+    totalCount: number;
     isHovered?: boolean;
+    isFocused?: boolean; // Menu open in this column
     onHover?: (stage: EngagementStage | null) => void;
+    onFocus?: (stage: EngagementStage | null) => void;
+    onScrollEnd?: () => void;
 }
 
-export function StageColumn({ stage, institutions, isHovered, onHover }: StageColumnProps) {
+export function StageColumn({ stage, institutions, totalCount, isHovered, isFocused, onHover, onFocus, onScrollEnd }: StageColumnProps) {
     const parentRef = useRef<HTMLDivElement>(null);
 
     const rowVirtualizer = useVirtualizer({
@@ -24,22 +28,31 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
         overscan: 5,
     });
 
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        // Trigger load more when within 200px of bottom
+        if (scrollHeight - scrollTop - clientHeight < 200) {
+            onScrollEnd?.();
+        }
+    };
+
     return (
         <div
             className={cn(
                 "flex flex-col rounded-xl border bg-card/50 backdrop-blur-sm h-full min-h-[calc(100vh-200px)] transition-all duration-300 ease-in-out",
-                isHovered ? "border-primary/20 w-80 shadow-md bg-card" : "border-border/60 w-72"
+                (isHovered || isFocused) ? "border-primary/20 w-96 shadow-md bg-card" : "border-border/60 w-72"
             )}
             style={{ height: 'calc(100vh - 200px)' }} // Explicit height
             onMouseEnter={() => onHover?.(stage)}
             onMouseLeave={() => onHover?.(null)}
         >
             <div className="p-3 border-b border-border/40 flex items-center justify-between bg-muted rounded-t-xl sticky top-0 z-10">
-                <StageBadge stage={stage} count={institutions.length} />
+                <StageBadge stage={stage} count={totalCount} />
             </div>
 
             <div
                 ref={parentRef}
+                onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-2 scrollbar-hide"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
@@ -60,7 +73,7 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
                         const inst = institutions[virtualRow.index];
                         return (
                             <div
-                                key={inst.institution_id}
+                                key={inst.id}
                                 data-index={virtualRow.index}
                                 ref={rowVirtualizer.measureElement}
                                 style={{
@@ -73,7 +86,13 @@ export function StageColumn({ stage, institutions, isHovered, onHover }: StageCo
                                 }}
                             >
                                 <div className="px-0.5">
-                                    <InstitutionCard institution={inst} />
+                                    <InstitutionCard
+                                        institution={inst}
+                                        onMenuOpen={(open) => {
+                                            if (open) onFocus?.(stage);
+                                            else onFocus?.(null);
+                                        }}
+                                    />
                                 </div>
                             </div>
                         );

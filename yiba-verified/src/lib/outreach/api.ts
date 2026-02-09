@@ -52,6 +52,37 @@ export const awarenessApi = {
     },
 
     // Institutions / Pipeline
+    async getStats(filters?: InstitutionFilters): Promise<{ counts: Record<string, number> }> {
+        const params = new URLSearchParams();
+        if (filters?.province) params.append("province", filters.province);
+
+        const res = await fetch(`/api/platform-admin/outreach/stats?${params}`);
+        if (!res.ok) throw new Error("Failed to fetch stats");
+        return res.json();
+    },
+
+    async getPipeline(filters?: InstitutionFilters, page = 1, limit = 50): Promise<{ data: InstitutionOutreachProfile[], meta: any }> {
+        const params = new URLSearchParams();
+        if (page) params.append("page", page.toString());
+        if (limit) params.append("limit", limit.toString());
+        if (filters?.stage) params.append("stage", filters.stage);
+        if (filters?.province) params.append("province", filters.province);
+        if (filters?.search) params.append("search", filters.search);
+
+        const res = await fetch(`/api/platform-admin/outreach/pipeline?${params}`);
+        if (!res.ok) throw new Error("Failed to fetch pipeline");
+        return res.json();
+    },
+
+    async updateInviteStage(inviteId: string, stage: string): Promise<void> {
+        const res = await fetch(`/api/platform-admin/outreach/invites/${inviteId}/stage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage }),
+        });
+        if (!res.ok) throw new Error('Failed to update stage');
+    },
+
     async getInstitutions(filters?: InstitutionFilters, page = 1, limit = 50): Promise<{ data: InstitutionOutreachProfile[], meta: { total: number, page: number, limit: number, totalPages: number } }> {
         // Pipeline API is implemented
         const params = new URLSearchParams();

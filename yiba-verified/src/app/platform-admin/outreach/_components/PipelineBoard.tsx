@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EngagementStage, InstitutionOutreachProfile } from "@/lib/outreach/types";
 import { StageColumn } from "./StageColumn";
 
 interface PipelineBoardProps {
     institutions: InstitutionOutreachProfile[];
     scrollRef: React.RefObject<HTMLDivElement | null>;
+    stageCounts: Record<string, number>;
+    onLoadMore: () => void;
+    hasMore: boolean;
+    loadingMore: boolean;
 }
 
-export function PipelineBoard({ institutions, scrollRef }: PipelineBoardProps) {
+export function PipelineBoard({
+    institutions,
+    scrollRef,
+    stageCounts,
+    onLoadMore,
+    hasMore,
+    loadingMore
+}: PipelineBoardProps) {
     const [hoveredStage, setHoveredStage] = useState<EngagementStage | null>(null);
+    const [focusedStage, setFocusedStage] = useState<EngagementStage | null>(null);
 
     const stages = [
         EngagementStage.UNCONTACTED,
@@ -26,6 +38,8 @@ export function PipelineBoard({ institutions, scrollRef }: PipelineBoardProps) {
         return institutions.filter((inst) => inst.engagement_stage === stage);
     };
 
+    // Strategy: Detect when any column is scrolled near bottom, trigger global loadMore.
+
     return (
         <div className="relative h-full group/board">
             <div
@@ -37,8 +51,16 @@ export function PipelineBoard({ institutions, scrollRef }: PipelineBoardProps) {
                         <StageColumn
                             stage={stage}
                             institutions={getInstitutionsByStage(stage)}
+                            totalCount={stageCounts[stage] || 0}
                             isHovered={hoveredStage === stage}
+                            isFocused={focusedStage === stage}
                             onHover={setHoveredStage}
+                            onFocus={setFocusedStage}
+                            onScrollEnd={() => {
+                                if (hasMore && !loadingMore) {
+                                    onLoadMore();
+                                }
+                            }}
                         />
                     </div>
                 ))}

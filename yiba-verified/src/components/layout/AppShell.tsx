@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { Footer } from "./Footer";
 import { useTour } from "@/components/tour/TourProvider";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { AnnouncementLoginModal } from "@/components/shared/AnnouncementLoginModal";
@@ -151,11 +152,11 @@ export function AppShell({
         )}
       >
         {/* Page content: no decoration (background is fixed layer); consistent container */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden">
           <GradientShell as="div" decoration="none" className="min-h-full bg-transparent">
             <div
               className={cn(
-                "mx-auto w-full py-8 px-[10px] sm:px-6 md:px-8 box-border",
+                "mx-auto w-full py-8 px-[10px] sm:px-6 md:px-8 box-border min-h-[calc(100vh-10rem)]",
                 isProfilePage ? "max-w-6xl" : "max-w-[1600px]"
               )}
             >
@@ -189,6 +190,9 @@ export function AppShell({
               )}
               {children}
             </div>
+
+            {/* Footer: Inside scroll container, static positioning */}
+            <Footer />
           </GradientShell>
         </main>
       </div>

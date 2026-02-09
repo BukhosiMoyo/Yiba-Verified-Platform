@@ -127,14 +127,14 @@ export function PipelineList({ institutions }: PipelineListProps) {
     };
 
     const handleMoveToNext = async (institution: InstitutionOutreachProfile) => {
-        setLoadingId(institution.institution_id);
+        setLoadingId(institution.id);
         try {
             const stages = Object.values(EngagementStage);
             const currentIndex = stages.indexOf(institution.engagement_stage);
             const nextStage = stages[currentIndex + 1];
 
             if (nextStage) {
-                await awarenessApi.updateStage(institution.institution_id, nextStage);
+                await awarenessApi.updateInviteStage(institution.id, nextStage);
                 toast.success(`Moved to ${nextStage}`);
                 router.refresh();
             } else {
@@ -149,9 +149,9 @@ export function PipelineList({ institutions }: PipelineListProps) {
     };
 
     const handleDecline = async (institution: InstitutionOutreachProfile) => {
-        setLoadingId(institution.institution_id);
+        setLoadingId(institution.id);
         try {
-            await awarenessApi.updateStage(institution.institution_id, EngagementStage.DECLINED);
+            await awarenessApi.updateInviteStage(institution.id, EngagementStage.DECLINED);
             toast.success("Marked as declined");
             router.refresh();
         } catch (error) {
@@ -302,7 +302,7 @@ export function PipelineList({ institutions }: PipelineListProps) {
                     <TableBody>
                         {paginatedInstitutions.length > 0 ? (
                             paginatedInstitutions.map((inst) => (
-                                <TableRow key={inst.institution_id}>
+                                <TableRow key={inst.id}>
                                     <TableCell className="font-medium">
                                         <Link
                                             href={`/platform-admin/outreach/institutions/${inst.institution_id}`}

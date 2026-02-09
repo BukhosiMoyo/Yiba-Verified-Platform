@@ -102,6 +102,7 @@ export interface StatusFlags {
 }
 
 export interface InstitutionOutreachProfile {
+    id: string; // Unique identifier for the pipeline card (Invite ID)
     institution_id: string;
     institution_name: string;
     domain: string;
