@@ -262,6 +262,17 @@ export const awarenessApi = {
         if (!res.ok) throw new Error('Failed to save questionnaire');
     },
 
+    async deleteQuestionnaire(id: string): Promise<void> {
+        if (USE_MOCKS) {
+            console.log('[MOCK] Delete questionnaire:', id);
+            return;
+        }
+        const res = await fetch(`/api/platform-admin/outreach/questionnaires/${id}`, {
+            method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to delete questionnaire');
+    },
+
     // Deliverability
     async getDeliverabilityMetrics(): Promise<DeliverabilityMetrics> {
         const res = await fetch('/api/platform-admin/outreach/deliverability/metrics');
@@ -288,6 +299,22 @@ export const awarenessApi = {
         const res = await fetch('/api/platform-admin/outreach/deliverability/suppression-list');
         if (!res.ok) throw new Error('Failed to fetch suppression list');
         return res.json();
+    },
+
+    async addSuppressionEntry(email: string): Promise<void> {
+        const res = await fetch('/api/platform-admin/outreach/deliverability/suppression-list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        if (!res.ok) throw new Error('Failed to add suppression entry');
+    },
+
+    async removeSuppressionEntry(email: string): Promise<void> {
+        const res = await fetch(`/api/platform-admin/outreach/deliverability/suppression-list?email=${encodeURIComponent(email)}`, {
+            method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to remove suppression entry');
     },
 
     // Declines
@@ -325,6 +352,30 @@ export const awarenessApi = {
         const res = await fetch('/api/platform-admin/outreach/declines/recovery');
         if (!res.ok) throw new Error('Failed to fetch recovery candidates');
         return res.json();
+    },
+
+    async recoverCandidate(institutionId: string, strategy: string): Promise<void> {
+        if (USE_MOCKS) {
+            console.log('[MOCK] Recover candidate:', institutionId, strategy);
+            return;
+        }
+        const res = await fetch(`/api/platform-admin/outreach/declines/recovery/${institutionId}/recover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ strategy }),
+        });
+        if (!res.ok) throw new Error('Failed to recover candidate');
+    },
+
+    async dismissCandidate(institutionId: string): Promise<void> {
+        if (USE_MOCKS) {
+            console.log('[MOCK] Dismiss candidate:', institutionId);
+            return;
+        }
+        const res = await fetch(`/api/platform-admin/outreach/declines/recovery/${institutionId}/dismiss`, {
+            method: 'POST',
+        });
+        if (!res.ok) throw new Error('Failed to dismiss candidate');
     },
 
     // AI Oversight

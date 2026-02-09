@@ -52,6 +52,18 @@ export default function DeliverabilityPage() {
         }
     };
 
+    const handleAddSuppression = async (email: string) => {
+        await awarenessApi.addSuppressionEntry(email);
+        const newList = await awarenessApi.getSuppressionList();
+        setSuppressionList(newList);
+    };
+
+    const handleRemoveSuppression = async (email: string) => {
+        await awarenessApi.removeSuppressionEntry(email);
+        const newList = await awarenessApi.getSuppressionList();
+        setSuppressionList(newList);
+    };
+
     if (loading) {
         return (
             <div className="flex h-[calc(100vh-200px)] items-center justify-center">
@@ -96,7 +108,11 @@ export default function DeliverabilityPage() {
                     <BatchConfigForm config={config} onSave={handleConfigSave} />
                 </div>
                 <div className="md:col-span-2">
-                    <SuppressionList entries={suppressionList} />
+                    <SuppressionList
+                        entries={suppressionList}
+                        onAdd={handleAddSuppression}
+                        onRemove={handleRemoveSuppression}
+                    />
                 </div>
             </div>
         </div>

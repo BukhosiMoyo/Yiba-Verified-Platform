@@ -121,27 +121,71 @@ export async function PATCH(request: NextRequest) {
         if (postal_address !== undefined) data.postal_address = postal_address;
         if (delivery_modes !== undefined) data.delivery_modes = delivery_modes;
 
-        // Update institution
-        const updated = await prisma.institution.update({
-            where: { institution_id: ctx.institutionId },
-            data: data as Parameters<typeof prisma.institution.update>[0]["data"],
-            select: {
-                institution_id: true,
-                legal_name: true,
-                trading_name: true,
-                institution_type: true,
-                registration_number: true,
-                physical_address: true,
-                postal_address: true,
-                province: true,
-                delivery_modes: true,
-                status: true,
-                contact_person_name: true,
-                contact_email: true,
-                contact_number: true,
-                created_at: true,
-                updated_at: true,
-            },
+        // Update institution with audit logging
+        const updated = await prisma.$transaction(async (tx) => {
+            // 1. Fetch current data for audit comparison
+            const current = await tx.institution.findUniqueOrThrow({
+                where: { institution_id: ctx.institutionId! },
+            });
+
+            // 2. Perform update
+            const result = await tx.institution.update({
+                where: { institution_id: ctx.institutionId! },
+                data: data as any,
+                select: {
+                    institution_id: true,
+                    legal_name: true,
+                    trading_name: true,
+                    institution_type: true,
+                    registration_number: true,
+                    physical_address: true,
+                    postal_address: true,
+                    province: true,
+                    delivery_modes: true,
+                    status: true,
+                    contact_person_name: true,
+                    contact_email: true,
+                    contact_number: true,
+                    created_at: true,
+                    updated_at: true,
+                },
+            });
+
+            // 3. Create audit logs for changed fields
+            // We need to dynamically import these to avoid circular dependencies if they use prisma
+            const { createAuditLogs, serializeValue } = await import("@/services/audit.service");
+
+            const auditEntries: any[] = [];
+
+            // Check each field in data to see if it changed
+            for (const [key, val] of Object.entries(data)) {
+                const fieldName = key;
+                const newValue = val;
+                const oldValue = current[key as keyof typeof current];
+
+                // Simple equality check (works for primitives and simple arrays if reference is different)
+                const isDifferent = JSON.stringify(newValue) !== JSON.stringify(oldValue);
+
+                if (isDifferent) {
+                    auditEntries.push({
+                        entityType: "INSTITUTION",
+                        entityId: ctx.institutionId!,
+                        fieldName: fieldName,
+                        oldValue: serializeValue(oldValue),
+                        newValue: serializeValue(newValue),
+                        changedBy: ctx.userId,
+                        roleAtTime: ctx.role,
+                        changeType: "UPDATE",
+                        institutionId: ctx.institutionId,
+                    });
+                }
+            }
+
+            if (auditEntries.length > 0) {
+                await createAuditLogs(tx, auditEntries);
+            }
+
+            return result;
         });
 
         return Response.json(updated);

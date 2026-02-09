@@ -56,6 +56,7 @@ export async function GET(req: Request) {
             if (stage && state !== stage) return null;
 
             return {
+                id: latestInvite?.invite_id || inst.institution_id,
                 institution_id: inst.institution_id,
                 institution_name: inst.legal_name,
                 domain: inst.contact_email ? inst.contact_email.split('@')[1] : "", // Simple domain extraction

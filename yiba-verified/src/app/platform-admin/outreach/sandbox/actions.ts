@@ -84,3 +84,16 @@ export async function simulateConversion(sessionId: string) {
     await SandboxEngine.convertSession(sessionId);
     revalidatePath(`/platform-admin/outreach/sandbox/${sessionId}`);
 }
+
+/**
+ * Deletes a session.
+ */
+export async function deleteSession(sessionId: string) {
+    await prisma.outreachSandboxMessage.deleteMany({ where: { session_id: sessionId } });
+    await prisma.outreachSandboxEvent.deleteMany({ where: { session_id: sessionId } });
+    // @ts-ignore
+    await prisma.outreachSandboxSession.delete({
+        where: { session_id: sessionId }
+    });
+    revalidatePath('/platform-admin/outreach/sandbox');
+}

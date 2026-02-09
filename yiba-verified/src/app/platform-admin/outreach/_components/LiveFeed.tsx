@@ -12,7 +12,7 @@ interface LiveFeedProps {
 
 export function LiveFeed({ logs }: LiveFeedProps) {
     return (
-        <Card className="h-full flex flex-col">
+        <Card className="h-full flex flex-col bg-card">
             <CardHeader className="flex-none">
                 <CardTitle className="flex items-center gap-2">
                     <span className="relative flex h-3 w-3">

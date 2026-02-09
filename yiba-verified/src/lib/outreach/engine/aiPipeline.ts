@@ -27,7 +27,33 @@ export async function generateDraft(
 ): Promise<AIDraft> {
 
     // Call LLM here
-    const mockOutput = "Subject: Hello\n\nBody: This is a draft.";
+    // Call LLM here
+    // Simple heuristic mock for now to respond to prompt content
+    const isMock = true;
+    let mockOutput = "";
+
+    if (isMock) {
+        const subjectMatch = prompt.match(/Questionnaire \((.*?)\)/);
+        const questionnaireTitle = subjectMatch ? subjectMatch[1] : "Verification Process";
+
+        mockOutput = `Subject: Action Required: ${questionnaireTitle} - Yiba Verified
+
+Body: <p>Dear Partner,</p>
+
+<p>We hope this email finds you well.</p>
+
+<p>As part of your accreditation journey with Yiba Verified, we require some additional information to proceed to the next stage.</p>
+
+<p><strong>Please complete the attached questionnaire: ${questionnaireTitle}</strong></p>
+
+<p>This will help us understand your specific needs and compliance status.</p>
+
+<p><br/></p>
+<p>Best regards,</p>
+<p>The Yiba Team</p>`;
+    } else {
+        mockOutput = "Subject: Hello\n\nBody: This is a draft.";
+    }
 
     // Log the generation attempt
     await logOutreachEvent(
@@ -37,12 +63,15 @@ export async function generateDraft(
         { prompt_snippet: prompt.substring(0, 50) }
     );
 
+    const subject = mockOutput.match(/Subject: (.*)/)?.[1] || "Update from Yiba";
+    const body = mockOutput.split("Body: ")[1] || mockOutput;
+
     return {
         draft_id: "draft_" + Date.now(),
         institution_id: institutionId,
         stage: "UNCONTACTED" as any,
-        subject: "Hello",
-        body: "This is a draft",
+        subject: subject,
+        body: body,
         generated_at: new Date(),
         approved: null,
         approved_by: null,

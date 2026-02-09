@@ -21,8 +21,8 @@ export function StageList({ currentStage, onSelectStage, templates }: StageListP
     ];
 
     return (
-        <div className="w-64 border-r bg-muted/20 h-full flex flex-col">
-            <div className="p-4 border-b font-semibold text-sm">
+        <div className="w-64 border-r border-border/40 bg-muted/20 h-full flex flex-col">
+            <div className="p-4 border-b border-border/40 font-semibold text-sm">
                 Engagement Stages
             </div>
             <div className="flex-1 overflow-y-auto py-2">

@@ -37,6 +37,7 @@ export async function GET(
         const primaryInvite = inst.invites[0];
 
         const profile: InstitutionOutreachProfile = {
+            id: primaryInvite?.invite_id || inst.institution_id,
             institution_id: inst.institution_id,
             institution_name: inst.trading_name || inst.legal_name,
             domain: inst.contact_email ? inst.contact_email.split('@')[1] : 'unknown',

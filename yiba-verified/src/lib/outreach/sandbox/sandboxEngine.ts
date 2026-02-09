@@ -86,19 +86,43 @@ export async function generateSandboxDraft(sessionId: string): Promise<SandboxMe
     const session = await prisma.outreachSandboxSession.findUnique({ where: { session_id: sessionId } });
     if (!session) throw new Error("Session not found");
 
-    // 2. Build Prompt (Pure Logic Reuse)
+    // 2. Fetch Relevant Questionnaire (Mock Logic for Sandbox)
+    const STATE_TO_SLUG: Partial<Record<string, string>> = {
+        [EngagementState.UNCONTACTED]: "unaware-check-in",
+        [EngagementState.CONTACTED]: "problem-aware-challenges",
+        [EngagementState.ENGAGED]: "solution-aware-needs",
+        [EngagementState.EVALUATING]: "trust-aware-action",
+        [EngagementState.READY]: "trust-aware-action",
+    };
+    const slug = STATE_TO_SLUG[session.current_stage as EngagementState];
+    let questionnaireContext = "No specific questionnaire.";
+
+    if (slug) {
+        const q = await prisma.questionnaire.findUnique({
+            where: { slug }
+        });
+        if (q) {
+            // @ts-ignore
+            const questions = q.steps.flatMap(s => s.questions.map(qu => qu.text)).join("\n- ");
+            questionnaireContext = `Relevant Questionnaire (${q.title}):\n${q.description}\nQuestions we want answered:\n- ${questions}`;
+        }
+    }
+
+    // 3. Build Prompt (Pure Logic Reuse)
     const prompt = buildAiPrompt(
         session.institution_name,
-        { stage: session.current_stage, score: session.engagement_score },
+        {
+            stage: session.current_stage,
+            score: session.engagement_score,
+            questionnaire_goal: questionnaireContext
+        },
         { tone: "Professional", references: [], forbidden_content: ["Guaranteed funding"] } // Mock policy
     );
 
-    // 3. Generate Draft (Service Reuse)
-    // Note: In real world, we might mock the LLM call itself for sandbox cost savings, 
-    // but the requirement says "generate next message exactly like production would".
+    // 4. Generate Draft (Service Reuse)
     const draft = await generateDraft("sandbox_" + sessionId, prompt, "System Prompt");
 
-    // 4. Save to Sandbox Message (Persistence)
+    // 5. Save to Sandbox Message (Persistence)
     // @ts-ignore
     return prisma.outreachSandboxMessage.create({
         data: {

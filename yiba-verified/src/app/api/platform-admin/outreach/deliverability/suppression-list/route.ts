@@ -39,36 +39,77 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await req.json(); // Expect SuppressionEntry[] or { items: ... }?
-        // Check what the UI sends. `SuppressionList` component likely just displays.
-        // Wait, does the UI allow adding?
-        // `SuppressionList` typically has an 'Add' or 'Upload' button.
-        // If `api.ts` doesn't have `addToSuppressionList`, maybe it's missing.
-        // `api.ts` has `getSuppressionList`. It DOES NOT have `updateSuppressionList`.
-        // So the user can only VIEW it currently?
-        // "SuppressionList: Implemented functional email suppression with CSV upload." in Previous Session Summary.
-        // If it was implemented, where is the code?
-        // Maybe in `SuppressionList` component it calls an API directly?
-        // I should check `SuppressionList.tsx`.
+        const body = await req.json();
+        const { email } = body;
 
-        // For now, implement generic POST to save list to support whatever the UI might do.
+        if (!email || typeof email !== 'string') {
+            return NextResponse.json({ error: "Email is required" }, { status: 400 });
+        }
+
+        const setting = await prisma.systemSetting.findUnique({ where: { key: SUPPRESSION_KEY } });
+        let list: any[] = setting ? JSON.parse(setting.value) : [];
+
+        // Avoid duplicates
+        if (!list.find((e: any) => e.email === email)) {
+            list.push({
+                email,
+                reason: "Manual addition",
+                added_at: new Date(),
+                added_by: session.user.userId
+            });
+        }
 
         await prisma.systemSetting.upsert({
             where: { key: SUPPRESSION_KEY },
             update: {
-                value: JSON.stringify(body),
+                value: JSON.stringify(list),
                 updated_by: session.user.userId
             },
             create: {
                 key: SUPPRESSION_KEY,
-                value: JSON.stringify(body),
+                value: JSON.stringify(list),
                 updated_by: session.user.userId
             }
         });
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Failed to update suppression list:", error);
+        console.error("Failed to add to suppression list:", error);
+        return NextResponse.json({ error: "Failed to update list" }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const email = searchParams.get('email');
+
+        if (!email) {
+            return NextResponse.json({ error: "Email is required" }, { status: 400 });
+        }
+
+        const setting = await prisma.systemSetting.findUnique({ where: { key: SUPPRESSION_KEY } });
+        if (!setting) return NextResponse.json({ success: true }); // Already empty
+
+        let list: any[] = JSON.parse(setting.value);
+        list = list.filter((e: any) => e.email !== email);
+
+        await prisma.systemSetting.update({
+            where: { key: SUPPRESSION_KEY },
+            data: {
+                value: JSON.stringify(list),
+                updated_by: session.user.userId
+            }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Failed to remove from suppression list:", error);
         return NextResponse.json({ error: "Failed to update list" }, { status: 500 });
     }
 }

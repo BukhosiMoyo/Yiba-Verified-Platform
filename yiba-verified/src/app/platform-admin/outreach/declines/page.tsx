@@ -35,20 +35,23 @@ export default function DeclinesPage() {
 
     const handleRecover = async (id: string, strategy: string) => {
         try {
-            // Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await awarenessApi.recoverCandidate(id, strategy);
             toast.success(`Recovering with strategy: ${strategy}`);
-            // Optimistic update
+            // Remove from list
             setRecoveryQueue((prev) => prev.filter((c) => c.institution_id !== id));
         } catch (error) {
             toast.error("Failed to start recovery");
         }
     };
 
-    const handleDismiss = (id: string) => {
-        // Optimistic update
-        setRecoveryQueue((prev) => prev.filter((c) => c.institution_id !== id));
-        toast.success("Candidate dismissed");
+    const handleDismiss = async (id: string) => {
+        try {
+            await awarenessApi.dismissCandidate(id);
+            setRecoveryQueue((prev) => prev.filter((c) => c.institution_id !== id));
+            toast.success("Candidate dismissed");
+        } catch (error) {
+            toast.error("Failed to dismiss candidate");
+        }
     };
 
     if (loading) {

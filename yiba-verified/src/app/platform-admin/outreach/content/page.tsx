@@ -120,7 +120,7 @@ export default function ContentStudioPage() {
     }
 
     return (
-        <div className="h-[calc(100vh-140px)] border rounded-lg overflow-hidden bg-background flex">
+        <div className="h-[calc(100vh-140px)] border border-border/40 rounded-lg overflow-hidden bg-background flex">
             <StageList
                 currentStage={selectedStage}
                 onSelectStage={setSelectedStage}

@@ -85,6 +85,7 @@ export function getMockAlerts(): Alert[] {
 export function getMockInstitutions(filters?: InstitutionFilters): InstitutionOutreachProfile[] {
     const allInstitutions: InstitutionOutreachProfile[] = [
         {
+            id: 'inst_1',
             institution_id: 'inst_1',
             institution_name: 'Tech Skills Academy',
             domain: 'techskills.ac.za',
@@ -111,6 +112,7 @@ export function getMockInstitutions(filters?: InstitutionFilters): InstitutionOu
             ],
         },
         {
+            id: 'inst_2',
             institution_id: 'inst_2',
             institution_name: 'Future Leaders Institute',
             domain: 'futureleaders.co.za',
@@ -137,6 +139,7 @@ export function getMockInstitutions(filters?: InstitutionFilters): InstitutionOu
             ],
         },
         {
+            id: 'inst_3',
             institution_id: 'inst_3',
             institution_name: 'Skills Development Hub',
             domain: 'skillshub.org.za',

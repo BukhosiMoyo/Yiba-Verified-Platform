@@ -6,7 +6,7 @@ import { EngagementState } from "@/lib/outreach/types";
 
 export async function POST(
     req: Request,
-    { params }: { params: { inviteId: string } }
+    context: { params: Promise<{ inviteId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user || session.user.role !== "PLATFORM_ADMIN") {
@@ -14,7 +14,7 @@ export async function POST(
     }
 
     try {
-        const { inviteId } = params;
+        const { inviteId } = await context.params;
         const body = await req.json();
         const { stage } = body;
 

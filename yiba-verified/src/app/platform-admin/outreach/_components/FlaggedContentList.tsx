@@ -47,7 +47,7 @@ export function FlaggedContentList({ items, onReview }: FlaggedContentListProps)
 
     return (
         <>
-            <Card>
+            <Card className="bg-card">
                 <CardHeader>
                     <CardTitle className="text-red-500 flex items-center gap-2">
                         Safety Review Queue
@@ -60,7 +60,7 @@ export function FlaggedContentList({ items, onReview }: FlaggedContentListProps)
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
+                    <Table className="bg-card">
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Reason</TableHead>

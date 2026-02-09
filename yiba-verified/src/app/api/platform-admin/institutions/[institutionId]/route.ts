@@ -23,11 +23,11 @@ import { calculateInstitutionCompleteness } from "@/lib/completeness";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ institutionId: string }> }
+  context: { params: Promise<{ institutionId: string }> }
 ) {
   try {
     await requireRole(request, "PLATFORM_ADMIN");
-    const { institutionId } = await params;
+    const { institutionId } = await context.params;
 
     // Query institution with all related data
     const institution = await prisma.institution.findUnique({
@@ -162,11 +162,11 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ institutionId: string }> }
+  context: { params: Promise<{ institutionId: string }> }
 ) {
   try {
-    await requireRole(request, "PLATFORM_ADMIN");
-    const { institutionId } = await params;
+    const ctx = await requireRole(request, "PLATFORM_ADMIN");
+    const { institutionId } = await context.params;
 
     const body = await request.json();
     const { ...updateData } = body;
@@ -202,31 +202,76 @@ export async function PATCH(
       }
     }
 
-    // Update institution
-    const updatedInstitution = await prisma.institution.update({
-      where: { institution_id: institutionId },
-      data: {
-        ...updateData,
-        updated_at: new Date(),
-      },
-      select: {
-        institution_id: true,
-        legal_name: true,
-        trading_name: true,
-        institution_type: true,
-        registration_number: true,
-        tax_compliance_pin: true,
-        physical_address: true,
-        postal_address: true,
-        province: true,
-        delivery_modes: true,
-        status: true,
-        contact_person_name: true,
-        contact_email: true,
-        contact_number: true,
-        created_at: true,
-        updated_at: true,
-      },
+    // Update institution with audit logging
+    const updatedInstitution = await prisma.$transaction(async (tx) => {
+      // 1. Fetch current data for audit comparison
+      const current = await tx.institution.findUniqueOrThrow({
+        where: { institution_id: institutionId },
+      });
+
+      // 2. Perform update
+      const result = await tx.institution.update({
+        where: { institution_id: institutionId },
+        data: {
+          ...updateData,
+          updated_at: new Date(),
+        },
+        select: {
+          institution_id: true,
+          legal_name: true,
+          trading_name: true,
+          institution_type: true,
+          registration_number: true,
+          tax_compliance_pin: true,
+          physical_address: true,
+          postal_address: true,
+          province: true,
+          delivery_modes: true,
+          status: true,
+          contact_person_name: true,
+          contact_email: true,
+          contact_number: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+
+      // 3. Create audit logs for changed fields
+      const { createAuditLogs, serializeValue } = await import("@/services/audit.service");
+      const auditEntries: any[] = [];
+
+      // Check each field in updateData
+      for (const [key, val] of Object.entries(updateData)) {
+        // Skip updated_at as it's handled automatically
+        if (key === "updated_at") continue;
+
+        const fieldName = key;
+        const newValue = val;
+        const oldValue = current[key as keyof typeof current];
+
+        const isDifferent = JSON.stringify(newValue) !== JSON.stringify(oldValue);
+
+        if (isDifferent) {
+          auditEntries.push({
+            entityType: "INSTITUTION",
+            entityId: institutionId,
+            fieldName: fieldName,
+            oldValue: serializeValue(oldValue),
+            newValue: serializeValue(newValue),
+            changedBy: ctx.userId,
+            roleAtTime: ctx.role,
+            changeType: "UPDATE",
+            // Since this is an admin action on an institution, link it to that institution
+            institutionId: institutionId,
+          });
+        }
+      }
+
+      if (auditEntries.length > 0) {
+        await createAuditLogs(tx, auditEntries);
+      }
+
+      return result;
     });
 
     return ok(updatedInstitution);

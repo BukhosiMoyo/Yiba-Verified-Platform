@@ -14,7 +14,7 @@ interface VersionControlProps {
 
 export function VersionControl({ version, status, hasChanges, onSave, onPublish }: VersionControlProps) {
     return (
-        <div className="flex items-center justify-between border-b p-4 bg-background z-10 sticky top-0">
+        <div className="flex items-center justify-between border-b border-border/40 p-4 bg-background z-10 sticky top-0">
             <div className="flex items-center gap-3">
                 <Badge variant="outline" className="text-xs">
                     v{version}

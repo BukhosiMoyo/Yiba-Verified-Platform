@@ -20,23 +20,17 @@ import {
 interface QuestionnaireListProps {
     questionnaires: Questionnaire[];
     onEdit: (q: Questionnaire) => void;
-    onCreate: () => void;
+    onDelete: (id: string) => void;
+    onPreview: (q: Questionnaire) => void;
 }
 
-export function QuestionnaireList({ questionnaires, onEdit, onCreate }: QuestionnaireListProps) {
+export function QuestionnaireList({ questionnaires, onEdit, onDelete, onPreview }: QuestionnaireListProps) {
     return (
         <div className="space-y-4">
-            <div className="flex justify-end">
-                <Button onClick={onCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Questionnaire
-                </Button>
-            </div>
-
-            <div className="rounded-md border">
-                <Table>
+            <div className="rounded-md border border-border/40 bg-card overflow-hidden">
+                <Table className="bg-card">
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="border-border/40 hover:bg-transparent">
                             <TableHead>Title</TableHead>
                             <TableHead>Slug</TableHead>
                             <TableHead>Steps</TableHead>
@@ -54,7 +48,7 @@ export function QuestionnaireList({ questionnaires, onEdit, onCreate }: Question
                             </TableRow>
                         ) : (
                             questionnaires.map((q) => (
-                                <TableRow key={q.questionnaire_id}>
+                                <TableRow key={q.questionnaire_id} className="border-border/40">
                                     <TableCell className="font-medium">{q.title}</TableCell>
                                     <TableCell className="text-muted-foreground font-mono text-xs">
                                         {q.slug}
@@ -82,10 +76,17 @@ export function QuestionnaireList({ questionnaires, onEdit, onCreate }: Question
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => onPreview(q)}>
                                                         <Eye className="mr-2 h-4 w-4" /> Preview
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-red-600">
+                                                    <DropdownMenuItem
+                                                        className="text-red-600"
+                                                        onClick={() => {
+                                                            if (confirm("Are you sure you want to delete this questionnaire?")) {
+                                                                onDelete(q.questionnaire_id);
+                                                            }
+                                                        }}
+                                                    >
                                                         Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>

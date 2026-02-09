@@ -58,17 +58,24 @@ export function QuestionnaireWizard({ initialData, onSave, onCancel }: Questionn
             toast.error("Title is required");
             return;
         }
-        if (questionnaire.steps.length === 0) {
-            toast.error("At least one step is required");
-            return;
-        }
-        onSave(questionnaire);
+        // Ensure steps have IDs 
+        const sanitizedSteps = questionnaire.steps.map(s => ({
+            ...s,
+            step_id: s.step_id || `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }));
+
+        const payload = {
+            ...questionnaire,
+            steps: sanitizedSteps
+        };
+
+        onSave(payload);
     };
 
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b p-4 flex items-center justify-between">
+            <div className="border-b border-border/40 p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <Button variant="ghost" size="icon" onClick={onCancel}>
                         <ArrowLeft className="h-4 w-4" />
@@ -129,16 +136,16 @@ export function QuestionnaireWizard({ initialData, onSave, onCancel }: Questionn
             ) : (
                 <div className="flex flex-1 overflow-hidden">
                     {/* Sidebar / Steps Nav */}
-                    <div className="w-64 border-r bg-muted/20 flex flex-col">
-                        <div className="p-4 font-medium text-sm border-b">Steps</div>
+                    <div className="w-64 border-r border-border/40 bg-muted/20 flex flex-col">
+                        <div className="p-4 font-medium text-sm border-b border-border/40">Steps</div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {questionnaire.steps.map((step, index) => (
                                 <button
                                     key={step.step_id}
                                     onClick={() => setActiveStepIndex(index)}
                                     className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between group ${activeStepIndex === index
-                                            ? "bg-primary text-primary-foreground"
-                                            : "hover:bg-accent hover:text-accent-foreground"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "hover:bg-accent hover:text-accent-foreground"
                                         }`}
                                 >
                                     <span className="truncate">
@@ -161,7 +168,7 @@ export function QuestionnaireWizard({ initialData, onSave, onCancel }: Questionn
 
                     {/* Main Builder Area */}
                     <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-black">
-                        <div className="border-b bg-background px-8">
+                        <div className="border-b border-border/40 bg-background px-8">
                             <ProgressPreview
                                 steps={questionnaire.steps}
                                 currentStepIndex={activeStepIndex}
@@ -169,7 +176,7 @@ export function QuestionnaireWizard({ initialData, onSave, onCancel }: Questionn
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8">
-                            <div className="max-w-3xl mx-auto bg-background rounded-xl shadow-sm border p-6 min-h-[500px]">
+                            <div className="max-w-3xl mx-auto bg-background rounded-xl shadow-sm border border-border/40 p-6 min-h-[500px]">
                                 {questionnaire.steps.length > 0 && questionnaire.steps[activeStepIndex] ? (
                                     <StepEditor
                                         step={questionnaire.steps[activeStepIndex]}

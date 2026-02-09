@@ -98,11 +98,6 @@ export async function GET(req: Request) {
                     {
                         contact_id: invite.invite_id, // Use invite_id as contact_id for specific card
                         email: invite.email,
-                        first_name: "", // Not stored on Invite directly in schema shown, but maybe we can infer? 
-                        // Actually, schema didn't show first_name on Invite in lines 1261-1281. 
-                        // If it's not there, we leave blank. Import puts it ... somewhere?
-                        // Import pushed: first_name: l.contacts[0].first_name.
-                        // I might have missed fields in grep. Assuming blank for now.
                         first_name: "",
                         last_name: "",
                         role: "Contact", // Can use invite.role enum potentially?
