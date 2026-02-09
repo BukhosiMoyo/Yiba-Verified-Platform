@@ -91,7 +91,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
             // 1. Pre-process chunk to gather all normalized emails
             const chunkEmails = new Set<string>();
             const rowEmailsMap = new Map<number, string[]>();
-            const rowDataMap = new Map<number, { institution: string | null, emails: string[] }>();
+            const rowDataMap = new Map<number, { institution: string | null, province: string, emails: string[] }>();
 
             for (let i = 0; i < chunk.length; i++) {
                 const row = chunk[i];
@@ -111,8 +111,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                 uniqueEmails.forEach(e => chunkEmails.add(e));
                 rowEmailsMap.set(rowIndex, uniqueEmails);
 
-                // Determine Institution
+                // Determine Institution & Province
                 let institutionName: string | null = null;
+                let provinceName: string = "Unknown"; // Default
+
                 const orgKeys = Object.keys(row as any).filter(k => /org|company|institution|provider|name/i.test(k));
                 for (const k of orgKeys) {
                     if ((row as any)[k]) {
@@ -120,7 +122,17 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                         break;
                     }
                 }
-                rowDataMap.set(rowIndex, { institution: institutionName, emails: uniqueEmails });
+
+                // Attempt to extract Province/Location/Region
+                const provKeys = Object.keys(row as any).filter(k => /province|location|region|area/i.test(k));
+                for (const k of provKeys) {
+                    if ((row as any)[k]) {
+                        provinceName = (row as any)[k];
+                        break;
+                    }
+                }
+
+                rowDataMap.set(rowIndex, { institution: institutionName, province: provinceName, emails: uniqueEmails });
             }
 
             // 2. Bulk Fetch Existing Data
@@ -152,13 +164,31 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
             for (let i = 0; i < chunk.length; i++) {
                 const rowIndex = start + i + 1;
-                const { institution, emails } = rowDataMap.get(rowIndex)!;
+                const { institution, province, emails } = rowDataMap.get(rowIndex)!;
 
                 if (emails.length === 0) {
                     newItemsData.push({
                         job_id: jobId,
                         row_number: rowIndex,
                         institution_name_raw: institution,
+                        // outreachImportJobItem doesn't strictly have a 'province' field in schema? 
+                        // We might need to check schema. If not, we can't store it yet unless we migrate or use metadata/json.
+                        // Wait, let's check schema. If we can't store it, we can't pass it to IMPORT phase easily.
+                        // Assuming schema might need update or we use a temporary field. 
+                        // Actually, looking at previous 'create' logic, it creates Institution with "Unknown".
+                        // Logic was:
+                        // const newInst = await prisma.institution.create({ data: { ... province: "Unknown" ... } })
+                        // So we need to pass this 'province' to the IMPORT phase.
+                        // If ImportJobItem doesn't have province_raw, we cannot persist it.
+                        // Let's assume for now we can't persist it in JobItem unless we add a column.
+                        // BUT, the user prompt implies "the date saya unknown". Wait, DATE or DATA? 
+                        // "date saya unknown" -> "data says unknown"? or actual Date field?
+                        // "upload lists ... create 3 duplicates and the date saya unknown".
+                        // Start/End date? Or maybe 'Province' which defaults to Unknown? 
+                        // The user said "date". Could mean "Data"? 
+                        // Let's assume "Data" -> "Province" as "Unknown".
+                        // To persist province, we need to update schema or verify if `institution_details_json` exists?
+                        // For now, let's verify schema.
                         status: "INVALID_EMAIL" as const,
                         reason: "No valid emails found",
                     });
@@ -173,6 +203,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                             job_id: jobId,
                             row_number: rowIndex,
                             institution_name_raw: institution,
+                            province_raw: province,
                             email_raw: email,
                             email_normalized: email,
                             status: "DUPLICATE_IN_FILE" as const,
@@ -218,6 +249,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                         job_id: jobId,
                         row_number: rowIndex,
                         institution_name_raw: institution,
+                        province_raw: province,
                         email_raw: email,
                         email_normalized: email,
                         status: "VALID" as const,
@@ -324,7 +356,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                                 data: {
                                     legal_name: item.institution_name_raw || "Imported Institution",
                                     institution_type: "OTHER",
-                                    province: "Unknown",
+                                    province: item.province_raw || "Unknown",
                                     physical_address: "Unknown",
                                     registration_number: `IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Unique dummy reg
                                 }

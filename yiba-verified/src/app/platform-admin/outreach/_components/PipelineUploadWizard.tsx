@@ -37,6 +37,14 @@ export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () =
     const [progress, setProgress] = useState(0);
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Keep job in ref for poll function to access current state if needed, 
+    // BUT poll function receives job.id via closure if defined inside effect or if job is dependency.
+    // Actually, defining poll inside component is fine, but we need to be careful about stale state.
+    // The recursive approach depends on 'job' state. If 'job' changes, the function closes over old 'job'.
+    // Better to pass ID to poll function or use a ref for job ID.
+    const jobIdRef = useRef<string | null>(null);
+    useEffect(() => { jobIdRef.current = job?.id || null; }, [job]);
+
     // Initial drag & drop setup
     const onDrop = useCallback((acceptedFiles: File[]) => {
         // Only accept one file for now to simplify job tracking
@@ -112,52 +120,59 @@ export function PipelineUploadWizard({ onSuccess, onCancel }: { onSuccess?: () =
         }
     };
 
-    // Poll Helper
-    const startPolling = (action: 'VALIDATE' | 'IMPORT') => {
-        if (pollingRef.current) clearInterval(pollingRef.current);
+    // Poll Helper - Recursive Pattern
+    const poll = async (action: 'VALIDATE' | 'IMPORT') => {
+        const currentJobId = jobIdRef.current;
+        if (!currentJobId) return;
 
-        pollingRef.current = setInterval(async () => {
-            if (!job) return;
+        try {
+            const res = await fetch(`/api/platform-admin/outreach/jobs/${currentJobId}/run`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action })
+            });
 
-            try {
-                const res = await fetch(`/api/platform-admin/outreach/jobs/${job.id}/run`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ action })
-                });
-
-                if (!res.ok) {
-                    const data = await res.json();
-                    console.error("Polling error:", data.error);
-                    // Don't stop polling immediately on transient error, but maybe warn?
-                    return;
-                }
-
+            if (!res.ok) {
                 const data = await res.json();
-                setJob(data.job);
-                setProgress(data.progress || 0);
-
-                if (data.done) {
-                    if (pollingRef.current) clearInterval(pollingRef.current);
-                    if (action === 'VALIDATE') setStep(3); // Review
-                    if (action === 'IMPORT') setStep(5); // Success
-                }
-            } catch (err) {
-                console.error("Polling network error:", err);
+                console.error("Polling error:", data.error);
+                // Retry after delay even on error, unless fatal?
+                // For now, retry.
+                pollingRef.current = setTimeout(() => poll(action), 2000);
+                return;
             }
-        }, 1000); // 1s interval
+
+            const data = await res.json();
+            setJob(data.job);
+            setProgress(data.progress || 0);
+
+            if (data.done) {
+                if (action === 'VALIDATE') setStep(3); // Review
+                if (action === 'IMPORT') setStep(5); // Success
+            } else {
+                // Continue polling
+                pollingRef.current = setTimeout(() => poll(action), 1000);
+            }
+        } catch (err) {
+            console.error("Polling network error:", err);
+            // Retry on network error
+            pollingRef.current = setTimeout(() => poll(action), 2000);
+        }
     };
 
     // Effect: Trigger Polling when entering Step 2 or 4
+    // We use a ref to track if multiple effects fire, though with dependency on step it should be stable.
     useEffect(() => {
+        // Clear any existing timeout
+        if (pollingRef.current) clearTimeout(pollingRef.current);
+
         if (step === 2 && job) {
-            startPolling('VALIDATE');
+            poll('VALIDATE');
         } else if (step === 4 && job) {
-            startPolling('IMPORT');
+            poll('IMPORT');
         }
 
         return () => {
-            if (pollingRef.current) clearInterval(pollingRef.current);
+            if (pollingRef.current) clearTimeout(pollingRef.current);
         };
     }, [step, job?.id]); // Depend on job.id mainly
 

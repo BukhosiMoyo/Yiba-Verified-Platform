@@ -2683,6 +2683,7 @@ model OutreachImportJobItem {
   job_id              String
   row_number          Int
   institution_name_raw String?
+  province_raw        String?
   email_raw           String?
   email_normalized    String?
   emails_extracted    Json?                   // Array of strings
