@@ -372,7 +372,7 @@ export function WorkspaceClient({ session, messages, events, questionnaire }: { 
                                     className="h-full min-h-[500px]"
                                 >
                                     {questionnaire ? (
-                                        <div className="h-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg">
+                                        <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg custom-scrollbar">
                                             <QuestionnaireRenderer
                                                 questionnaire={questionnaire}
                                                 onComplete={async (answers) => {

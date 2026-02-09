@@ -10,16 +10,22 @@ import { OutreachEventType, EngagementState } from "../types";
  */
 export async function createSession(name: string, userId: string, institutionName: string = "Acme University"): Promise<SandboxSession> {
     // @ts-ignore - Prisma might generate types slowly
-    return prisma.outreachSandboxSession.create({
+    const session = await prisma.outreachSandboxSession.create({
         data: {
             name,
             created_by_user_id: userId,
             institution_name: institutionName,
+            province: "Gauteng", // Default for simulation context
             current_stage: EngagementState.UNCONTACTED,
             engagement_score: 0,
             ai_enabled: true
         }
     });
+
+    // Generate initial draft for "Unaware" stage
+    await generateSandboxDraft(session.session_id);
+
+    return session;
 }
 
 /**
@@ -108,7 +114,32 @@ export async function generateSandboxDraft(sessionId: string): Promise<SandboxMe
         }
     }
 
-    // 3. Build Prompt (Pure Logic Reuse)
+    // 3. Conditional: Use Hardcoded Template for "UNCONTACTED"
+    // This overrides the AI/Mock engine to match user preference exactly for the initial hook.
+    if (session.current_stage === EngagementState.UNCONTACTED) {
+        const provinceText = session.province && session.province !== "Unknown" ? session.province : "local";
+        const emailBody = `Hi ${session.institution_name},
+
+We noticed that you are a key player in the ${provinceText} education sector, but currently handle your accreditation manually.
+
+Yiba Verified is the new standard platform designed to streamline your QCTO compliance.
+
+Would you be open to a 10-minute demo to see how we automate submissions?`;
+
+        // @ts-ignore
+        return prisma.outreachSandboxMessage.create({
+            data: {
+                session_id: sessionId,
+                subject: "Partnership Opportunity: Streamline QCTO Compliance", // Fitting subject for the body
+                body_html: emailBody.replace(/\n/g, '<br/>'), // Simple HTML conversion
+                status: 'DRAFT',
+                from_name: 'Yiba Team',
+                ai_draft_id: `template_uncontacted_${Date.now()}`
+            }
+        });
+    }
+
+    // 4. Build Prompt (Pure Logic Reuse)
     const prompt = buildAiPrompt(
         session.institution_name,
         {
@@ -152,6 +183,9 @@ export async function resetSession(sessionId: string): Promise<void> {
             }
         })
     ]);
+
+    // Generate initial draft for "Unaware" (Uncontacted) stage
+    await generateSandboxDraft(sessionId);
 }
 
 /**
