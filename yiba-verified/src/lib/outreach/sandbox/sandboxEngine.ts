@@ -8,13 +8,14 @@ import { OutreachEventType, EngagementState } from "../types";
 /**
  * Creates a new sandbox session.
  */
-export async function createSession(name: string, userId: string, institutionName: string = "Acme University"): Promise<SandboxSession> {
+export async function createSession(name: string, userId: string, institutionName: string = "Acme University", contactName?: string): Promise<SandboxSession> {
     // @ts-ignore - Prisma might generate types slowly
     const session = await prisma.outreachSandboxSession.create({
         data: {
             name,
             created_by_user_id: userId,
             institution_name: institutionName,
+            contact_name: contactName,
             province: "Gauteng", // Default for simulation context
             current_stage: EngagementState.UNCONTACTED,
             engagement_score: 0,
@@ -118,7 +119,9 @@ export async function generateSandboxDraft(sessionId: string): Promise<SandboxMe
     // This overrides the AI/Mock engine to match user preference exactly for the initial hook.
     if (session.current_stage === EngagementState.UNCONTACTED) {
         const provinceText = session.province && session.province !== "Unknown" ? session.province : "local";
-        const emailBody = `Hi ${session.institution_name},
+        const greetingName = session.contact_name ? session.contact_name : session.institution_name;
+
+        const emailBody = `Hi ${greetingName},
 
 We noticed that you are a key player in the ${provinceText} education sector, but currently handle your accreditation manually.
 

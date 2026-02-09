@@ -91,7 +91,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
             // 1. Pre-process chunk to gather all normalized emails
             const chunkEmails = new Set<string>();
             const rowEmailsMap = new Map<number, string[]>();
-            const rowDataMap = new Map<number, { institution: string | null, province: string, emails: string[] }>();
+            const rowDataMap = new Map<number, { institution: string | null, province: string, contactName: string | null, emails: string[] }>();
 
             for (let i = 0; i < chunk.length; i++) {
                 const row = chunk[i];
@@ -132,7 +132,17 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                     }
                 }
 
-                rowDataMap.set(rowIndex, { institution: institutionName, province: provinceName, emails: uniqueEmails });
+                // Attempt to extract Contact Name
+                let contactName: string | null = null;
+                const contactKeys = Object.keys(row as any).filter(k => /contact|first name|full name|person/i.test(k) && !/email|number|phone/i.test(k));
+                for (const k of contactKeys) {
+                    if ((row as any)[k]) {
+                        contactName = (row as any)[k];
+                        break;
+                    }
+                }
+
+                rowDataMap.set(rowIndex, { institution: institutionName, province: provinceName, contactName, emails: uniqueEmails });
             }
 
             // 2. Bulk Fetch Existing Data
@@ -164,7 +174,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
             for (let i = 0; i < chunk.length; i++) {
                 const rowIndex = start + i + 1;
-                const { institution, province, emails } = rowDataMap.get(rowIndex)!;
+                const { institution, province, contactName, emails } = rowDataMap.get(rowIndex)!;
 
                 if (emails.length === 0) {
                     newItemsData.push({
@@ -250,6 +260,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                         row_number: rowIndex,
                         institution_name_raw: institution,
                         province_raw: province,
+                        contact_name_raw: contactName,
                         email_raw: email,
                         email_normalized: email,
                         status: "VALID" as const,
@@ -357,6 +368,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
                                     legal_name: item.institution_name_raw || "Imported Institution",
                                     institution_type: "OTHER",
                                     province: item.province_raw || "Unknown",
+                                    contact_person_name: item.contact_name_raw,
                                     physical_address: "Unknown",
                                     registration_number: `IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Unique dummy reg
                                 }

@@ -2507,6 +2507,7 @@ model OutreachSandboxSession {
   
   // Simulated Institution State
   institution_name  String
+  contact_name      String?
   industry          String?
   province          String?
   current_stage     String   @default("UNCONTACTED") // store enum as string for flexibility or map to Enums
@@ -2683,6 +2684,7 @@ model OutreachImportJobItem {
   job_id              String
   row_number          Int
   institution_name_raw String?
+  contact_name_raw    String?
   province_raw        String?
   email_raw           String?
   email_normalized    String?
